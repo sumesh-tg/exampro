@@ -107,70 +107,74 @@ export function ExamClient({ exam }: { exam: Exam }) {
   const progress = ((currentQuestionIndex + 1) / exam.questions.length) * 100;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-2xl shadow-lg">
-        <CardHeader>
-          <div className="flex justify-between items-center mb-4">
-            <CardTitle>{exam.title}</CardTitle>
-            <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
-                <Timer className="h-4 w-4" />
-                <span>{formatTime(time)}</span>
-            </div>
-          </div>
-          <Progress value={progress} className="w-full" />
-          <CardDescription className="pt-4 text-center text-base">
-            Question {currentQuestionIndex + 1} of {exam.questions.length}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
-          <RadioGroup
-            value={selectedAnswers[currentQuestionIndex]}
-            onValueChange={handleAnswerSelect}
-            className="space-y-3"
-          >
-            {currentQuestion.options.map((option, index) => (
-              <Label key={index} className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
-                <RadioGroupItem value={option} id={`option-${index}`} />
-                <span>{option}</span>
-              </Label>
-            ))}
-          </RadioGroup>
-          <div className="flex justify-end pt-4">
-            {currentQuestionIndex < exam.questions.length - 1 ? (
-              <Button onClick={handleNext} size="lg">Next</Button>
-            ) : (
-              <Button onClick={handleSubmit} size="lg">Submit</Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="w-full max-w-2xl shadow-lg mt-4">
-        <CardHeader>
-          <CardTitle className="text-xl">Question Navigator</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
-            {exam.questions.map((_, index) => (
-              <Button
-                key={index}
-                onClick={() => goToQuestion(index)}
-                variant="outline"
-                className={cn(
-                  'text-white',
-                  {
-                    'bg-primary hover:bg-primary/90': currentQuestionIndex === index,
-                    'bg-yellow-500 hover:bg-yellow-600': currentQuestionIndex !== index && visited.has(index),
-                    'bg-green-500 hover:bg-green-600': currentQuestionIndex !== index && !visited.has(index),
-                  }
-                )}
+    <div className="grid min-h-screen w-full lg:grid-cols-3 gap-6 p-4 md:p-8">
+      <div className="lg:col-span-2">
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <div className="flex justify-between items-center mb-4">
+                <CardTitle>{exam.title}</CardTitle>
+                <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                    <Timer className="h-4 w-4" />
+                    <span>{formatTime(time)}</span>
+                </div>
+              </div>
+              <Progress value={progress} className="w-full" />
+              <CardDescription className="pt-4 text-center text-base">
+                Question {currentQuestionIndex + 1} of {exam.questions.length}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
+              <RadioGroup
+                value={selectedAnswers[currentQuestionIndex]}
+                onValueChange={handleAnswerSelect}
+                className="space-y-3"
               >
-                {index + 1}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                {currentQuestion.options.map((option, index) => (
+                  <Label key={index} className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
+                    <RadioGroupItem value={option} id={`option-${index}`} />
+                    <span>{option}</span>
+                  </Label>
+                ))}
+              </RadioGroup>
+              <div className="flex justify-end pt-4">
+                {currentQuestionIndex < exam.questions.length - 1 ? (
+                  <Button onClick={handleNext} size="lg">Next</Button>
+                ) : (
+                  <Button onClick={handleSubmit} size="lg">Submit</Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+      </div>
+      <div className="lg:col-span-1">
+        <Card className="w-full shadow-lg sticky top-8">
+            <CardHeader>
+            <CardTitle className="text-xl">Question Navigator</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                {exam.questions.map((_, index) => (
+                <Button
+                    key={index}
+                    onClick={() => goToQuestion(index)}
+                    variant="outline"
+                    className={cn(
+                    'text-white',
+                    {
+                        'bg-primary hover:bg-primary/90': currentQuestionIndex === index,
+                        'bg-yellow-500 hover:bg-yellow-600': currentQuestionIndex !== index && visited.has(index),
+                        'bg-green-500 hover:bg-green-600': currentQuestionIndex !== index && !visited.has(index),
+                    }
+                    )}
+                >
+                    {index + 1}
+                </Button>
+                ))}
+            </div>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
