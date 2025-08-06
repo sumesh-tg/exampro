@@ -1,5 +1,8 @@
+
+'use client';
+
 import Link from 'next/link';
-import { BookOpen, History, Upload, Bot } from 'lucide-react';
+import { BookOpen, History, Upload, Bot, LogOut, User as UserIcon } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -19,8 +22,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/auth/signin');
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -33,7 +58,39 @@ export default function Home() {
             <span className="text-xl font-bold">ExamPro</span>
           </Link>
         </nav>
-        <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+        <div className="flex items-center gap-4">
+          <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+          {loading ? (
+            <div/>
+          ) : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" className="rounded-full">
+                  <Avatar>
+                    <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
+                    <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="sr-only">Toggle user menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {}}>Profile</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {}}>Settings</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button asChild>
+              <Link href="/auth/signin">Sign In</Link>
+            </Button>
+          )}
+        </div>
       </header>
       <main className="flex-1 p-4 md:p-8">
         <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
