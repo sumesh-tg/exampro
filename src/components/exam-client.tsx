@@ -25,6 +25,7 @@ export function ExamClient({ exam }: { exam: Exam }) {
   const [score, setScore] = useState(0);
   const [time, setTime] = useState(0);
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
+  const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -54,6 +55,18 @@ export function ExamClient({ exam }: { exam: Exam }) {
     if (currentQuestionIndex < exam.questions.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
     }
+  };
+
+  const handleMarkForReview = () => {
+    setMarkedForReview((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(currentQuestionIndex)) {
+        newSet.delete(currentQuestionIndex);
+      } else {
+        newSet.add(currentQuestionIndex);
+      }
+      return newSet;
+    });
   };
 
   const handleSubmit = () => {
@@ -137,7 +150,10 @@ export function ExamClient({ exam }: { exam: Exam }) {
                   </Label>
                 ))}
               </RadioGroup>
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end pt-4 gap-2">
+                <Button onClick={handleMarkForReview} variant={markedForReview.has(currentQuestionIndex) ? 'default' : 'outline'} size="lg">
+                  {markedForReview.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
+                </Button>
                 {currentQuestionIndex < exam.questions.length - 1 ? (
                   <Button onClick={handleNext} size="lg">Next</Button>
                 ) : (
@@ -164,9 +180,10 @@ export function ExamClient({ exam }: { exam: Exam }) {
                       'font-bold',
                       {
                         'bg-primary text-primary-foreground hover:bg-primary/90': currentQuestionIndex === index,
-                        'bg-yellow-400 hover:bg-yellow-500 text-yellow-900': currentQuestionIndex !== index && visited.has(index) && !selectedAnswers[index],
-                        'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex !== index && !visited.has(index),
-                        'bg-blue-400 hover:bg-blue-500 text-blue-900': selectedAnswers[index] && currentQuestionIndex !== index,
+                        'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-yellow-400 hover:bg-yellow-500 text-yellow-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-blue-400 hover:bg-blue-500 text-blue-900': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-green-400 hover:bg-green-500 text-green-900': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
                       }
                     )}
                 >
