@@ -107,7 +107,7 @@ export function ExamClient({ exam }: { exam: Exam }) {
   const progress = ((currentQuestionIndex + 1) / exam.questions.length) * 100;
 
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-8">
+    <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-8">
       <div className="flex flex-col gap-6">
           <Card className="w-full shadow-lg">
             <CardHeader>
@@ -147,26 +147,27 @@ export function ExamClient({ exam }: { exam: Exam }) {
             </CardContent>
           </Card>
       </div>
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <Card className="w-full shadow-lg sticky top-8">
             <CardHeader>
             <CardTitle className="text-xl">Question Navigator</CardTitle>
             </CardHeader>
             <CardContent>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-4 lg:grid-cols-5 gap-2">
                 {exam.questions.map((_, index) => (
                 <Button
                     key={index}
                     onClick={() => goToQuestion(index)}
                     variant="outline"
+                    size="icon"
                     className={cn(
-                    'text-white',
-                    {
-                        'bg-primary hover:bg-primary/90': currentQuestionIndex === index,
-                        'bg-yellow-500 hover:bg-yellow-600': currentQuestionIndex !== index && visited.has(index),
-                        'bg-green-500 hover:bg-green-600': currentQuestionIndex !== index && !visited.has(index) && !selectedAnswers[index],
-                        'bg-blue-500 hover:bg-blue-600': currentQuestionIndex !== index && !visited.has(index) && selectedAnswers[index],
-                    }
+                      'font-bold',
+                      {
+                        'bg-primary text-primary-foreground hover:bg-primary/90': currentQuestionIndex === index,
+                        'bg-yellow-400 hover:bg-yellow-500 text-yellow-900': currentQuestionIndex !== index && visited.has(index) && !selectedAnswers[index],
+                        'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex !== index && !visited.has(index),
+                        'bg-blue-400 hover:bg-blue-500 text-blue-900': selectedAnswers[index] && currentQuestionIndex !== index,
+                      }
                     )}
                 >
                     {index + 1}
