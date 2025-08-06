@@ -1,16 +1,19 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Exam } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Timer, CheckCircle, XCircle } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, Download } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -26,6 +29,7 @@ export function ExamClient({ exam }: { exam: Exam }) {
   const [time, setTime] = useState(0);
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
+  const resultCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -80,10 +84,23 @@ export function ExamClient({ exam }: { exam: Exam }) {
     setIsSubmitted(true);
   };
 
+  const handleDownloadPdf = async () => {
+    const input = resultCardRef.current;
+    if (input) {
+      const canvas = await html2canvas(input, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`exam-result-${exam.id}.pdf`);
+    }
+  };
+
   if (isSubmitted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-2xl text-center shadow-lg">
+        <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg">
           <CardHeader>
             <CardTitle className="text-3xl font-bold">Exam Completed!</CardTitle>
             <CardDescription>Here's your result for "{exam.title}".</CardDescription>
@@ -107,9 +124,15 @@ export function ExamClient({ exam }: { exam: Exam }) {
                     <span>{formatTime(time)}</span>
                 </div>
             </div>
-            <Button asChild className="w-full md:w-auto" size="lg">
-              <Link href="/">Back to Home</Link>
-            </Button>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button asChild className="w-full md:w-auto" size="lg">
+                <Link href="/">Back to Home</Link>
+              </Button>
+               <Button onClick={handleDownloadPdf} className="w-full md:w-auto" size="lg" variant="outline">
+                <Download className="mr-2 h-5 w-5" />
+                Download PDF
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
