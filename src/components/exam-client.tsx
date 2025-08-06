@@ -107,8 +107,8 @@ export function ExamClient({ exam }: { exam: Exam }) {
   const progress = ((currentQuestionIndex + 1) / exam.questions.length) * 100;
 
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-3 gap-6 p-4 md:p-8">
-      <div className="lg:col-span-2">
+    <div className="grid min-h-screen w-full lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-8">
+      <div className="flex flex-col gap-6">
           <Card className="w-full shadow-lg">
             <CardHeader>
               <div className="flex justify-between items-center mb-4">
@@ -147,13 +147,13 @@ export function ExamClient({ exam }: { exam: Exam }) {
             </CardContent>
           </Card>
       </div>
-      <div className="lg:col-span-1">
+      <div className="hidden lg:block">
         <Card className="w-full shadow-lg sticky top-8">
             <CardHeader>
             <CardTitle className="text-xl">Question Navigator</CardTitle>
             </CardHeader>
             <CardContent>
-            <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-2">
                 {exam.questions.map((_, index) => (
                 <Button
                     key={index}
@@ -164,7 +164,8 @@ export function ExamClient({ exam }: { exam: Exam }) {
                     {
                         'bg-primary hover:bg-primary/90': currentQuestionIndex === index,
                         'bg-yellow-500 hover:bg-yellow-600': currentQuestionIndex !== index && visited.has(index),
-                        'bg-green-500 hover:bg-green-600': currentQuestionIndex !== index && !visited.has(index),
+                        'bg-green-500 hover:bg-green-600': currentQuestionIndex !== index && !visited.has(index) && !selectedAnswers[index],
+                        'bg-blue-500 hover:bg-blue-600': currentQuestionIndex !== index && !visited.has(index) && selectedAnswers[index],
                     }
                     )}
                 >
