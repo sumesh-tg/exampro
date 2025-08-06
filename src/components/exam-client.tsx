@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Timer, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -22,6 +24,7 @@ export function ExamClient({ exam }: { exam: Exam }) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [time, setTime] = useState(0);
+  const [visited, setVisited] = useState<Set<number>>(new Set([0]));
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -31,12 +34,20 @@ export function ExamClient({ exam }: { exam: Exam }) {
     }, 1000);
     return () => clearInterval(timer);
   }, [isSubmitted]);
+  
+  useEffect(() => {
+    setVisited((prev) => new Set(prev).add(currentQuestionIndex));
+  }, [currentQuestionIndex]);
 
   const handleAnswerSelect = (answer: string) => {
     setSelectedAnswers((prev) => ({
       ...prev,
       [currentQuestionIndex]: answer,
     }));
+  };
+  
+  const goToQuestion = (index: number) => {
+    setCurrentQuestionIndex(index);
   };
 
   const handleNext = () => {
@@ -131,6 +142,32 @@ export function ExamClient({ exam }: { exam: Exam }) {
             ) : (
               <Button onClick={handleSubmit} size="lg">Submit</Button>
             )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="w-full max-w-2xl shadow-lg mt-4">
+        <CardHeader>
+          <CardTitle className="text-xl">Question Navigator</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
+            {exam.questions.map((_, index) => (
+              <Button
+                key={index}
+                onClick={() => goToQuestion(index)}
+                variant="outline"
+                className={cn(
+                  'text-white',
+                  {
+                    'bg-primary hover:bg-primary/90': currentQuestionIndex === index,
+                    'bg-yellow-500 hover:bg-yellow-600': currentQuestionIndex !== index && visited.has(index),
+                    'bg-green-500 hover:bg-green-600': currentQuestionIndex !== index && !visited.has(index),
+                  }
+                )}
+              >
+                {index + 1}
+              </Button>
+            ))}
           </div>
         </CardContent>
       </Card>
