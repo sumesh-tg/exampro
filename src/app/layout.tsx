@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'QuizWhiz',
+  title: 'ExamPro',
   description: 'An online exam platform for multiple choice questions.',
 };
 

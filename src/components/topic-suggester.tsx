@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { suggestQuizTopics } from "@/ai/flows/suggest-topics";
+import { suggestExamTopics } from "@/ai/flows/suggest-topics";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,7 @@ export function TopicSuggester() {
     setLoading(true);
     setTopics([]);
     try {
-      const result = await suggestQuizTopics({ interests: values.interests });
+      const result = await suggestExamTopics({ interests: values.interests });
       setTopics(result.topics);
     } catch (error) {
       console.error("Failed to suggest topics:", error);
@@ -50,7 +50,7 @@ export function TopicSuggester() {
           <Sparkles className="h-6 w-6 text-accent" />
           <CardTitle>Stuck for ideas?</CardTitle>
         </div>
-        <CardDescription>Let AI suggest some quiz topics based on your interests.</CardDescription>
+        <CardDescription>Let AI suggest some exam topics based on your interests.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

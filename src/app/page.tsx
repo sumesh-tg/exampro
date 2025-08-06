@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { quizzes, quizHistory } from '@/lib/data';
+import { exams, examHistory } from '@/lib/data';
 import { TopicSuggester } from '@/components/topic-suggester';
 import {
   Table,
@@ -30,7 +30,7 @@ export default function Home() {
             className="flex items-center gap-2 text-lg font-semibold"
           >
             <Bot className="h-6 w-6" />
-            <span className="text-xl font-bold">QuizWhiz</span>
+            <span className="text-xl font-bold">ExamPro</span>
           </Link>
         </nav>
         <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
@@ -42,26 +42,26 @@ export default function Home() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-6 w-6 text-primary" />
-                  <CardTitle>Available Quizzes</CardTitle>
+                  <CardTitle>Available Exams</CardTitle>
                 </div>
                 <CardDescription>
-                  Choose a quiz to test your knowledge.
+                  Choose an exam to test your knowledge.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
-                {quizzes.map((quiz) => (
+                {exams.map((exam) => (
                   <div
-                    key={quiz.id}
+                    key={exam.id}
                     className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
                   >
                     <div className="space-y-1">
-                      <p className="font-semibold">{quiz.title}</p>
+                      <p className="font-semibold">{exam.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {quiz.description}
+                        {exam.description}
                       </p>
                     </div>
                     <Button asChild>
-                      <Link href={`/quiz/${quiz.id}`}>Start Quiz</Link>
+                      <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                     </Button>
                   </div>
                 ))}
@@ -75,7 +75,7 @@ export default function Home() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <History className="h-6 w-6 text-primary" />
-                  <CardTitle>Quiz History</CardTitle>
+                  <CardTitle>Exam History</CardTitle>
                 </div>
                 <CardDescription>
                   Review your past performances.
@@ -85,14 +85,14 @@ export default function Home() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Quiz</TableHead>
+                      <TableHead>Exam</TableHead>
                       <TableHead className="text-right">Score</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {quizHistory.map((item, index) => (
+                    {examHistory.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{item.quizTitle}</TableCell>
+                        <TableCell className="font-medium">{item.examTitle}</TableCell>
                         <TableCell className="text-right">
                           <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
                         </TableCell>

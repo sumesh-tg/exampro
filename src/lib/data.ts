@@ -4,18 +4,18 @@ export type Question = {
   correctAnswer: string;
 };
 
-export type Quiz = {
+export type Exam = {
   id: string;
   title: string;
   description: string;
   questions: Question[];
 };
 
-export const quizzes: Quiz[] = [
+export const exams: Exam[] = [
   {
     id: '1',
     title: 'General Knowledge',
-    description: 'A fun quiz to test your general knowledge.',
+    description: 'A fun exam to test your general knowledge.',
     questions: [
       {
         questionText: 'What is the capital of France?',
@@ -58,18 +58,18 @@ export const quizzes: Quiz[] = [
   },
 ];
 
-export type QuizHistory = {
-  quizId: string;
-  quizTitle: string;
+export type ExamHistory = {
+  examId: string;
+  examTitle: string;
   score: number;
   totalQuestions: number;
   date: string;
 };
 
-export const quizHistory: QuizHistory[] = [
+export const examHistory: ExamHistory[] = [
   {
-    quizId: '1',
-    quizTitle: 'General Knowledge',
+    examId: '1',
+    examTitle: 'General Knowledge',
     score: 2,
     totalQuestions: 3,
     date: '2023-10-27',
