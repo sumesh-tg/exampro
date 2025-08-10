@@ -22,7 +22,7 @@ import { Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
 import { generateExamQuestions, type GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import type { Exam } from '@/lib/data';
 import { addExam } from '@/services/examService';
 
@@ -101,9 +101,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
     try {
         await addExam(newExamData);
-        onExamCreated(); 
+        onExamCreated();
         onOpenChange(false);
-        reset();
     } catch (error) {
         console.error("Failed to save exam:", error);
     } finally {
