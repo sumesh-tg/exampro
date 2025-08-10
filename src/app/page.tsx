@@ -58,7 +58,7 @@ export default function Home() {
         setExams(prevExams => [...prevExams, newExam]);
       }
     }
-  }, []);
+  }, [exams]);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -66,11 +66,21 @@ export default function Home() {
   };
 
   const handleStartExam = (exam: Exam) => {
-    // For newly created exams, pass the data via sessionStorage as a temporary solution.
-    if (!initialExams.some(e => e.id === exam.id)) {
+    if (initialExams.some(e => e.id === exam.id)) {
+      router.push(`/exam/${exam.id}`);
+    } else {
       sessionStorage.setItem('tempExam', JSON.stringify(exam));
+      router.push(`/exam/${exam.id}`);
     }
-    router.push(`/exam/${exam.id}`);
+  };
+
+  const handleConfigureExam = (exam: Exam) => {
+    if (initialExams.some(e => e.id === exam.id)) {
+        router.push(`/exam/configure/${exam.id}`);
+    } else {
+        const examData = encodeURIComponent(JSON.stringify(exam));
+        router.push(`/exam/configure/custom?examData=${examData}`);
+    }
   };
 
   const handleExamCreated = (newExam: Exam) => {
@@ -169,7 +179,7 @@ export default function Home() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => router.push(`/exam/configure/${exam.id}`)}
+                              onClick={() => handleConfigureExam(exam)}
                             >
                               Configure
                             </DropdownMenuItem>
