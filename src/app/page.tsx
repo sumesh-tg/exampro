@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -119,9 +119,27 @@ export default function Home() {
                         {exam.description}
                       </p>
                     </div>
-                    <Button asChild>
-                      <Link href={`/exam/configure/${exam.id}`}>Configure</Link>
-                    </Button>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                           <DropdownMenuItem
+                            onClick={() => router.push(`/exam/${exam.id}`)}
+                          >
+                            Start Exam
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => router.push(`/exam/configure/${exam.id}`)}
+                          >
+                            Configure
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                   </div>
                 ))}
               </CardContent>
