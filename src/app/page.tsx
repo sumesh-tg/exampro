@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, Bot, LogOut, User as UserIcon } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -54,7 +54,7 @@ export default function Home() {
             href="#"
             className="flex items-center gap-2 text-lg font-semibold"
           >
-            <Bot className="h-6 w-6" />
+            <GraduationCap className="h-6 w-6" />
             <span className="text-xl font-bold">ExamPro</span>
           </Link>
         </nav>
