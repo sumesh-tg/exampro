@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { ExamClient } from '@/components/exam-client';
 import { notFound, useSearchParams } from 'next/navigation';
 import type { Exam } from '@/lib/data';
-import { getExam } from '@/services/examService';
 
 export default function ExamPage({ params }: { params: { id: string } }) {
   const [examData, setExamData] = useState<Exam | null | undefined>(undefined);
@@ -13,21 +12,28 @@ export default function ExamPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     async function fetchExam() {
-      // Try to get from sessionStorage first (for newly created exams not yet in DB)
+      // Try to get from sessionStorage first
       const tempExamData = sessionStorage.getItem('tempExam');
       if (tempExamData) {
         const tempExam = JSON.parse(tempExamData);
         if (tempExam.id === params.id) {
           setExamData(tempExam);
-          // Optional: clear it after use if it's truly temporary
-          // sessionStorage.removeItem('tempExam'); 
           return;
         }
       }
       
-      // If not in session storage, fetch from Firestore
-      const examFromDb = await getExam(params.id);
-      setExamData(examFromDb);
+      // If not in temp storage, check full list in sessionStorage
+      const allExamsData = sessionStorage.getItem('exams');
+      if (allExamsData) {
+        const allExams = JSON.parse(allExamsData);
+        const examFromList = allExams.find((e: Exam) => e.id === params.id);
+        if (examFromList) {
+          setExamData(examFromList);
+          return;
+        }
+      }
+      
+      setExamData(null); // Exam not found
     }
 
     fetchExam();

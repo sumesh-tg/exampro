@@ -38,8 +38,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
 import type { Exam } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
-import { getExams } from '@/services/examService';
-
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -47,17 +45,18 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
 
-
-  async function fetchExams() {
-    if (user) {
-      const fetchedExams = await getExams();
-      setExams(fetchedExams);
+  function fetchExams() {
+    const storedExams = sessionStorage.getItem('exams');
+    if (storedExams) {
+      setExams(JSON.parse(storedExams));
+    } else {
+      setExams([]); // Start with an empty list if nothing is in storage
     }
   }
 
   useEffect(() => {
     fetchExams();
-  }, [user]);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -65,14 +64,12 @@ export default function Home() {
   };
 
   const handleConfigureExam = (exam: Exam) => {
-    // Store in session storage to handle navigation for newly created (unsaved) exams
     sessionStorage.setItem('tempExam', JSON.stringify(exam));
     router.push(`/exam/configure/${exam.id}`);
   };
 
   const handleExamCreated = () => {
-    // Refetch exams from firestore to show the new one
-    fetchExams();
+    fetchExams(); // Refetch from sessionStorage
   }
 
   return (

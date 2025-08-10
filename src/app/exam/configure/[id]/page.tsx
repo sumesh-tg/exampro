@@ -10,14 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import Link from 'next/link';
-import { getExam } from '@/services/examService';
 
 export default function ConfigureExamPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [exam, setExam] = useState<Exam | null>(null);
 
   useEffect(() => {
-    async function fetchExam() {
+    function fetchExam() {
       // Try to get from sessionStorage first
       const tempExamData = sessionStorage.getItem('tempExam');
       if (tempExamData) {
@@ -27,9 +26,16 @@ export default function ConfigureExamPage({ params }: { params: { id: string } }
           return;
         }
       }
-      // If not in session, fetch from DB
-      const dbExam = await getExam(params.id);
-      setExam(dbExam);
+       // If not in temp storage, check full list in sessionStorage
+      const allExamsData = sessionStorage.getItem('exams');
+      if (allExamsData) {
+        const allExams = JSON.parse(allExamsData);
+        const examFromList = allExams.find((e: Exam) => e.id === params.id);
+        if (examFromList) {
+          setExam(examFromList);
+          return;
+        }
+      }
     }
     fetchExam();
   }, [params.id]);
@@ -56,7 +62,7 @@ export default function ConfigureExamPage({ params }: { params: { id: string } }
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-2xl">Configure Exam: {exam.title}</CardTitle>
+          <CardTitle>Configure Exam: {exam.title}</CardTitle>
           <CardDescription>Adjust the settings for your exam session.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

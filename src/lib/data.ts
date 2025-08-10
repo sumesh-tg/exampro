@@ -12,8 +12,6 @@ export type Exam = {
   questions: Question[];
 };
 
-export const exams: Exam[] = [];
-
 export type ExamHistory = {
   examId: string;
   examTitle: string;
