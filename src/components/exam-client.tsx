@@ -176,15 +176,15 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
                 Question {currentQuestionIndex + 1} of {exam.questions.length}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
               <RadioGroup
                 value={selectedAnswers[currentQuestionIndex]}
                 onValueChange={handleAnswerSelect}
-                className="space-y-3"
+                className="space-y-2"
               >
                 {currentQuestion.options.map((option, index) => (
-                  <Label key={index} className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
+                  <Label key={index} className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
                     <RadioGroupItem value={option} id={`option-${index}`} />
                     <span>{option}</span>
                   </Label>
@@ -244,3 +244,5 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
     </div>
   );
 }
+
+    
