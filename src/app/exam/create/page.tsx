@@ -16,6 +16,7 @@ import { Loader2, PlusCircle, Trash2, Sparkles } from 'lucide-react';
 import { generateExamQuestions } from '@/ai/flows/generate-questions';
 import type { GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
