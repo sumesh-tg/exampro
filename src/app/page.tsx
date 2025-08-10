@@ -48,9 +48,17 @@ export default function Home() {
 
 
   useEffect(() => {
-    // The previous implementation using sessionStorage caused hydration errors.
     // A proper solution would involve a database or a robust global state management library.
-    // For now, new exams will not persist on the homepage after creation to avoid the error.
+    // For now, new exams will not persist on the homepage after creation to avoid hydration errors.
+    const newExamData = sessionStorage.getItem('newExam');
+    if (newExamData) {
+      const newExam = JSON.parse(newExamData);
+      // Ensure we don't add duplicates on re-renders
+      if (!exams.some(exam => exam.id === newExam.id)) {
+        setExams(prevExams => [...prevExams, newExam]);
+      }
+      // sessionStorage.removeItem('newExam'); // Clean up after use
+    }
   }, []);
 
   const handleSignOut = async () => {
@@ -58,9 +66,15 @@ export default function Home() {
     router.push('/auth/signin');
   };
 
+  const handleStartExam = (exam: Exam) => {
+    // For newly created exams, pass the data through router state
+    if (!initialExams.some(e => e.id === exam.id)) {
+      sessionStorage.setItem('tempExam', JSON.stringify(exam));
+    }
+    router.push(`/exam/${exam.id}`);
+  };
+
   const handleExamCreated = (newExam: Exam) => {
-    // In a real app, you'd save this to a DB and refetch.
-    // For now, we'll just add it to local state to see the effect.
     setExams(prevExams => [...prevExams, newExam]);
     setCreateExamOpen(false);
   }
@@ -144,7 +158,7 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="default" size="sm" onClick={() => router.push(`/exam/${exam.id}`)}>Start Exam</Button>
+                      <Button variant="default" size="sm" onClick={() => handleStartExam(exam)}>Start Exam</Button>
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -207,3 +221,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
