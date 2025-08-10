@@ -62,20 +62,17 @@ export default function Home() {
     router.push('/auth/signin');
   };
 
-  const handleStartExam = (exam: Exam) => {
-    sessionStorage.setItem('tempExam', JSON.stringify(exam));
-    router.push(`/exam/${exam.id}`);
-  };
-
   const handleConfigureExam = (exam: Exam) => {
+    // Store in session storage to handle navigation for newly created (unsaved) exams
     sessionStorage.setItem('tempExam', JSON.stringify(exam));
     router.push(`/exam/configure/${exam.id}`);
   };
 
   const handleExamCreated = () => {
+    // Close the dialog immediately for an optimistic update feel
+    setCreateExamOpen(false);
     // Refetch exams from firestore to show the new one
     fetchExams();
-    setCreateExamOpen(false);
   }
 
   return (
@@ -157,7 +154,7 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="default" size="sm" onClick={() => handleStartExam(exam)}>Start Exam</Button>
+                      <Button variant="default" size="sm" onClick={() => handleConfigureExam(exam)}>Start Exam</Button>
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">

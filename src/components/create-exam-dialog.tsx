@@ -99,9 +99,12 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
       questions: questions,
     };
     
+    // Close the dialog immediately for optimistic UI
+    onOpenChange(false);
+
     try {
         await addExam(newExamData);
-        onExamCreated();
+        onExamCreated(); // This will trigger a refetch on the parent page
         reset();
     } catch (error) {
         console.error("Failed to save exam:", error);
@@ -116,7 +119,6 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     setQuestions([]);
     setStep(1);
     setLoading(false);
-    onOpenChange(false); // Close dialog on reset
   }
 
   const handleOpenChange = (isOpen: boolean) => {
