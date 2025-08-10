@@ -6,7 +6,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 
 
 export const metadata: Metadata = {
-  title: 'QuizWhiz',
+  title: 'ExamPro',
   description: 'An online exam platform for multiple choice questions.',
 };
 

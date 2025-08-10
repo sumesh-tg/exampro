@@ -85,7 +85,7 @@ export default function Home() {
             className="flex items-center gap-2 text-lg font-semibold"
           >
             <GraduationCap className="h-6 w-6" />
-            <span className="text-xl font-bold">QuizWhiz</span>
+            <span className="text-xl font-bold">ExamPro</span>
           </Link>
         </nav>
         <div className="flex items-center gap-4">
