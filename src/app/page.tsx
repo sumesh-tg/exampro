@@ -68,7 +68,9 @@ export default function Home() {
                 <Button variant="secondary" size="icon" className="rounded-full">
                   <Avatar>
                     <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
-                    <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>
+                      {user.phoneNumber ? user.phoneNumber.slice(-2) : <UserIcon size={20} />}
+                    </AvatarFallback>
                   </Avatar>
                   <span className="sr-only">Toggle user menu</span>
                 </Button>

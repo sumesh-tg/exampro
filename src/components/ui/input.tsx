@@ -19,4 +19,17 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
 )
 Input.displayName = "Input"
 
+const PhoneInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, ...props }, ref) => {
+    return (
+      <Input
+        className={cn("pl-12", className)}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+PhoneInput.displayName = "PhoneInput"
+
 export { Input }
