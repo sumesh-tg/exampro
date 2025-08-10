@@ -101,7 +101,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
     try {
         await addExam(newExamData);
-        onExamCreated();
+        onExamCreated(); // This will trigger the refetch on the homepage
         onOpenChange(false);
     } catch (error) {
         console.error("Failed to save exam:", error);
