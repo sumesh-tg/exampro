@@ -139,7 +139,7 @@ export default function Home() {
                 <CardDescription>
                   Review your past performances.
                 </CardDescription>
-              </Header>
+              </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
