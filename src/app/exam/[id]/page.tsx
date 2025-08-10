@@ -27,9 +27,9 @@ export default function ExamPage({ params }: { params: { id: string } }) {
     setExamData(foundExam);
 
     // Clean up sessionStorage after use
-    return () => {
+    if (foundExam && !initialExams.some(e => e.id === foundExam!.id)) {
       sessionStorage.removeItem('tempExam');
-    };
+    }
   }, [params.id]);
 
 
@@ -57,5 +57,3 @@ export default function ExamPage({ params }: { params: { id: string } }) {
 
   return <ExamClient exam={exam} timeLimit={timeLimitInSeconds} />;
 }
-
-    

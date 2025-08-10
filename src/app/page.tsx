@@ -48,8 +48,8 @@ export default function Home() {
 
 
   useEffect(() => {
+    // This is a temporary solution to show new exams.
     // A proper solution would involve a database or a robust global state management library.
-    // For now, new exams will not persist on the homepage after creation to avoid hydration errors.
     const newExamData = sessionStorage.getItem('newExam');
     if (newExamData) {
       const newExam = JSON.parse(newExamData);
@@ -57,7 +57,6 @@ export default function Home() {
       if (!exams.some(exam => exam.id === newExam.id)) {
         setExams(prevExams => [...prevExams, newExam]);
       }
-      // sessionStorage.removeItem('newExam'); // Clean up after use
     }
   }, []);
 
@@ -67,7 +66,7 @@ export default function Home() {
   };
 
   const handleStartExam = (exam: Exam) => {
-    // For newly created exams, pass the data through router state
+    // For newly created exams, pass the data via sessionStorage as a temporary solution.
     if (!initialExams.some(e => e.id === exam.id)) {
       sessionStorage.setItem('tempExam', JSON.stringify(exam));
     }
@@ -76,6 +75,7 @@ export default function Home() {
 
   const handleExamCreated = (newExam: Exam) => {
     setExams(prevExams => [...prevExams, newExam]);
+    sessionStorage.setItem('newExam', JSON.stringify(newExam));
     setCreateExamOpen(false);
   }
 
@@ -221,5 +221,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
