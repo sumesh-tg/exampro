@@ -13,7 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, PlusCircle, Trash2, Sparkles } from 'lucide-react';
-import { generateExamQuestions, GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
+import { generateExamQuestions } from '@/ai/flows/generate-questions';
+import type { GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formSchema = z.object({

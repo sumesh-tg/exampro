@@ -12,13 +12,13 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const GenerateExamQuestionsInputSchema = z.object({
+const GenerateExamQuestionsInputSchema = z.object({
   topic: z.string().describe('The topic for which to generate exam questions.'),
   numQuestions: z.number().min(1).max(20).describe('The number of questions to generate.'),
 });
 export type GenerateExamQuestionsInput = z.infer<typeof GenerateExamQuestionsInputSchema>;
 
-export const GenerateExamQuestionsOutputSchema = z.object({
+const GenerateExamQuestionsOutputSchema = z.object({
   questions: z.array(
     z.object({
       questionText: z.string().describe('The text of the question.'),
