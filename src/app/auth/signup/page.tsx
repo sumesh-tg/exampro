@@ -157,7 +157,7 @@ export default function SignUpPage() {
                         <Input type="text" placeholder="123456" {...field} />
                       </FormControl>
                       <FormMessage />
-                    </Ite  m>
+                    </FormItem>
                   )}
                 />
                 <Button type="submit" disabled={loading} className="w-full">
