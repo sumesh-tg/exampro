@@ -60,17 +60,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
   const handleNext = () => setStep(s => s + 1);
 
-  const handleGenerateQuestions = async () => {
-    const topic = step2Form.getValues('topic');
-    const numQuestions = step2Form.getValues('numQuestions');
-    if (!topic || !numQuestions) {
-      step2Form.trigger(['topic', 'numQuestions']);
-      return;
-    }
+  const handleGenerateQuestions = async (values: z.infer<typeof step2Schema>) => {
     setLoading(true);
     setQuestions([]);
     try {
-      const result = await generateExamQuestions({ topic, numQuestions });
+      const result = await generateExamQuestions({ topic: values.topic, numQuestions: values.numQuestions });
       setQuestions(result.questions);
       setStep(3);
     } catch (error) {
