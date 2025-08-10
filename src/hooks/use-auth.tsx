@@ -7,6 +7,8 @@ import {
   useEffect,
   useContext,
   ReactNode,
+  Dispatch,
+  SetStateAction,
 } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -15,29 +17,44 @@ import { useRouter } from 'next/navigation';
 type AuthContextType = {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
+  setAdmin?: Dispatch<SetStateAction<boolean>>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  isAdmin: false,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      if (!user) {
+        // If firebase auth state changes and there's no user, log out admin too
+        sessionStorage.removeItem('isSuperAdmin');
+        setAdmin(false);
+      }
       setLoading(false);
     });
+    
+    // Check session storage on initial load
+    if (sessionStorage.getItem('isSuperAdmin') === 'true') {
+        setAdmin(true);
+    }
+
 
     return () => unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, setAdmin }}>
       {children}
     </AuthContext.Provider>
   );
@@ -46,14 +63,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => useContext(AuthContext);
 
 export const useRequireAuth = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isAdmin) {
       router.push('/auth/signin');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isAdmin]);
 
-  return { user, loading };
+  return { user, loading, isAdmin };
 };

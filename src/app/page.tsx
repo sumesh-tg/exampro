@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -41,28 +41,39 @@ import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin, setAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
 
   async function fetchExams() {
+    if (!user && !isAdmin) return;
     const fetchedExams = await getExams();
     setExams(fetchedExams as Exam[]);
   }
 
   useEffect(() => {
     fetchExams();
-  }, []);
+  }, [user, isAdmin]);
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    if (isAdmin && setAdmin) {
+        sessionStorage.removeItem('isSuperAdmin');
+        setAdmin(false);
+    } else {
+        await signOut(auth);
+    }
     router.push('/auth/signin');
   };
 
   const handleDeleteExam = async (id: string) => {
     await deleteExam(id);
     fetchExams();
+  }
+  
+  const handleExamCreated = () => {
+    fetchExams();
+    setCreateExamOpen(false);
   }
 
   return (
@@ -78,12 +89,17 @@ export default function Home() {
           </Link>
         </nav>
         <div className="flex items-center gap-4">
-          <CreateExamDialog 
-            open={isCreateExamOpen}
-            onOpenChange={setCreateExamOpen}
-            onExamCreated={fetchExams}
-          />
-          <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+          {(user || isAdmin) && (
+            <>
+              <CreateExamDialog 
+                open={isCreateExamOpen}
+                onOpenChange={setCreateExamOpen}
+                onExamCreated={handleExamCreated}
+              />
+              <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+            </>
+          )}
+
           {loading ? (
             <div/>
           ) : user ? (
@@ -93,7 +109,7 @@ export default function Home() {
                   <Avatar>
                     <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
                     <AvatarFallback>
-                      {user.phoneNumber ? user.phoneNumber.slice(-2) : <UserIcon size={20} />}
+                      {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : <UserIcon size={20} />}
                     </AvatarFallback>
                   </Avatar>
                   <span className="sr-only">Toggle user menu</span>
@@ -111,6 +127,27 @@ export default function Home() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : isAdmin ? (
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" className="rounded-full">
+                  <Avatar>
+                    <AvatarFallback>
+                      <ShieldCheck size={20} />
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="sr-only">Toggle admin menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button asChild>
               <Link href="/auth/signin">Sign In</Link>
@@ -119,90 +156,97 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1 p-4 md:p-8">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <Card className="h-full">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-6 w-6 text-primary" />
-                  <CardTitle>Available Exams</CardTitle>
-                </div>
-                <CardDescription>
-                  Choose an exam to test your knowledge.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4">
-                {exams.map((exam) => (
-                  <div
-                    key={exam.id}
-                    className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-semibold">{exam.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {exam.description}
-                      </p>
-                    </div>
+        {(user || isAdmin) ? (
+            <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <Card className="h-full">
+                  <CardHeader>
                     <div className="flex items-center gap-2">
-                      <Button variant="default" size="sm" asChild>
-                        <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                      </Button>
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)}>
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <BookOpen className="h-6 w-6 text-primary" />
+                      <CardTitle>Available Exams</CardTitle>
                     </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="row-span-2 flex flex-col gap-8">
-             <TopicSuggester />
-             <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <History className="h-6 w-6 text-primary" />
-                  <CardTitle>Exam History</CardTitle>
-                </div>
-                <CardDescription>
-                  Review your past performances.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Exam</TableHead>
-                      <TableHead className="text-right">Score</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {examHistory.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{item.examTitle}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
-                        </TableCell>
-                      </TableRow>
+                    <CardDescription>
+                      Choose an exam to test your knowledge.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4">
+                    {exams.map((exam) => (
+                      <div
+                        key={exam.id}
+                        className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
+                      >
+                        <div className="space-y-1">
+                          <p className="font-semibold">{exam.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {exam.description}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="default" size="sm" asChild>
+                            <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                          </Button>
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)}>
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="row-span-2 flex flex-col gap-8">
+                <TopicSuggester />
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <History className="h-6 w-6 text-primary" />
+                      <CardTitle>Exam History</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Review your past performances.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Exam</TableHead>
+                          <TableHead className="text-right">Score</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {examHistory.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{item.examTitle}</TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+        ) : (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">Welcome to ExamPro</h2>
+            <p className="text-muted-foreground">Please sign in to continue.</p>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
