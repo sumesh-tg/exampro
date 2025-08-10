@@ -48,11 +48,12 @@ export default function Home() {
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
 
 
+  async function fetchExams() {
+    const fetchedExams = await getExams();
+    setExams(fetchedExams);
+  }
+
   useEffect(() => {
-    async function fetchExams() {
-      const fetchedExams = await getExams();
-      setExams(fetchedExams);
-    }
     fetchExams();
   }, []);
 
@@ -71,8 +72,9 @@ export default function Home() {
     router.push(`/exam/configure/${exam.id}`);
   };
 
-  const handleExamCreated = (newExam: Exam) => {
-    setExams(prevExams => [...prevExams, newExam]);
+  const handleExamCreated = () => {
+    // Refetch exams from firestore to show the new one
+    fetchExams();
     setCreateExamOpen(false);
   }
 

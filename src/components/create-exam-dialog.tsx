@@ -41,7 +41,7 @@ type Question = GenerateExamQuestionsOutput['questions'][0];
 interface CreateExamDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onExamCreated: (newExam: Exam) => void;
+    onExamCreated: () => void;
 }
 
 export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateExamDialogProps) {
@@ -99,19 +99,12 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
       questions: questions,
     };
     
-    // Optimistic UI update
-    const tempId = `temp-${Date.now()}`;
-    const optimisticExam: Exam = { id: tempId, ...newExamData };
-    onExamCreated(optimisticExam);
-    reset();
-
     try {
         await addExam(newExamData);
-        // Here you might want to update the temporary exam with the real one from firestore
-        // but for now, we'll just log success or handle error.
+        onExamCreated();
+        reset();
     } catch (error) {
         console.error("Failed to save exam:", error);
-        // Optionally, you could add logic here to revert the optimistic update
     } finally {
         setLoading(false);
     }
