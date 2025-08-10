@@ -63,9 +63,9 @@ export default function Home() {
     router.push('/auth/signin');
   };
 
-  const handleConfigureExam = (exam: Exam) => {
+  const handleStartExam = (exam: Exam) => {
     sessionStorage.setItem('tempExam', JSON.stringify(exam));
-    router.push(`/exam/configure/${exam.id}`);
+    router.push(`/exam/${exam.id}`);
   };
 
   const handleExamCreated = () => {
@@ -151,7 +151,7 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="default" size="sm" onClick={() => handleConfigureExam(exam)}>Start Exam</Button>
+                      <Button variant="default" size="sm" onClick={() => handleStartExam(exam)}>Start Exam</Button>
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -162,9 +162,13 @@ export default function Home() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => handleConfigureExam(exam)}
+                              onClick={() => {
+                                const newExams = exams.filter(e => e.id !== exam.id);
+                                sessionStorage.setItem('exams', JSON.stringify(newExams));
+                                setExams(newExams);
+                              }}
                             >
-                              Configure
+                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
