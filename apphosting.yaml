@@ -5,3 +5,6 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+  # Time in seconds that a server will wait for a request to respond before returning a 504.
+  # The default is 60s.
+  timeoutSeconds: 300

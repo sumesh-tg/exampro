@@ -24,6 +24,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import type { Exam } from '@/lib/data';
+import { addExam } from '@/services/examService';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -93,23 +94,18 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   const handleSaveExam = async () => {
     setLoading(true);
     const examDetails = step1Form.getValues();
-    const newExamData: Exam = {
-      id: `exam_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    const newExamData: Omit<Exam, 'id'> = {
       ...examDetails,
       questions: questions,
     };
 
     try {
-        const existingExamsRaw = sessionStorage.getItem('exams');
-        const existingExams = existingExamsRaw ? JSON.parse(existingExamsRaw) : [];
-        const updatedExams = [...existingExams, newExamData];
-        sessionStorage.setItem('exams', JSON.stringify(updatedExams));
-        
+        await addExam(newExamData);
         onExamCreated();
         reset();
         onOpenChange(false);
     } catch (error) {
-        console.error("Failed to save exam to sessionStorage:", error);
+        console.error("Failed to save exam to Firestore:", error);
     } finally {
         setLoading(false);
     }

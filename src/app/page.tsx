@@ -38,6 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
 import type { Exam } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
+import { getExams, deleteExam } from '@/services/examService';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -45,13 +46,9 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
 
-  function fetchExams() {
-    const storedExams = sessionStorage.getItem('exams');
-    if (storedExams) {
-      setExams(JSON.parse(storedExams));
-    } else {
-      setExams([]); // Start with an empty list if nothing is in storage
-    }
+  async function fetchExams() {
+    const fetchedExams = await getExams();
+    setExams(fetchedExams as Exam[]);
   }
 
   useEffect(() => {
@@ -63,13 +60,9 @@ export default function Home() {
     router.push('/auth/signin');
   };
 
-  const handleStartExam = (exam: Exam) => {
-    sessionStorage.setItem('tempExam', JSON.stringify(exam));
-    router.push(`/exam/${exam.id}`);
-  };
-
-  const handleExamCreated = () => {
-    fetchExams(); // Refetch from sessionStorage
+  const handleDeleteExam = async (id: string) => {
+    await deleteExam(id);
+    fetchExams();
   }
 
   return (
@@ -88,7 +81,7 @@ export default function Home() {
           <CreateExamDialog 
             open={isCreateExamOpen}
             onOpenChange={setCreateExamOpen}
-            onExamCreated={handleExamCreated}
+            onExamCreated={fetchExams}
           />
           <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
           {loading ? (
@@ -151,7 +144,9 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="default" size="sm" onClick={() => handleStartExam(exam)}>Start Exam</Button>
+                      <Button variant="default" size="sm" asChild>
+                        <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                      </Button>
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -161,13 +156,7 @@ export default function Home() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                const newExams = exams.filter(e => e.id !== exam.id);
-                                sessionStorage.setItem('exams', JSON.stringify(newExams));
-                                setExams(newExams);
-                              }}
-                            >
+                            <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)}>
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
