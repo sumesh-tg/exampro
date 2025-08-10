@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -47,13 +47,14 @@ export default function Home() {
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
 
   async function fetchExams() {
-    if (!user && !isAdmin) return;
     const fetchedExams = await getExams();
     setExams(fetchedExams as Exam[]);
   }
 
   useEffect(() => {
-    fetchExams();
+    if (user || isAdmin) {
+      fetchExams();
+    }
   }, [user, isAdmin]);
 
   const handleSignOut = async () => {
@@ -81,11 +82,11 @@ export default function Home() {
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
         <nav className="flex-1">
           <Link
-            href="#"
+            href="/"
             className="flex items-center gap-2 text-lg font-semibold"
           >
             <GraduationCap className="h-6 w-6" />
-            <span className="text-xl font-bold">ExamPro</span>
+            <span className="text-xl font-bold">QuizWhiz</span>
           </Link>
         </nav>
         <div className="flex items-center gap-4">
@@ -142,6 +143,13 @@ export default function Home() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/users">
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>User Management</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -170,7 +178,8 @@ export default function Home() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4">
-                    {exams.map((exam) => (
+                    {exams.length > 0 ? (
+                      exams.map((exam) => (
                       <div
                         key={exam.id}
                         className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
@@ -185,23 +194,28 @@ export default function Home() {
                           <Button variant="default" size="sm" asChild>
                             <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                           </Button>
-                          <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)}>
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                          {isAdmin && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)}>
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                          )}
                         </div>
                       </div>
-                    ))}
+                    ))
+                    ) : (
+                      <div className="text-center text-muted-foreground">No exams available. Create one to get started.</div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -243,7 +257,7 @@ export default function Home() {
             </div>
         ) : (
           <div className="text-center">
-            <h2 className="text-2xl font-bold">Welcome to ExamPro</h2>
+            <h2 className="text-2xl font-bold">Welcome to QuizWhiz</h2>
             <p className="text-muted-foreground">Please sign in to continue.</p>
           </div>
         )}
