@@ -4,13 +4,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  "projectId": "quizwhiz-gs6fd",
-  "appId": "1:1074624854644:web:16246065a775fc324a6f21",
-  "storageBucket": "quizwhiz-gs6fd.firebasestorage.app",
-  "apiKey": "AIzaSyCt_eR6sE-IG2T-7br467sGTT7Cnh-zRik",
-  "authDomain": "quizwhiz-gs6fd.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "1074624854644"
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 };
 
 // Initialize Firebase
