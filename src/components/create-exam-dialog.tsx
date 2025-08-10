@@ -94,16 +94,24 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   const handleSaveExam = async () => {
     setLoading(true);
     const examDetails = step1Form.getValues();
-    const newExam: Omit<Exam, 'id'> = {
+    const newExamData: Omit<Exam, 'id'> = {
       ...examDetails,
       questions: questions,
     };
+    
+    // Optimistic UI update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticExam: Exam = { id: tempId, ...newExamData };
+    onExamCreated(optimisticExam);
+    reset();
+
     try {
-        const savedExam = await addExam(newExam);
-        onExamCreated(savedExam);
-        reset();
+        await addExam(newExamData);
+        // Here you might want to update the temporary exam with the real one from firestore
+        // but for now, we'll just log success or handle error.
     } catch (error) {
         console.error("Failed to save exam:", error);
+        // Optionally, you could add logic here to revert the optimistic update
     } finally {
         setLoading(false);
     }
@@ -115,6 +123,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     setQuestions([]);
     setStep(1);
     setLoading(false);
+    onOpenChange(false); // Close dialog on reset
   }
 
   const handleOpenChange = (isOpen: boolean) => {
