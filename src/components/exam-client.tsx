@@ -21,24 +21,40 @@ function formatTime(seconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function ExamClient({ exam }: { exam: Exam }) {
+export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
-  const [time, setTime] = useState(0);
+  const [time, setTime] = useState(timeLimit ?? 0);
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const resultCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (!isSubmitted) {
-        setTime((prevTime) => prevTime + 1);
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isSubmitted]);
+    if (timeLimit) {
+      const timer = setInterval(() => {
+        if (!isSubmitted) {
+          setTime((prevTime) => {
+            if (prevTime <= 1) {
+              clearInterval(timer);
+              handleSubmit();
+              return 0;
+            }
+            return prevTime - 1;
+          });
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    } else {
+      const timer = setInterval(() => {
+        if (!isSubmitted) {
+          setTime((prevTime) => prevTime + 1);
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isSubmitted, timeLimit]);
   
   useEffect(() => {
     setVisited((prev) => new Set(prev).add(currentQuestionIndex));
@@ -74,6 +90,7 @@ export function ExamClient({ exam }: { exam: Exam }) {
   };
 
   const handleSubmit = () => {
+    if (isSubmitted) return;
     let finalScore = 0;
     exam.questions.forEach((q, index) => {
       if (selectedAnswers[index] === q.correctAnswer) {
@@ -121,7 +138,7 @@ export function ExamClient({ exam }: { exam: Exam }) {
                 </div>
                 <div className="flex items-center gap-2">
                     <Timer />
-                    <span>{formatTime(time)}</span>
+                    <span>{formatTime(timeLimit ? timeLimit - time : time)}</span>
                 </div>
             </div>
             <div className="flex flex-wrap justify-center gap-4">
@@ -204,15 +221,22 @@ export function ExamClient({ exam }: { exam: Exam }) {
                       {
                         'bg-primary text-primary-foreground hover:bg-primary/90': currentQuestionIndex === index,
                         'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-yellow-400 hover:bg-yellow-500 text-yellow-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-blue-400 hover:bg-blue-500 text-blue-900': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-green-400 hover:bg-green-500 text-green-900': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-green-400 hover:bg-green-500 text-green-900': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-red-400 hover:bg-red-500 text-red-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-gray-300 hover:bg-gray-400 text-gray-800': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
                       }
                     )}
                 >
                     {index + 1}
                 </Button>
                 ))}
+            </div>
+             <div className="mt-4 space-y-2 text-sm">
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Current</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Answered</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-red-400"></span> Unanswered</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-orange-400"></span> Marked for Review</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-gray-300"></span> Not Visited</div>
             </div>
             </CardContent>
         </Card>

@@ -55,7 +55,7 @@ export default function Home() {
             className="flex items-center gap-2 text-lg font-semibold"
           >
             <GraduationCap className="h-6 w-6" />
-            <span className="text-xl font-bold">ExamPro</span>
+            <span className="text-xl font-bold">QuizWhiz</span>
           </Link>
         </nav>
         <div className="flex items-center gap-4">
@@ -120,7 +120,7 @@ export default function Home() {
                       </p>
                     </div>
                     <Button asChild>
-                      <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                      <Link href={`/exam/configure/${exam.id}`}>Configure</Link>
                     </Button>
                   </div>
                 ))}
@@ -139,7 +139,7 @@ export default function Home() {
                 <CardDescription>
                   Review your past performances.
                 </CardDescription>
-              </CardHeader>
+              </Header>
               <CardContent>
                 <Table>
                   <TableHeader>
