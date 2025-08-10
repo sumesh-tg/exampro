@@ -45,17 +45,9 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>(initialExams);
 
   useEffect(() => {
-    const newExamData = sessionStorage.getItem('newExam');
-    if (newExamData) {
-      const newExam = JSON.parse(newExamData);
-      setExams(prevExams => {
-        if (prevExams.find(e => e.id === newExam.id)) {
-          return prevExams;
-        }
-        return [...prevExams, newExam]
-      });
-      sessionStorage.removeItem('newExam');
-    }
+    // The previous implementation using sessionStorage caused hydration errors.
+    // A proper solution would involve a database or a robust global state management library.
+    // For now, new exams will not persist on the homepage after creation to avoid the error.
   }, []);
 
   const handleSignOut = async () => {
