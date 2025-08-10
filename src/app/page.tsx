@@ -120,7 +120,7 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => router.push(`/exam/${exam.id}`)}>Start Exam</Button>
+                      <Button variant="default" size="sm" onClick={() => router.push(`/exam/${exam.id}`)}>Start Exam</Button>
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
