@@ -24,6 +24,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import type { Exam } from '@/lib/data';
+import { addExam } from '@/services/examService';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -47,13 +48,6 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [uniqueId, setUniqueId] = useState('');
-
-  useEffect(() => {
-    if (open) {
-       setUniqueId(Date.now().toString() + Math.random().toString(36).substring(2, 9));
-    }
-  }, [open]);
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
@@ -97,15 +91,22 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     setQuestions(questions.filter((_, i) => i !== index));
   };
   
-  const handleSaveExam = () => {
+  const handleSaveExam = async () => {
+    setLoading(true);
     const examDetails = step1Form.getValues();
-    const newExam: Exam = {
-      id: uniqueId,
+    const newExam: Omit<Exam, 'id'> = {
       ...examDetails,
       questions: questions,
     };
-    onExamCreated(newExam);
-    reset();
+    try {
+        const savedExam = await addExam(newExam);
+        onExamCreated(savedExam);
+        reset();
+    } catch (error) {
+        console.error("Failed to save exam:", error);
+    } finally {
+        setLoading(false);
+    }
   };
 
   const reset = () => {
@@ -252,7 +253,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                 </Accordion>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-                    <Button onClick={handleSaveExam}>Save Exam</Button>
+                    <Button onClick={handleSaveExam} disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Exam
+                    </Button>
                 </DialogFooter>
             </div>
         )}

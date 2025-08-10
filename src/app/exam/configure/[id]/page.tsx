@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, notFound } from 'next/navigation';
-import { exams as initialExams } from '@/lib/data';
 import type { Exam } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,23 +10,28 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import Link from 'next/link';
+import { getExam } from '@/services/examService';
 
 export default function ConfigureExamPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [exam, setExam] = useState<Exam | null>(null);
 
   useEffect(() => {
-    let foundExam = initialExams.find((e) => e.id === params.id);
-    if (!foundExam) {
+    async function fetchExam() {
+      // Try to get from sessionStorage first
       const tempExamData = sessionStorage.getItem('tempExam');
       if (tempExamData) {
         const tempExam = JSON.parse(tempExamData);
         if (tempExam.id === params.id) {
-          foundExam = tempExam;
+          setExam(tempExam);
+          return;
         }
       }
+      // If not in session, fetch from DB
+      const dbExam = await getExam(params.id);
+      setExam(dbExam);
     }
-    setExam(foundExam || null);
+    fetchExam();
   }, [params.id]);
   
   const [numQuestions, setNumQuestions] = useState(0);
@@ -41,8 +45,6 @@ export default function ConfigureExamPage({ params }: { params: { id: string } }
   }, [exam]);
 
   if (!exam) {
-    // You can return a notFound() or a loading state.
-    // A loading state is better if the exam is expected to be found.
     return <div className="flex min-h-screen items-center justify-center">Loading configuration...</div>;
   }
 

@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { exams as initialExams, examHistory } from '@/lib/data';
+import { examHistory } from '@/lib/data';
 import { TopicSuggester } from '@/components/topic-suggester';
 import {
   Table,
@@ -38,29 +38,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
 import type { Exam } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
+import { getExams } from '@/services/examService';
 
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [exams, setExams] = useState<Exam[]>(initialExams);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
 
 
   useEffect(() => {
-    // This is a temporary solution to show new exams.
-    // A proper solution would involve a database or a robust global state management library.
-    const newExamData = sessionStorage.getItem('newExam');
-    if (newExamData) {
-      const newExam = JSON.parse(newExamData);
-      // Ensure we don't add duplicates on re-renders
-      if (!exams.some(exam => exam.id === newExam.id)) {
-        setExams(prevExams => [...prevExams, newExam]);
-      }
-      // Clean up after adding
-      sessionStorage.removeItem('newExam');
+    async function fetchExams() {
+      const fetchedExams = await getExams();
+      setExams(fetchedExams);
     }
-  }, [exams]);
+    fetchExams();
+  }, []);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -68,24 +62,17 @@ export default function Home() {
   };
 
   const handleStartExam = (exam: Exam) => {
-    // For newly created exams, we must store them in session storage
-    // so the exam page can access them.
-    if (!initialExams.some(e => e.id === exam.id)) {
-      sessionStorage.setItem('tempExam', JSON.stringify(exam));
-    }
+    sessionStorage.setItem('tempExam', JSON.stringify(exam));
     router.push(`/exam/${exam.id}`);
   };
 
   const handleConfigureExam = (exam: Exam) => {
-    if (!initialExams.some(e => e.id === exam.id)) {
-        sessionStorage.setItem('tempExam', JSON.stringify(exam));
-    }
+    sessionStorage.setItem('tempExam', JSON.stringify(exam));
     router.push(`/exam/configure/${exam.id}`);
   };
 
   const handleExamCreated = (newExam: Exam) => {
     setExams(prevExams => [...prevExams, newExam]);
-    sessionStorage.setItem('newExam', JSON.stringify(newExam));
     setCreateExamOpen(false);
   }
 
