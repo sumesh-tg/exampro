@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, PlusCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { exams, examHistory } from '@/lib/data';
+import { exams as initialExams, examHistory } from '@/lib/data';
 import { TopicSuggester } from '@/components/topic-suggester';
 import {
   Table,
@@ -35,11 +35,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEffect, useState } from 'react';
+import type { Exam } from '@/lib/data';
 
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [exams, setExams] = useState<Exam[]>(initialExams);
+
+  useEffect(() => {
+    const newExamData = sessionStorage.getItem('newExam');
+    if (newExamData) {
+      const newExam = JSON.parse(newExamData);
+      setExams(prevExams => {
+        if (prevExams.find(e => e.id === newExam.id)) {
+          return prevExams;
+        }
+        return [...prevExams, newExam]
+      });
+      sessionStorage.removeItem('newExam');
+    }
+  }, []);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -59,6 +76,9 @@ export default function Home() {
           </Link>
         </nav>
         <div className="flex items-center gap-4">
+          <Button variant="outline" asChild>
+            <Link href="/exam/create">Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Link>
+          </Button>
           <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
           {loading ? (
             <div/>
