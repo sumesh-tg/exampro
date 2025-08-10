@@ -69,8 +69,6 @@ export default function Home() {
   };
 
   const handleExamCreated = () => {
-    // Close the dialog immediately for an optimistic update feel
-    setCreateExamOpen(false);
     // Refetch exams from firestore to show the new one
     fetchExams();
   }

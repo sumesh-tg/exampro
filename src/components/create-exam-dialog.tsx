@@ -98,13 +98,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
       ...examDetails,
       questions: questions,
     };
-    
-    // Close the dialog immediately for optimistic UI
-    onOpenChange(false);
 
     try {
         await addExam(newExamData);
-        onExamCreated(); // This will trigger a refetch on the parent page
+        onExamCreated(); 
+        onOpenChange(false);
         reset();
     } catch (error) {
         console.error("Failed to save exam:", error);
