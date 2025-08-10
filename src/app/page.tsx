@@ -57,6 +57,8 @@ export default function Home() {
       if (!exams.some(exam => exam.id === newExam.id)) {
         setExams(prevExams => [...prevExams, newExam]);
       }
+      // Clean up after adding
+      sessionStorage.removeItem('newExam');
     }
   }, [exams]);
 
@@ -66,21 +68,19 @@ export default function Home() {
   };
 
   const handleStartExam = (exam: Exam) => {
-    if (initialExams.some(e => e.id === exam.id)) {
-      router.push(`/exam/${exam.id}`);
-    } else {
+    // For newly created exams, we must store them in session storage
+    // so the exam page can access them.
+    if (!initialExams.some(e => e.id === exam.id)) {
       sessionStorage.setItem('tempExam', JSON.stringify(exam));
-      router.push(`/exam/${exam.id}`);
     }
+    router.push(`/exam/${exam.id}`);
   };
 
   const handleConfigureExam = (exam: Exam) => {
-    if (initialExams.some(e => e.id === exam.id)) {
-        router.push(`/exam/configure/${exam.id}`);
-    } else {
-        const examData = encodeURIComponent(JSON.stringify(exam));
-        router.push(`/exam/configure/custom?examData=${examData}`);
+    if (!initialExams.some(e => e.id === exam.id)) {
+        sessionStorage.setItem('tempExam', JSON.stringify(exam));
     }
+    router.push(`/exam/configure/${exam.id}`);
   };
 
   const handleExamCreated = (newExam: Exam) => {

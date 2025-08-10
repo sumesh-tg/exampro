@@ -12,24 +12,27 @@ export default function ExamPage({ params }: { params: { id: string } }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Try to find the exam in the statically defined list first.
     let foundExam = initialExams.find((q) => q.id === params.id);
 
+    // If not found, check sessionStorage for a temporary exam (e.g., newly created).
     if (!foundExam) {
       const tempExamData = sessionStorage.getItem('tempExam');
       if (tempExamData) {
-        const tempExam = JSON.parse(tempExamData);
-        if (tempExam.id === params.id) {
-          foundExam = tempExam;
+        try {
+          const tempExam = JSON.parse(tempExamData);
+          // Make sure the ID from storage matches the URL parameter.
+          if (tempExam.id === params.id) {
+            foundExam = tempExam;
+          }
+        } catch (error) {
+          console.error("Failed to parse temporary exam data from sessionStorage", error);
         }
       }
     }
     
     setExamData(foundExam);
 
-    // Clean up sessionStorage after use
-    if (foundExam && !initialExams.some(e => e.id === foundExam!.id)) {
-      sessionStorage.removeItem('tempExam');
-    }
   }, [params.id]);
 
 
