@@ -49,13 +49,15 @@ export default function Home() {
 
 
   async function fetchExams() {
-    const fetchedExams = await getExams();
-    setExams(fetchedExams);
+    if (user) {
+      const fetchedExams = await getExams();
+      setExams(fetchedExams);
+    }
   }
 
   useEffect(() => {
     fetchExams();
-  }, []);
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut(auth);
