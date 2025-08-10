@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -47,6 +47,13 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [uniqueId, setUniqueId] = useState('');
+
+  useEffect(() => {
+    if (open) {
+       setUniqueId(Date.now().toString() + Math.random().toString(36).substring(2, 9));
+    }
+  }, [open]);
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
@@ -93,7 +100,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   const handleSaveExam = () => {
     const examDetails = step1Form.getValues();
     const newExam: Exam = {
-      id: Date.now().toString(), // Temporary unique ID
+      id: uniqueId,
       ...examDetails,
       questions: questions,
     };
