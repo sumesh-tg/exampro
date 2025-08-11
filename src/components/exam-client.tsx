@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { Exam } from '@/lib/data';
+import type { Exam, ExamHistory } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -13,6 +13,8 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useAuth } from '@/hooks/use-auth';
+import { addExamHistory } from '@/services/examHistoryService';
 
 
 function formatTime(seconds: number) {
@@ -22,6 +24,7 @@ function formatTime(seconds: number) {
 }
 
 export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number }) {
+  const { user } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -89,7 +92,7 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmitted) return;
     let finalScore = 0;
     exam.questions.forEach((q, index) => {
@@ -99,6 +102,18 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
     });
     setScore(finalScore);
     setIsSubmitted(true);
+
+    if (user) {
+      const historyEntry: Omit<ExamHistory, 'id'> = {
+        userId: user.uid,
+        examId: exam.id,
+        examTitle: exam.title,
+        score: finalScore,
+        totalQuestions: exam.questions.length,
+        date: new Date().toISOString(),
+      };
+      await addExamHistory(historyEntry);
+    }
   };
 
   const handleDownloadPdf = async () => {
@@ -160,11 +175,11 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
   const progress = ((currentQuestionIndex + 1) / exam.questions.length) * 100;
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-8">
+    <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-6">
       <div className="flex flex-col gap-6">
           <Card className="w-full shadow-lg">
             <CardHeader>
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-2">
                 <CardTitle>{exam.title}</CardTitle>
                 <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
                     <Timer className="h-4 w-4" />
@@ -172,11 +187,11 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
                 </div>
               </div>
               <Progress value={progress} className="w-full" />
-              <CardDescription className="pt-4 text-center text-base">
+              <CardDescription className="pt-2 text-center text-base">
                 Question {currentQuestionIndex + 1} of {exam.questions.length}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
               <RadioGroup
                 value={selectedAnswers[currentQuestionIndex]}
@@ -184,13 +199,13 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
                 className="space-y-2"
               >
                 {currentQuestion.options.map((option, index) => (
-                  <Label key={index} className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
+                  <Label key={index} className="flex items-center gap-3 rounded-lg border p-2 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
                     <RadioGroupItem value={option} id={`option-${index}`} />
                     <span>{option}</span>
                   </Label>
                 ))}
               </RadioGroup>
-              <div className="flex justify-end pt-4 gap-2">
+              <div className="flex justify-end pt-2 gap-2">
                 <Button onClick={handleMarkForReview} variant={markedForReview.has(currentQuestionIndex) ? 'default' : 'outline'} size="lg">
                   {markedForReview.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
                 </Button>
@@ -244,5 +259,3 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
     </div>
   );
 }
-
-    

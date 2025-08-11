@@ -6,26 +6,18 @@ export type Question = {
 };
 
 export type Exam = {
-  id: string;
+  id:string;
   title: string;
   description: string;
   questions: Question[];
 };
 
 export type ExamHistory = {
+  id: string;
+  userId: string;
   examId: string;
   examTitle: string;
   score: number;
   totalQuestions: number;
   date: string;
 };
-
-export const examHistory: ExamHistory[] = [
-  {
-    examId: '1',
-    examTitle: 'General Knowledge',
-    score: 8,
-    totalQuestions: 10,
-    date: '2023-10-27',
-  },
-];

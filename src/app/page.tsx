@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { examHistory } from '@/lib/data';
 import { TopicSuggester } from '@/components/topic-suggester';
 import {
   Table,
@@ -36,14 +35,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import type { Exam } from '@/lib/data';
+import type { Exam, ExamHistory } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
+import { getExamHistory } from '@/services/examHistoryService';
 
 export default function Home() {
   const { user, loading, isAdmin, setAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
+  const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
 
   async function fetchExams() {
@@ -51,8 +52,19 @@ export default function Home() {
     setExams(fetchedExams as Exam[]);
   }
 
+  async function fetchExamHistory() {
+    if (user) {
+      const history = await getExamHistory(user.uid);
+      setExamHistory(history as ExamHistory[]);
+    }
+  }
+
   useEffect(() => {
-    if (user || isAdmin) {
+    if (user) {
+      fetchExams();
+      fetchExamHistory();
+    }
+    if (isAdmin) {
       fetchExams();
     }
   }, [user, isAdmin]);
@@ -241,14 +253,20 @@ export default function Home() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {examHistory.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{item.examTitle}</TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
-                            </TableCell>
+                        {examHistory.length > 0 ? (
+                          examHistory.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">{item.examTitle}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={2} className="text-center text-muted-foreground">No exam history yet.</TableCell>
                           </TableRow>
-                        ))}
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
