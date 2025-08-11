@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,9 +22,15 @@ const adminLoginSchema = z.object({
 
 export default function AdminSignInPage() {
   const [loading, setLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { setAdmin } = useAuth();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   const form = useForm<z.infer<typeof adminLoginSchema>>({
     resolver: zodResolver(adminLoginSchema),
@@ -71,6 +77,7 @@ export default function AdminSignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+         {isClient && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -105,6 +112,7 @@ export default function AdminSignInPage() {
               </Button>
             </form>
           </Form>
+          )}
           <div className="mt-4 text-center text-sm">
             <Link href="/auth/signin" className="underline">
               Back to user sign in

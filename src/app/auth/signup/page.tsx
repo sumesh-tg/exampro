@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,8 +49,13 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -144,7 +149,7 @@ export default function SignUpPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 'phone' ? (
+          {isClient && step === 'phone' ? (
             <div className="space-y-4">
                 <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
                     <GoogleIcon className="mr-2 h-5 w-5" /> Sign up with Google
@@ -185,7 +190,7 @@ export default function SignUpPage() {
                 </form>
               </Form>
             </div>
-          ) : (
+          ) : isClient && step === 'otp' ? (
             <Form {...otpForm}>
               <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
                 <FormField
@@ -207,7 +212,7 @@ export default function SignUpPage() {
                 </Button>
               </form>
             </Form>
-          )}
+          ) : null}
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
             <Link href="/auth/signin" className="underline">
