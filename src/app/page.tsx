@@ -62,13 +62,18 @@ export default function Home() {
   useEffect(() => {
     if (loading) return;
 
+    if (!user && !isAdmin) {
+      router.push('/auth/signin');
+      return;
+    }
+
     if (isAdmin) {
       fetchExams();
     } else if (user) {
       fetchExams();
       fetchExamHistory();
     }
-  }, [user, isAdmin, loading]);
+  }, [user, isAdmin, loading, router]);
 
   const handleSignOut = async () => {
     if (isAdmin && setAdmin) {
@@ -88,6 +93,10 @@ export default function Home() {
   const handleExamCreated = () => {
     fetchExams();
     setCreateExamOpen(false);
+  }
+
+  if (loading || (!user && !isAdmin)) {
+    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
   return (
