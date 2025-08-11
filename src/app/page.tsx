@@ -60,13 +60,15 @@ export default function Home() {
   }
 
   useEffect(() => {
-    if (user) {
+    if (loading) return;
+
+    if (isAdmin) {
+      fetchExams();
+    } else if (user) {
       fetchExams();
       fetchExamHistory();
-    } else if (isAdmin) {
-      fetchExams();
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, loading]);
 
   const handleSignOut = async () => {
     if (isAdmin && setAdmin) {

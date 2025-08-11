@@ -18,8 +18,13 @@ export function ConfigureExamComponent({ exam }: { exam: Exam }) {
   const [timeLimit, setTimeLimit] = useState(Math.ceil(exam.questions.length * 0.5)); // Default 30s per question
 
   const handleStartExam = () => {
-    sessionStorage.setItem('tempExam', JSON.stringify(exam));
-    router.push(`/exam/${exam.id}?questions=${numQuestions}&time=${timeLimit}`);
+    // Give the exam a temporary ID for history tracking if it doesn't have one
+    const examToStart = {
+        ...exam,
+        id: exam.id || `custom-${Date.now()}`
+    };
+    sessionStorage.setItem('tempExam', JSON.stringify(examToStart));
+    router.push(`/exam/custom?questions=${numQuestions}&time=${timeLimit}`);
   };
 
   return (
