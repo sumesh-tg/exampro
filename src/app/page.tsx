@@ -63,8 +63,7 @@ export default function Home() {
     if (user) {
       fetchExams();
       fetchExamHistory();
-    }
-    if (isAdmin) {
+    } else if (isAdmin) {
       fetchExams();
     }
   }, [user, isAdmin]);
@@ -234,43 +233,45 @@ export default function Home() {
 
               <div className="row-span-2 flex flex-col gap-8">
                 <TopicSuggester />
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <History className="h-6 w-6 text-primary" />
-                      <CardTitle>Exam History</CardTitle>
-                    </div>
-                    <CardDescription>
-                      Review your past performances.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Exam</TableHead>
-                          <TableHead className="text-right">Score</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {examHistory.length > 0 ? (
-                          examHistory.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.examTitle}</TableCell>
-                              <TableCell className="text-right">
-                                <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
-                              </TableCell>
+                { user && (
+                    <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                        <History className="h-6 w-6 text-primary" />
+                        <CardTitle>Exam History</CardTitle>
+                        </div>
+                        <CardDescription>
+                        Review your past performances.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead>Exam</TableHead>
+                            <TableHead className="text-right">Score</TableHead>
                             </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={2} className="text-center text-muted-foreground">No exam history yet.</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                            {examHistory.length > 0 ? (
+                            examHistory.map((item) => (
+                                <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.examTitle}</TableCell>
+                                <TableCell className="text-right">
+                                    <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
+                                </TableCell>
+                                </TableRow>
+                            ))
+                            ) : (
+                            <TableRow>
+                                <TableCell colSpan={2} className="text-center text-muted-foreground">No exam history yet.</TableCell>
+                            </TableRow>
+                            )}
+                        </TableBody>
+                        </Table>
+                    </CardContent>
+                    </Card>
+                )}
               </div>
             </div>
         ) : (
