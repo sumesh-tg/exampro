@@ -16,6 +16,15 @@ import html2canvas from 'html2canvas';
 import { useAuth } from '@/hooks/use-auth';
 import { addExamHistory } from '@/services/examHistoryService';
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -25,6 +34,7 @@ function formatTime(seconds: number) {
 
 export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number }) {
   const { user } = useAuth();
+  const [shuffledExam, setShuffledExam] = useState<Exam | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -33,6 +43,15 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const resultCardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Randomize questions and options once on mount
+    const randomizedQuestions = shuffleArray(exam.questions).map(question => ({
+      ...question,
+      options: shuffleArray(question.options),
+    }));
+    setShuffledExam({ ...exam, questions: randomizedQuestions });
+  }, [exam]);
 
   useEffect(() => {
     if (timeLimit) {
@@ -75,7 +94,7 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < exam.questions.length - 1) {
+    if (shuffledExam && currentQuestionIndex < shuffledExam.questions.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
     }
   };
@@ -93,9 +112,9 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
   };
 
   const handleSubmit = async () => {
-    if (isSubmitted) return;
+    if (isSubmitted || !shuffledExam) return;
     let finalScore = 0;
-    exam.questions.forEach((q, index) => {
+    shuffledExam.questions.forEach((q, index) => {
       if (selectedAnswers[index] === q.correctAnswer) {
         finalScore++;
       }
@@ -106,10 +125,10 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
     if (user) {
       const historyEntry: Omit<ExamHistory, 'id'> = {
         userId: user.uid,
-        examId: exam.id,
-        examTitle: exam.title,
+        examId: shuffledExam.id,
+        examTitle: shuffledExam.title,
         score: finalScore,
-        totalQuestions: exam.questions.length,
+        totalQuestions: shuffledExam.questions.length,
         date: new Date().toISOString(),
       };
       await addExamHistory(historyEntry);
@@ -128,6 +147,10 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
       pdf.save(`exam-result-${exam.id}.pdf`);
     }
   };
+  
+  if (!shuffledExam) {
+     return <div className="flex min-h-screen items-center justify-center">Shuffling questions...</div>;
+  }
 
   if (isSubmitted) {
     return (
@@ -135,12 +158,12 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
         <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg">
           <CardHeader>
             <CardTitle className="text-3xl font-bold">Exam Completed!</CardTitle>
-            <CardDescription>Here's your result for "{exam.title}".</CardDescription>
+            <CardDescription>Here's your result for "{shuffledExam.title}".</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-full bg-primary/10 p-8 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4 border-primary">
               <p className="text-muted-foreground">You scored</p>
-              <p className="text-5xl font-bold text-primary">{score} / {exam.questions.length}</p>
+              <p className="text-5xl font-bold text-primary">{score} / {shuffledExam.questions.length}</p>
             </div>
             <div className="flex flex-wrap justify-around text-lg gap-4">
                 <div className="flex items-center gap-2">
@@ -149,7 +172,7 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
                 </div>
                 <div className="flex items-center gap-2">
                     <XCircle className="text-red-500" />
-                    <span>{exam.questions.length - score} Incorrect</span>
+                    <span>{shuffledExam.questions.length - score} Incorrect</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <Timer />
@@ -171,8 +194,8 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
     );
   }
 
-  const currentQuestion = exam.questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / exam.questions.length) * 100;
+  const currentQuestion = shuffledExam.questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / shuffledExam.questions.length) * 100;
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-6">
@@ -180,7 +203,7 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
           <Card className="w-full shadow-lg">
             <CardHeader>
               <div className="flex justify-between items-center mb-2">
-                <CardTitle>{exam.title}</CardTitle>
+                <CardTitle>{shuffledExam.title}</CardTitle>
                 <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
                     <Timer className="h-4 w-4" />
                     <span>{formatTime(time)}</span>
@@ -188,7 +211,7 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
               </div>
               <Progress value={progress} className="w-full" />
               <CardDescription className="pt-2 text-center text-base">
-                Question {currentQuestionIndex + 1} of {exam.questions.length}
+                Question {currentQuestionIndex + 1} of {shuffledExam.questions.length}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -209,7 +232,7 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
                 <Button onClick={handleMarkForReview} variant={markedForReview.has(currentQuestionIndex) ? 'default' : 'outline'} size="lg">
                   {markedForReview.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
                 </Button>
-                {currentQuestionIndex < exam.questions.length - 1 ? (
+                {currentQuestionIndex < shuffledExam.questions.length - 1 ? (
                   <Button onClick={handleNext} size="lg">Next</Button>
                 ) : (
                   <Button onClick={handleSubmit} size="lg">Submit</Button>
@@ -225,7 +248,7 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
             </CardHeader>
             <CardContent>
             <div className="grid grid-cols-4 lg:grid-cols-5 gap-2">
-                {exam.questions.map((_, index) => (
+                {shuffledExam.questions.map((_, index) => (
                 <Button
                     key={index}
                     onClick={() => goToQuestion(index)}
