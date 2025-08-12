@@ -33,7 +33,7 @@ const step1Schema = z.object({
 
 const step2Schema = z.object({
   topic: z.string().min(2, { message: 'Topic must be at least 2 characters.' }),
-  numQuestions: z.coerce.number().min(3).max(20),
+  numQuestions: z.coerce.number().min(1).max(20),
 });
 
 type Question = GenerateExamQuestionsOutput['questions'][0];
@@ -190,7 +190,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                                 <FormField control={step2Form.control} name="numQuestions" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Number of Questions</FormLabel>
-                                        <FormControl><Input type="number" min="3" max="20" {...field} /></FormControl>
+                                        <FormControl><Input type="number" min="1" max="20" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
