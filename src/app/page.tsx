@@ -130,7 +130,7 @@ export default function Home() {
                 onOpenChange={setCreateExamOpen}
                 onExamCreated={handleExamCreated}
               />
-              <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+              <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
             </>
           )}
 
