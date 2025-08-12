@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { addExamHistory } from '@/services/examHistoryService';
 
 // Fisher-Yates shuffle algorithm
@@ -33,6 +33,7 @@ function formatTime(seconds: number) {
 }
 
 export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number }) {
+  useRequireAuth();
   const { user } = useAuth();
   const [shuffledExam, setShuffledExam] = useState<Exam | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
