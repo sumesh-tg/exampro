@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from 'react';
 import type { Exam, ExamHistory } from '@/lib/data';
-import { getExamHistoryBySharer } from '@/services/examHistoryService';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +21,7 @@ import {
 import { Badge } from './ui/badge';
 import { Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getAllExamHistoryBySharer } from '@/services/examHistoryService';
 
 interface SharedExamReportDialogProps {
   exam: Exam;
@@ -38,8 +38,9 @@ export function SharedExamReportDialog({ exam, sharerId, open, onOpenChange }: S
     if (open) {
       async function fetchHistory() {
         setLoading(true);
-        const sharedHistory = await getExamHistoryBySharer(exam.id, sharerId);
-        setHistory(sharedHistory as ExamHistory[]);
+        const sharedHistory = (await getAllExamHistoryBySharer(sharerId)) as ExamHistory[];
+        const filteredHistory = sharedHistory.filter(h => h.examId === exam.id);
+        setHistory(filteredHistory);
         setLoading(false);
       }
       fetchHistory();

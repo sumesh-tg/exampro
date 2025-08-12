@@ -41,7 +41,7 @@ import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
 import { useToast } from '@/hooks/use-toast';
-import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
+import { AllSharedExamsReportDialog } from '@/components/all-shared-exams-report-dialog';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -55,7 +55,7 @@ export default function Home() {
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
-  const [selectedExamForReport, setSelectedExamForReport] = useState<Exam | null>(null);
+  const [isShareReportOpen, setShareReportOpen] = useState(false);
   const { toast } = useToast();
   
   const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
@@ -119,26 +119,17 @@ export default function Home() {
     toast({ title: "Link Copied!", description: "Exam link copied to clipboard." });
   };
   
-  const handleOpenReport = (exam: Exam) => {
-    setSelectedExamForReport(exam);
-  };
-
   if (loading || (!user && !isAdmin)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      {selectedExamForReport && user && (
-        <SharedExamReportDialog
-            exam={selectedExamForReport}
+      {user && (
+        <AllSharedExamsReportDialog
             sharerId={user.uid}
-            open={!!selectedExamForReport}
-            onOpenChange={(isOpen) => {
-                if (!isOpen) {
-                    setSelectedExamForReport(null);
-                }
-            }}
+            open={isShareReportOpen}
+            onOpenChange={setShareReportOpen}
         />
       )}
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -160,6 +151,12 @@ export default function Home() {
                 onExamCreated={handleExamCreated}
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+              {user && (
+                  <Button variant="outline" onClick={() => setShareReportOpen(true)}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      View Share Report
+                  </Button>
+              )}
             </>
           )}
 
@@ -269,12 +266,6 @@ export default function Home() {
                                   <Share2 className="mr-2 h-4 w-4" />
                                   <span>Share</span>
                                 </DropdownMenuItem>
-                                {user && (
-                                   <DropdownMenuItem onClick={() => handleOpenReport(exam)}>
-                                      <FileText className="mr-2 h-4 w-4" />
-                                      <span>View Share Report</span>
-                                    </DropdownMenuItem>
-                                )}
                                 {isAdmin && (
                                   <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
                                     Delete

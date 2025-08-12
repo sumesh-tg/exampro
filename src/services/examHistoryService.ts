@@ -11,10 +11,9 @@ export const getExamHistory = async (userId: string) => {
     return data.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 }
 
-export const getExamHistoryBySharer = async (examId: string, sharerId: string) => {
+export const getAllExamHistoryBySharer = async (sharerId: string) => {
     const q = query(
         examHistoryCollectionRef,
-        where("examId", "==", examId),
         where("sharedBy", "==", sharerId)
     );
     const data = await getDocs(q);
