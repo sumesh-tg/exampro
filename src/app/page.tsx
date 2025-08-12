@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -41,6 +41,7 @@ import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
 import { useToast } from '@/hooks/use-toast';
+import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -54,6 +55,7 @@ export default function Home() {
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [selectedExamForReport, setSelectedExamForReport] = useState<Exam | null>(null);
   const { toast } = useToast();
   
   const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
@@ -116,6 +118,10 @@ export default function Home() {
     navigator.clipboard.writeText(url);
     toast({ title: "Link Copied!", description: "Exam link copied to clipboard." });
   };
+  
+  const handleOpenReport = (exam: Exam) => {
+    setSelectedExamForReport(exam);
+  };
 
   if (loading || (!user && !isAdmin)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -123,6 +129,18 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
+      {selectedExamForReport && user && (
+        <SharedExamReportDialog
+            exam={selectedExamForReport}
+            sharerId={user.uid}
+            open={!!selectedExamForReport}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) {
+                    setSelectedExamForReport(null);
+                }
+            }}
+        />
+      )}
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
         <nav className="flex-1">
           <Link
@@ -251,6 +269,12 @@ export default function Home() {
                                   <Share2 className="mr-2 h-4 w-4" />
                                   <span>Share</span>
                                 </DropdownMenuItem>
+                                {user && (
+                                   <DropdownMenuItem onClick={() => handleOpenReport(exam)}>
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      <span>View Share Report</span>
+                                    </DropdownMenuItem>
+                                )}
                                 {isAdmin && (
                                   <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
                                     Delete
@@ -346,5 +370,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
