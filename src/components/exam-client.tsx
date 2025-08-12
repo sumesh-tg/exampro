@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { addExamHistory } from '@/services/examHistoryService';
 
 // Fisher-Yates shuffle algorithm
@@ -32,7 +32,8 @@ function formatTime(seconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number }) {
+export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimit?: number, sharedBy?: string | null }) {
+  useRequireAuth();
   const { user } = useAuth();
   const [shuffledExam, setShuffledExam] = useState<Exam | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -54,8 +55,9 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
   }, [exam]);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (timeLimit) {
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         if (!isSubmitted) {
           setTime((prevTime) => {
             if (prevTime <= 1) {
@@ -67,15 +69,14 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
           });
         }
       }, 1000);
-      return () => clearInterval(timer);
     } else {
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         if (!isSubmitted) {
           setTime((prevTime) => prevTime + 1);
         }
       }, 1000);
-      return () => clearInterval(timer);
     }
+    return () => clearInterval(timer);
   }, [isSubmitted, timeLimit]);
   
   useEffect(() => {
@@ -90,7 +91,9 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
   };
   
   const goToQuestion = (index: number) => {
-    setCurrentQuestionIndex(index);
+    if (index >= 0 && shuffledExam && index < shuffledExam.questions.length) {
+      setCurrentQuestionIndex(index);
+    }
   };
 
   const handleNext = () => {
@@ -131,6 +134,14 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
         totalQuestions: shuffledExam.questions.length,
         date: new Date().toISOString(),
       };
+      if (sharedBy) {
+        try {
+            // In a real app, you might want to fetch the user's name from their UID
+            historyEntry.sharedBy = atob(sharedBy);
+        } catch (e) {
+            console.error("Failed to decode sharedBy param:", e);
+        }
+      }
       await addExamHistory(historyEntry);
     }
   };
@@ -282,3 +293,5 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
     </div>
   );
 }
+
+    

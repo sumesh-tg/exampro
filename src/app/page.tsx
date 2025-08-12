@@ -2,11 +2,12 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -39,6 +40,11 @@ import type { Exam, ExamHistory } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
+import { useToast } from '@/hooks/use-toast';
+
+
+const EXAMS_PAGE_SIZE = 3;
+const EXAM_HISTORY_PAGE_SIZE = 3;
 
 export default function Home() {
   const { user, loading, isAdmin, setAdmin } = useAuth();
@@ -46,6 +52,16 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const { toast } = useToast();
+  
+  const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
+  const paginatedExams = exams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
+
+  const historyTotalPages = Math.ceil(examHistory.length / EXAM_HISTORY_PAGE_SIZE);
+  const paginatedExamHistory = examHistory.slice((historyCurrentPage - 1) * EXAM_HISTORY_PAGE_SIZE, historyCurrentPage * EXAM_HISTORY_PAGE_SIZE);
+
 
   async function fetchExams() {
     const fetchedExams = await getExams();
@@ -67,10 +83,8 @@ export default function Home() {
       return;
     }
 
-    if (isAdmin) {
-      fetchExams();
-    } else if (user) {
-      fetchExams();
+    fetchExams();
+    if (user) {
       fetchExamHistory();
     }
   }, [user, isAdmin, loading, router]);
@@ -94,6 +108,14 @@ export default function Home() {
     fetchExams();
     setCreateExamOpen(false);
   }
+
+  const handleShareExam = (examId: string) => {
+    if (!user) return;
+    const encodedUserId = btoa(user.uid);
+    const url = `${window.location.origin}/exam/${examId}?shared_by=${encodedUserId}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: "Exam link copied to clipboard." });
+  };
 
   if (loading || (!user && !isAdmin)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -119,7 +141,7 @@ export default function Home() {
                 onOpenChange={setCreateExamOpen}
                 onExamCreated={handleExamCreated}
               />
-              <Button variant="outline">Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+              <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
             </>
           )}
 
@@ -189,7 +211,7 @@ export default function Home() {
         {(user || isAdmin) ? (
             <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <Card className="h-full">
+                <Card className="h-full flex flex-col">
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-6 w-6 text-primary" />
@@ -199,9 +221,9 @@ export default function Home() {
                       Choose an exam to test your knowledge.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="grid gap-4">
+                  <CardContent className="grid gap-4 flex-1">
                     {exams.length > 0 ? (
-                      exams.map((exam) => (
+                      paginatedExams.map((exam) => (
                       <div
                         key={exam.id}
                         className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
@@ -216,36 +238,51 @@ export default function Home() {
                           <Button variant="default" size="sm" asChild>
                             <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                           </Button>
-                          {isAdmin && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)}>
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
+                                  <Share2 className="mr-2 h-4 w-4" />
+                                  <span>Share</span>
+                                </DropdownMenuItem>
+                                {isAdmin && (
+                                  <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
                                     Delete
                                   </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                          )}
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                       </div>
                     ))
                     ) : (
-                      <div className="text-center text-muted-foreground">No exams available. Create one to get started.</div>
+                      <div className="text-center text-muted-foreground h-full flex items-center justify-center">No exams available. Create one to get started.</div>
                     )}
                   </CardContent>
+                  {totalPages > 1 && (
+                    <CardFooter className="flex items-center justify-center p-4 gap-4">
+                      <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+                       <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </CardFooter>
+                  )}
                 </Card>
               </div>
 
               <div className="row-span-2 flex flex-col gap-8">
                 <TopicSuggester />
                 { user && (
-                    <Card>
+                    <Card className="flex flex-col">
                     <CardHeader>
                         <div className="flex items-center gap-2">
                         <History className="h-6 w-6 text-primary" />
@@ -255,7 +292,7 @@ export default function Home() {
                         Review your past performances.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1">
                         <Table>
                         <TableHeader>
                             <TableRow>
@@ -264,10 +301,13 @@ export default function Home() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {examHistory.length > 0 ? (
-                            examHistory.map((item) => (
+                            {paginatedExamHistory.length > 0 ? (
+                            paginatedExamHistory.map((item) => (
                                 <TableRow key={item.id}>
-                                <TableCell className="font-medium">{item.examTitle}</TableCell>
+                                <TableCell className="font-medium">
+                                  <div>{item.examTitle}</div>
+                                  {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
                                 </TableCell>
@@ -281,6 +321,17 @@ export default function Home() {
                         </TableBody>
                         </Table>
                     </CardContent>
+                     {historyTotalPages > 1 && (
+                        <CardFooter className="flex items-center justify-center p-4 gap-4">
+                        <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p - 1)} disabled={historyCurrentPage === 1}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm font-medium">Page {historyCurrentPage} of {historyTotalPages}</span>
+                        <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === historyTotalPages}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        </CardFooter>
+                    )}
                     </Card>
                 )}
               </div>
@@ -295,3 +346,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

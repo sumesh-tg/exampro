@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInWithPhoneNumber, RecaptchaVerifier, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
-import { Separator } from '@/components/ui/separator';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -37,17 +36,28 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-export default function SignInPage() {
+function SignInFormComponent() {
   const [loading, setLoading] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    const redirectUrl = searchParams.get('redirect');
+    if (redirectUrl) {
+      sessionStorage.setItem('redirectUrl', redirectUrl);
+    }
+  }, [searchParams]);
+
+  const handleSuccessfulSignIn = () => {
+    const redirectUrl = sessionStorage.getItem('redirectUrl');
+    sessionStorage.removeItem('redirectUrl');
+    router.push(redirectUrl || '/');
+  };
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -64,8 +74,8 @@ export default function SignInPage() {
   });
 
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
         'callback': (response: any) => {
           // reCAPTCHA solved, allow signInWithPhoneNumber.
@@ -77,7 +87,7 @@ export default function SignInPage() {
   async function onPhoneSubmit(values: z.infer<typeof phoneSchema>) {
     setLoading(true);
     setupRecaptcha();
-    const appVerifier = window.recaptchaVerifier;
+    const appVerifier = (window as any).recaptchaVerifier;
     try {
       const result = await signInWithPhoneNumber(auth, values.phone, appVerifier);
       setConfirmationResult(result);
@@ -99,7 +109,7 @@ export default function SignInPage() {
     setLoading(true);
     try {
       await confirmationResult.confirm(values.otp);
-      router.push('/');
+      handleSuccessfulSignIn();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -116,7 +126,7 @@ export default function SignInPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push('/');
+      handleSuccessfulSignIn();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -130,9 +140,10 @@ export default function SignInPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4">
+      <div className="absolute bottom-4 right-4 text-lg font-bold text-muted-foreground/50">ExamsPro.in</div>
       <div id="recaptcha-container"></div>
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm z-10">
         <CardHeader>
           <CardTitle className="text-2xl">Sign In</CardTitle>
           <CardDescription>
@@ -216,4 +227,12 @@ export default function SignInPage() {
       </Card>
     </div>
   );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignInFormComponent />
+    </Suspense>
+  )
 }

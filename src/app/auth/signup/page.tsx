@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
-import { Separator } from '@/components/ui/separator';
 
 
 // Extend window interface for reCAPTCHA
