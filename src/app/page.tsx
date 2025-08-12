@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -41,6 +42,7 @@ import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
 
 const EXAMS_PAGE_SIZE = 3;
+const EXAM_HISTORY_PAGE_SIZE = 3;
 
 export default function Home() {
   const { user, loading, isAdmin, setAdmin } = useAuth();
@@ -49,9 +51,14 @@ export default function Home() {
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   
   const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
   const paginatedExams = exams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
+
+  const historyTotalPages = Math.ceil(examHistory.length / EXAM_HISTORY_PAGE_SIZE);
+  const paginatedExamHistory = examHistory.slice((historyCurrentPage - 1) * EXAM_HISTORY_PAGE_SIZE, historyCurrentPage * EXAM_HISTORY_PAGE_SIZE);
+
 
   async function fetchExams() {
     const fetchedExams = await getExams();
@@ -73,10 +80,8 @@ export default function Home() {
       return;
     }
 
-    if (isAdmin) {
-      fetchExams();
-    } else if (user) {
-      fetchExams();
+    fetchExams();
+    if (user) {
       fetchExamHistory();
     }
   }, [user, isAdmin, loading, router]);
@@ -246,7 +251,7 @@ export default function Home() {
                     )}
                   </CardContent>
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-center p-4 gap-4">
+                    <CardFooter className="flex items-center justify-center p-4 gap-4">
                       <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -254,7 +259,7 @@ export default function Home() {
                        <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
-                    </div>
+                    </CardFooter>
                   )}
                 </Card>
               </div>
@@ -262,7 +267,7 @@ export default function Home() {
               <div className="row-span-2 flex flex-col gap-8">
                 <TopicSuggester />
                 { user && (
-                    <Card>
+                    <Card className="flex flex-col">
                     <CardHeader>
                         <div className="flex items-center gap-2">
                         <History className="h-6 w-6 text-primary" />
@@ -272,7 +277,7 @@ export default function Home() {
                         Review your past performances.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1">
                         <Table>
                         <TableHeader>
                             <TableRow>
@@ -281,8 +286,8 @@ export default function Home() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {examHistory.length > 0 ? (
-                            examHistory.map((item) => (
+                            {paginatedExamHistory.length > 0 ? (
+                            paginatedExamHistory.map((item) => (
                                 <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.examTitle}</TableCell>
                                 <TableCell className="text-right">
@@ -298,6 +303,17 @@ export default function Home() {
                         </TableBody>
                         </Table>
                     </CardContent>
+                     {historyTotalPages > 1 && (
+                        <CardFooter className="flex items-center justify-center p-4 gap-4">
+                        <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p - 1)} disabled={historyCurrentPage === 1}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm font-medium">Page {historyCurrentPage} of {historyTotalPages}</span>
+                        <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === historyTotalPages}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        </CardFooter>
+                    )}
                     </Card>
                 )}
               </div>
@@ -312,5 +328,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
