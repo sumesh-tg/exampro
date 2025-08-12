@@ -32,7 +32,7 @@ function formatTime(seconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number }) {
+export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimit?: number, sharedBy?: string | null }) {
   useRequireAuth();
   const { user } = useAuth();
   const [shuffledExam, setShuffledExam] = useState<Exam | null>(null);
@@ -132,6 +132,13 @@ export function ExamClient({ exam, timeLimit }: { exam: Exam, timeLimit?: number
         totalQuestions: shuffledExam.questions.length,
         date: new Date().toISOString(),
       };
+      if (sharedBy) {
+        try {
+            historyEntry.sharedBy = atob(sharedBy);
+        } catch (e) {
+            console.error("Failed to decode sharedBy param:", e);
+        }
+      }
       await addExamHistory(historyEntry);
     }
   };

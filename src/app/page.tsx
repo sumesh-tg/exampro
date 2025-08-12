@@ -110,7 +110,9 @@ export default function Home() {
   }
 
   const handleShareExam = (examId: string) => {
-    const url = `${window.location.origin}/exam/${examId}`;
+    if (!user) return;
+    const encodedUserId = btoa(user.uid);
+    const url = `${window.location.origin}/exam/${examId}?shared_by=${encodedUserId}`;
     navigator.clipboard.writeText(url);
     toast({ title: "Link Copied!", description: "Exam link copied to clipboard." });
   };
@@ -302,7 +304,10 @@ export default function Home() {
                             {paginatedExamHistory.length > 0 ? (
                             paginatedExamHistory.map((item) => (
                                 <TableRow key={item.id}>
-                                <TableCell className="font-medium">{item.examTitle}</TableCell>
+                                <TableCell className="font-medium">
+                                  <div>{item.examTitle}</div>
+                                  {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by {item.sharedBy}</div>}
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
                                 </TableCell>

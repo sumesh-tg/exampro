@@ -20,4 +20,5 @@ export type ExamHistory = {
   score: number;
   totalQuestions: number;
   date: string;
+  sharedBy?: string;
 };
