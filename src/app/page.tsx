@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -40,6 +40,8 @@ import type { Exam, ExamHistory } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
+import { useToast } from '@/hooks/use-toast';
+
 
 const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
@@ -52,6 +54,7 @@ export default function Home() {
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const { toast } = useToast();
   
   const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
   const paginatedExams = exams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
@@ -105,6 +108,12 @@ export default function Home() {
     fetchExams();
     setCreateExamOpen(false);
   }
+
+  const handleShareExam = (examId: string) => {
+    const url = `${window.location.origin}/exam/${examId}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: "Exam link copied to clipboard." });
+  };
 
   if (loading || (!user && !isAdmin)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -227,22 +236,26 @@ export default function Home() {
                           <Button variant="default" size="sm" asChild>
                             <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                           </Button>
-                          {isAdmin && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)}>
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
+                                  <Share2 className="mr-2 h-4 w-4" />
+                                  <span>Share</span>
+                                </DropdownMenuItem>
+                                {isAdmin && (
+                                  <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
                                     Delete
                                   </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                          )}
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                       </div>
                     ))

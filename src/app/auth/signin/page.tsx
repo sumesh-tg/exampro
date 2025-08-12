@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInWithPhoneNumber, RecaptchaVerifier, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,11 +43,23 @@ export default function SignInPage() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    const redirectUrl = searchParams.get('redirect');
+    if (redirectUrl) {
+      sessionStorage.setItem('redirectUrl', redirectUrl);
+    }
+  }, [searchParams]);
+
+  const handleSuccessfulSignIn = () => {
+    const redirectUrl = sessionStorage.getItem('redirectUrl');
+    sessionStorage.removeItem('redirectUrl');
+    router.push(redirectUrl || '/');
+  };
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -99,7 +111,7 @@ export default function SignInPage() {
     setLoading(true);
     try {
       await confirmationResult.confirm(values.otp);
-      router.push('/');
+      handleSuccessfulSignIn();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -116,7 +128,7 @@ export default function SignInPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push('/');
+      handleSuccessfulSignIn();
     } catch (error: any) {
       toast({
         variant: 'destructive',

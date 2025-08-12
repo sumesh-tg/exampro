@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 type AuthContextType = {
   user: User | null;
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     
     // Check session storage on initial load
-    if (sessionStorage.getItem('isSuperAdmin') === 'true') {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('isSuperAdmin') === 'true') {
         setAdmin(true);
     }
 
@@ -65,12 +65,20 @@ export const useAuth = () => useContext(AuthContext);
 export const useRequireAuth = () => {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user && !isAdmin) {
-      router.push('/auth/signin');
+      // Don't redirect if we are already on an auth page
+      if (pathname.startsWith('/auth')) {
+        return;
+      }
+      // If there's a path we want to be redirected to (e.g. a shared exam link)
+      // append it to the signin url
+      const redirectUrl = `?redirect=${encodeURIComponent(pathname)}`;
+      router.push(`/auth/signin${redirectUrl}`);
     }
-  }, [user, loading, router, isAdmin]);
+  }, [user, loading, router, isAdmin, pathname]);
 
   return { user, loading, isAdmin };
 };
