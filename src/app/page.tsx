@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -40,12 +40,18 @@ import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
 
+const EXAMS_PAGE_SIZE = 3;
+
 export default function Home() {
   const { user, loading, isAdmin, setAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
+  const paginatedExams = exams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
 
   async function fetchExams() {
     const fetchedExams = await getExams();
@@ -189,7 +195,7 @@ export default function Home() {
         {(user || isAdmin) ? (
             <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <Card className="h-full">
+                <Card className="h-full flex flex-col">
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-6 w-6 text-primary" />
@@ -199,9 +205,9 @@ export default function Home() {
                       Choose an exam to test your knowledge.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="grid gap-4">
+                  <CardContent className="grid gap-4 flex-1">
                     {exams.length > 0 ? (
-                      exams.map((exam) => (
+                      paginatedExams.map((exam) => (
                       <div
                         key={exam.id}
                         className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
@@ -236,9 +242,20 @@ export default function Home() {
                       </div>
                     ))
                     ) : (
-                      <div className="text-center text-muted-foreground">No exams available. Create one to get started.</div>
+                      <div className="text-center text-muted-foreground h-full flex items-center justify-center">No exams available. Create one to get started.</div>
                     )}
                   </CardContent>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center p-4 gap-4">
+                      <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+                       <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               </div>
 
@@ -295,3 +312,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
