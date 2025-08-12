@@ -130,9 +130,10 @@ export default function SignInPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4">
+      <div className="absolute bottom-4 right-4 text-lg font-bold text-muted-foreground/50">ExamsPro.in</div>
       <div id="recaptcha-container"></div>
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm z-10">
         <CardHeader>
           <CardTitle className="text-2xl">Sign In</CardTitle>
           <CardDescription>
