@@ -306,7 +306,7 @@ export default function Home() {
                                 <TableRow key={item.id}>
                                 <TableCell className="font-medium">
                                   <div>{item.examTitle}</div>
-                                  {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by {item.sharedBy}</div>}
+                                  {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
@@ -346,3 +346,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

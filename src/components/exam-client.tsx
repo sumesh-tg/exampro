@@ -55,8 +55,9 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   }, [exam]);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (timeLimit) {
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         if (!isSubmitted) {
           setTime((prevTime) => {
             if (prevTime <= 1) {
@@ -68,15 +69,14 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
           });
         }
       }, 1000);
-      return () => clearInterval(timer);
     } else {
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         if (!isSubmitted) {
           setTime((prevTime) => prevTime + 1);
         }
       }, 1000);
-      return () => clearInterval(timer);
     }
+    return () => clearInterval(timer);
   }, [isSubmitted, timeLimit]);
   
   useEffect(() => {
@@ -91,7 +91,9 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   };
   
   const goToQuestion = (index: number) => {
-    setCurrentQuestionIndex(index);
+    if (index >= 0 && shuffledExam && index < shuffledExam.questions.length) {
+      setCurrentQuestionIndex(index);
+    }
   };
 
   const handleNext = () => {
@@ -134,6 +136,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
       };
       if (sharedBy) {
         try {
+            // In a real app, you might want to fetch the user's name from their UID
             historyEntry.sharedBy = atob(sharedBy);
         } catch (e) {
             console.error("Failed to decode sharedBy param:", e);
@@ -290,3 +293,5 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     </div>
   );
 }
+
+    
