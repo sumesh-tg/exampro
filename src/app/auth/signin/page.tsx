@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInWithPhoneNumber, RecaptchaVerifier, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
-import { Separator } from '@/components/ui/separator';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -37,13 +36,12 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-export default function SignInPage() {
+function SignInFormComponent() {
   const [loading, setLoading] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
@@ -76,8 +74,8 @@ export default function SignInPage() {
   });
 
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
         'callback': (response: any) => {
           // reCAPTCHA solved, allow signInWithPhoneNumber.
@@ -89,7 +87,7 @@ export default function SignInPage() {
   async function onPhoneSubmit(values: z.infer<typeof phoneSchema>) {
     setLoading(true);
     setupRecaptcha();
-    const appVerifier = window.recaptchaVerifier;
+    const appVerifier = (window as any).recaptchaVerifier;
     try {
       const result = await signInWithPhoneNumber(auth, values.phone, appVerifier);
       setConfirmationResult(result);
@@ -229,4 +227,12 @@ export default function SignInPage() {
       </Card>
     </div>
   );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignInFormComponent />
+    </Suspense>
+  )
 }
