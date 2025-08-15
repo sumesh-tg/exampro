@@ -10,18 +10,74 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, User } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Camera } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
+import { auth, storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useEffect, useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+
 
 const profileSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
-  photoURL: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
 });
+
+function getCroppedImg(image: HTMLImageElement, crop: Crop, fileName: string): Promise<File> {
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        throw new Error('No 2d context');
+    }
+
+    ctx.drawImage(
+        image,
+        crop.x * scaleX,
+        crop.y * scaleY,
+        crop.width * scaleX,
+        crop.height * scaleY,
+        0,
+        0,
+        crop.width,
+        crop.height
+    );
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+            if (!blob) {
+                reject(new Error('Canvas is empty'));
+                return;
+            }
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+            resolve(file);
+        }, 'image/jpeg');
+    });
+}
+
+function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  )
+}
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -29,11 +85,17 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const [imgSrc, setImgSrc] = useState('');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const [isCropModalOpen, setCropModalOpen] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       displayName: user?.displayName ?? '',
-      photoURL: user?.photoURL ?? '',
     },
   });
 
@@ -41,116 +103,170 @@ export default function ProfilePage() {
     if (user) {
       form.reset({
         displayName: user.displayName ?? '',
-        photoURL: user.photoURL ?? '',
       });
     }
   }, [user, form]);
 
-  async function onSubmit(values: z.infer<typeof profileSchema>) {
+  async function onUpdateDisplayName(values: z.infer<typeof profileSchema>) {
     if (!user) return;
-
     setLoading(true);
     try {
-      await updateProfile(user, {
-        displayName: values.displayName,
-        photoURL: values.photoURL,
-      });
-      toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been updated successfully.',
-      });
-      // Force a reload of the user to get the latest profile info in the app
+      await updateProfile(user, { displayName: values.displayName });
+      toast({ title: 'Display Name Updated' });
       await auth.currentUser?.reload();
-      router.refresh(); // This will re-fetch server components and update the UI
+      router.refresh();
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.message,
-      });
+      toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
     } finally {
       setLoading(false);
     }
   }
+  
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCrop(undefined) // Makes crop preview update between images.
+      const reader = new FileReader();
+      reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
+      reader.readAsDataURL(e.target.files[0]);
+      setCropModalOpen(true);
+    }
+  };
+
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 1));
+  };
+  
+  const handleCropAndUpload = async () => {
+    if (!completedCrop || !imgRef.current || !user) return;
+
+    setLoading(true);
+    setCropModalOpen(false);
+
+    try {
+        const croppedImageFile = await getCroppedImg(imgRef.current, completedCrop, `${user.uid}.jpg`);
+        const storageRef = ref(storage, `profileImages/${user.uid}`);
+        await uploadBytes(storageRef, croppedImageFile);
+        const photoURL = await getDownloadURL(storageRef);
+
+        await updateProfile(user, { photoURL });
+        await auth.currentUser?.reload();
+        router.refresh();
+
+        toast({
+            title: 'Profile Picture Updated',
+            description: 'Your new profile picture has been saved.',
+        });
+
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error.message,
+        });
+    } finally {
+        setLoading(false);
+    }
+  }
+
 
   if (authLoading || !user) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
-        <Button variant="outline" size="icon" asChild>
-          <Link href="/">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <h1 className="text-xl font-semibold">Edit Profile</h1>
-      </header>
-      <main className="flex flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle>Your Profile</CardTitle>
-            <CardDescription>Update your display name and profile picture.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="flex items-center gap-4">
-                    <Avatar className="h-20 w-20">
-                        <AvatarImage src={form.watch('photoURL') || user.photoURL || ''} alt="user avatar" />
-                        <AvatarFallback>
-                            <User size={40} />
-                        </AvatarFallback>
-                    </Avatar>
-                    <FormField
-                      control={form.control}
-                      name="photoURL"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Photo URL</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://example.com/your-photo.jpg" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+    <>
+      <Dialog open={isCropModalOpen} onOpenChange={setCropModalOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Crop your new profile picture</DialogTitle>
+            </DialogHeader>
+            {imgSrc && (
+                <div className="flex justify-center">
+                    <ReactCrop
+                        crop={crop}
+                        onChange={c => setCrop(c)}
+                        onComplete={c => setCompletedCrop(c)}
+                        aspect={1}
+                        circularCrop
+                    >
+                       <img ref={imgRef} alt="Crop me" src={imgSrc} onLoad={onImageLoad} />
+                    </ReactCrop>
                 </div>
-                <FormField
-                  control={form.control}
-                  name="displayName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Display Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your Name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="email"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input disabled value={user.email ?? 'No email associated'} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
+            )}
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setCropModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleCropAndUpload} disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Photo
                 </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <div className="flex min-h-screen w-full flex-col bg-background">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+          <Button variant="outline" size="icon" asChild>
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <h1 className="text-xl font-semibold">Edit Profile</h1>
+        </header>
+        <main className="flex flex-1 items-center justify-center p-4">
+          <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle>Your Profile</CardTitle>
+              <CardDescription>Update your display name and profile picture.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+               <div className="flex items-center gap-6">
+                    <div className="relative group">
+                        <Avatar className="h-24 w-24">
+                            <AvatarImage src={user.photoURL || ''} alt="user avatar" />
+                            <AvatarFallback>
+                                <User size={40} />
+                            </AvatarFallback>
+                        </Avatar>
+                        <Button 
+                            variant="outline"
+                            size="icon"
+                            className="absolute bottom-0 right-0 rounded-full group-hover:bg-primary group-hover:text-primary-foreground"
+                            onClick={() => fileInputRef.current?.click()}>
+                            <Camera className="h-5 w-5"/>
+                        </Button>
+                        <input type="file" ref={fileInputRef} onChange={onSelectFile} accept="image/*" className="hidden" />
+                    </div>
+                    <div className="grid gap-2">
+                        <h2 className="text-2xl font-bold">{user.displayName || 'Anonymous User'}</h2>
+                        <p className="text-muted-foreground">{user.email || 'No email associated'}</p>
+                    </div>
+                </div>
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onUpdateDisplayName)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="displayName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Name
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    </>
   );
 }
