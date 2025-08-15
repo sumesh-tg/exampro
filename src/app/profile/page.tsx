@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { updateUserProfile } from '@/services/userService';
 
 
 const profileSchema = z.object({
@@ -112,6 +113,7 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       await updateProfile(user, { displayName: values.displayName });
+      await updateUserProfile(user.uid, { displayName: values.displayName });
       toast({ title: 'Display Name Updated' });
       await auth.currentUser?.reload();
       router.refresh();
@@ -150,6 +152,7 @@ export default function ProfilePage() {
         const photoURL = await getDownloadURL(storageRef);
 
         await updateProfile(user, { photoURL });
+        await updateUserProfile(user.uid, { photoURL });
         await auth.currentUser?.reload();
         router.refresh();
 

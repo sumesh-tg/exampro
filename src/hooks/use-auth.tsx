@@ -13,6 +13,7 @@ import {
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
+import { updateUserProfile } from '@/services/userService';
 
 type AuthContextType = {
   user: User | null;
@@ -35,8 +36,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (!user) {
+      if (user) {
+        setUser(user);
+        // Sync user data to Firestore
+        updateUserProfile(user.uid, {
+            uid: user.uid,
+            email: user.email ?? '',
+            displayName: user.displayName ?? '',
+            photoURL: user.photoURL ?? ''
+        });
+      } else {
+        setUser(null);
         // If firebase auth state changes and there's no user, log out admin too
         sessionStorage.removeItem('isSuperAdmin');
         setAdmin(false);
@@ -75,7 +85,7 @@ export const useRequireAuth = () => {
       }
       // If there's a path we want to be redirected to (e.g. a shared exam link)
       // append it to the signin url
-      const redirectUrl = `?redirect=${encodeURIComponent(pathname)}`;
+      const redirectUrl = `?redirect=${encodeURIComponent(pathname + window.location.search)}`;
       router.push(`/auth/signin${redirectUrl}`);
     }
   }, [user, loading, router, isAdmin, pathname]);
