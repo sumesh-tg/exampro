@@ -17,9 +17,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { listUsers, setUserRole, type AdminUserRecord } from '@/services/userService';
+import { listUsers, setUserRole, updateUserStatus, deleteUser, type AdminUserRecord } from '@/services/userService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 export default function UserManagementPage() {
@@ -67,6 +78,26 @@ export default function UserManagementPage() {
       fetchUsers(); // Refresh the user list
     } else {
       toast({ variant: 'destructive', title: "Error", description: result.message });
+    }
+  };
+  
+  const handleToggleUserStatus = async (uid: string, isDisabled: boolean) => {
+    const result = await updateUserStatus(uid, !isDisabled);
+    if (result.success) {
+      toast({ variant: 'success', title: 'User Status Updated', description: `The user has been ${!isDisabled ? 'disabled' : 'enabled'}.` });
+      fetchUsers();
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    const result = await deleteUser(uid);
+    if (result.success) {
+      toast({ variant: 'success', title: 'User Deleted', description: 'The user has been permanently deleted.' });
+      fetchUsers();
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
   };
 
@@ -145,12 +176,35 @@ export default function UserManagementPage() {
                                                 Make as admin
                                             </DropdownMenuItem>
                                         )}
-                                      <DropdownMenuItem disabled>
+                                      <DropdownMenuItem onClick={() => handleToggleUserStatus(user.uid, user.disabled)}>
                                           {user.disabled ? 'Enable User' : 'Disable User'}
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem className="text-destructive" disabled>
-                                          Delete User
-                                      </DropdownMenuItem>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem
+                                                className="text-destructive"
+                                                onSelect={(e) => e.preventDefault()} // prevent menu from closing
+                                            >
+                                                Delete User
+                                            </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the user account and all associated data.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    className="bg-destructive hover:bg-destructive/90"
+                                                    onClick={() => handleDeleteUser(user.uid)}>
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
                                   </DropdownMenuContent>
                                   </DropdownMenu>
                               </TableCell>
