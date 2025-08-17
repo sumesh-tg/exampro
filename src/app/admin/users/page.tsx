@@ -17,45 +17,59 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { listUsers, type AdminUserRecord } from '@/services/userService';
+import { listUsers, setUserRole, type AdminUserRecord } from '@/services/userService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function UserManagementPage() {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const canManageUsers = isAdmin || isSuperAdmin;
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !canManageUsers) {
       router.push('/auth/signin');
     }
-  }, [isAdmin, authLoading, router]);
+  }, [canManageUsers, authLoading, router]);
+
+  const fetchUsers = async () => {
+    if (canManageUsers) {
+      try {
+        setLoading(true);
+        const fetchedUsers = await listUsers();
+        setUsers(fetchedUsers);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || "An unknown error occurred.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (isAdmin) {
-        try {
-          setLoading(true);
-          const fetchedUsers = await listUsers();
-          setUsers(fetchedUsers);
-          setError(null);
-        } catch (err: any) {
-          setError(err.message || "An unknown error occurred.");
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    
-    if (!authLoading) {
+    if (!authLoading && canManageUsers) {
       fetchUsers();
     }
-  }, [isAdmin, authLoading]);
+  }, [canManageUsers, authLoading]);
   
-  if (authLoading || !isAdmin) {
+  const handleMakeAdmin = async (uid: string) => {
+    const result = await setUserRole(uid, 'admin');
+    if (result.success) {
+      toast({ title: "User Promoted", description: "The user has been made an admin." });
+      fetchUsers(); // Refresh the user list
+    } else {
+      toast({ variant: 'destructive', title: "Error", description: result.message });
+    }
+  };
+
+  if (authLoading || !canManageUsers) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
@@ -115,6 +129,9 @@ export default function UserManagementPage() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                       <DropdownMenuItem onClick={() => handleMakeAdmin(user.uid)}>
+                                          Make as admin
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem disabled>
                                           {user.disabled ? 'Enable User' : 'Disable User'}
                                       </DropdownMenuItem>

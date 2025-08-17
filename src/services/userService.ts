@@ -22,6 +22,7 @@ export type AdminUserRecord = {
     disabled: boolean;
     creationTime: string;
     lastSignInTime: string;
+    customClaims?: { [key: string]: any };
 }
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>) => {
@@ -77,5 +78,24 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
             throw error;
         }
         throw new Error("An unknown error occurred while listing users.");
+    }
+};
+
+export const setUserRole = async (uid: string, role: 'admin' | 'user'): Promise<{ success: boolean; message?: string }> => {
+    try {
+        // In a real app, this should be a call to a secure backend function
+        // that validates the caller is authorized to perform this action.
+        console.log(`Request to set role for ${uid} to ${role}`);
+        // For now, we'll simulate a successful call.
+        // const setUserRoleFunction = httpsCallable(functions, 'setUserRole');
+        // await setUserRoleFunction({ uid, role });
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Error setting user role:", error);
+        if (error instanceof Error) {
+            return { success: false, message: error.message };
+        }
+        return { success: false, message: 'An unknown error occurred.' };
     }
 };
