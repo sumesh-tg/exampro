@@ -83,13 +83,19 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
 
 export const setUserRole = async (uid: string, role: 'admin' | 'user'): Promise<{ success: boolean; message?: string }> => {
     try {
-        // In a real app, this should be a call to a secure backend function
-        // that validates the caller is authorized to perform this action.
-        console.log(`Request to set role for ${uid} to ${role}`);
-        // For now, we'll simulate a successful call.
-        // const setUserRoleFunction = httpsCallable(functions, 'setUserRole');
-        // await setUserRoleFunction({ uid, role });
-        
+        const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/setCustomUserClaims-customUserClaims', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ uid, role }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `API error: ${response.status}`);
+        }
+
         return { success: true };
     } catch (error) {
         console.error("Error setting user role:", error);
