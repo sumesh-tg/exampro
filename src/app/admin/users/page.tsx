@@ -29,7 +29,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 
@@ -79,7 +78,6 @@ export default function UserManagementPage() {
       deleted: user.customClaims?.deleted || false,
     };
     
-    // The disabled status is a top-level property on the user record, not a custom claim.
     const fullClaims = { ...currentClaims, ...newClaims, disabled: newClaims.disabled ?? user.disabled };
 
     const result = await updateUserClaims(uid, fullClaims);
@@ -93,8 +91,11 @@ export default function UserManagementPage() {
 
   const handleDeleteUser = async (uid: string) => {
     await handleUpdateClaims(uid, { deleted: true });
-    toast({ variant: 'success', title: 'User Marked for Deletion', description: 'The user has been marked for deletion.' });
   };
+  
+  const handleUndoDelete = async (uid: string) => {
+    await handleUpdateClaims(uid, { deleted: false });
+  }
 
   if (authLoading || !canManageUsers) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -140,7 +141,7 @@ export default function UserManagementPage() {
                       </TableHeader>
                       <TableBody>
                           {users.map((user) => (
-                          <TableRow key={user.uid}>
+                          <TableRow key={user.uid} className={user.customClaims?.deleted ? 'opacity-50' : ''}>
                               <TableCell className="font-mono text-sm">{user.uid}</TableCell>
                               <TableCell>{user.email || 'N/A'}</TableCell>
                               <TableCell>{user.phoneNumber || 'N/A'}</TableCell>
@@ -166,44 +167,52 @@ export default function UserManagementPage() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        {user.customClaims?.admin ? (
-                                            <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: false })}>
-                                                Remove from Admin
+                                      {user.customClaims?.deleted ? (
+                                        <DropdownMenuItem onClick={() => handleUndoDelete(user.uid)}>
+                                          Undo Delete
+                                        </DropdownMenuItem>
+                                      ) : (
+                                        <>
+                                            {user.customClaims?.admin ? (
+                                                <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: false })}>
+                                                    Remove from Admin
+                                                </DropdownMenuItem>
+                                            ) : (
+                                                <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: true })}>
+                                                    Make as admin
+                                                </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { disabled: !user.disabled })}>
+                                                {user.disabled ? 'Enable User' : 'Disable User'}
                                             </DropdownMenuItem>
-                                        ) : (
-                                            <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: true })}>
-                                                Make as admin
-                                            </DropdownMenuItem>
-                                        )}
-                                      <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { disabled: !user.disabled })}>
-                                          {user.disabled ? 'Enable User' : 'Disable User'}
-                                      </DropdownMenuItem>
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem
-                                                className="text-destructive"
-                                                onSelect={(e) => e.preventDefault()} // prevent menu from closing
-                                            >
-                                                Delete User
-                                            </DropdownMenuItem>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action cannot be undone. This will permanently mark the user for deletion.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    className="bg-destructive hover:bg-destructive/90"
-                                                    onClick={() => handleDeleteUser(user.uid)}>
-                                                    Delete
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem
+                                                        className="text-destructive"
+                                                        onSelect={(e) => e.preventDefault()}
+                                                    >
+                                                        Delete User
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently mark the user for deletion.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            className="bg-destructive hover:bg-destructive/90"
+                                                            onClick={() => handleDeleteUser(user.uid)}>
+                                                            Delete
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </>
+                                      )}
                                   </DropdownMenuContent>
                                   </DropdownMenu>
                               </TableCell>
