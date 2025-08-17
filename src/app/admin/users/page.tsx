@@ -62,7 +62,7 @@ export default function UserManagementPage() {
   const handleMakeAdmin = async (uid: string) => {
     const result = await setUserRole(uid, 'admin');
     if (result.success) {
-      toast({ title: "User Promoted", description: "The user has been made an admin." });
+      toast({ variant: 'success', title: "User Promoted", description: "The user has been made an admin." });
       fetchUsers(); // Refresh the user list
     } else {
       toast({ variant: 'destructive', title: "Error", description: result.message });
