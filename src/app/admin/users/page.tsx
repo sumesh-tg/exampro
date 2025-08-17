@@ -59,10 +59,11 @@ export default function UserManagementPage() {
     }
   }, [canManageUsers, authLoading]);
   
-  const handleMakeAdmin = async (uid: string) => {
-    const result = await setUserRole(uid, 'admin');
+  const handleSetRole = async (uid: string, role: 'admin' | 'user') => {
+    const result = await setUserRole(uid, role);
     if (result.success) {
-      toast({ variant: 'success', title: "User Promoted", description: "The user has been made an admin." });
+      const action = role === 'admin' ? "Promoted" : "Demoted";
+      toast({ variant: 'success', title: `User ${action}`, description: `The user has been made a${role === 'admin' ? 'n admin' : ' regular user'}.` });
       fetchUsers(); // Refresh the user list
     } else {
       toast({ variant: 'destructive', title: "Error", description: result.message });
@@ -106,6 +107,7 @@ export default function UserManagementPage() {
                           <TableHead>User ID</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Phone Number</TableHead>
+                          <TableHead>Role</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
@@ -116,6 +118,11 @@ export default function UserManagementPage() {
                               <TableCell className="font-mono text-sm">{user.uid}</TableCell>
                               <TableCell>{user.email || 'N/A'}</TableCell>
                               <TableCell>{user.phoneNumber || 'N/A'}</TableCell>
+                              <TableCell>
+                                <Badge variant={user.customClaims?.admin ? 'secondary' : 'outline'}>
+                                  {user.customClaims?.admin ? 'Admin' : 'User'}
+                                </Badge>
+                              </TableCell>
                               <TableCell>
                                   <Badge variant={!user.disabled ? 'default' : 'destructive'}>{!user.disabled ? 'Active' : 'Disabled'}</Badge>
                               </TableCell>
@@ -129,9 +136,15 @@ export default function UserManagementPage() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                       <DropdownMenuItem onClick={() => handleMakeAdmin(user.uid)}>
-                                          Make as admin
-                                      </DropdownMenuItem>
+                                        {user.customClaims?.admin ? (
+                                            <DropdownMenuItem onClick={() => handleSetRole(user.uid, 'user')}>
+                                                Remove from Admin
+                                            </DropdownMenuItem>
+                                        ) : (
+                                            <DropdownMenuItem onClick={() => handleSetRole(user.uid, 'admin')}>
+                                                Make as admin
+                                            </DropdownMenuItem>
+                                        )}
                                       <DropdownMenuItem disabled>
                                           {user.disabled ? 'Enable User' : 'Disable User'}
                                       </DropdownMenuItem>

@@ -90,12 +90,14 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
 
 export const setUserRole = async (uid: string, role: 'admin' | 'user'): Promise<{ success: boolean; message?: string }> => {
     try {
+        const claims = role === 'admin' ? { admin: true } : { admin: false };
+
         const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/setCustomUserClaims-customUserClaims', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ uid, claims: { [role]: true } }),
+            body: JSON.stringify({ uid, claims }),
         });
 
         if (!response.ok) {
