@@ -16,6 +16,7 @@ export type UserProfile = {
 export type AdminUserRecord = {
     uid: string;
     email?: string;
+    phoneNumber?: string;
     displayName?: string;
     photoURL?: string;
     disabled: boolean;

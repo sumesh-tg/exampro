@@ -22,7 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 export default function UserManagementPage() {
-  const { isAdmin, loading: authLoading } from useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,22 +36,24 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        const fetchedUsers = await listUsers();
-        setUsers(fetchedUsers);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message || "An unknown error occurred.");
-      } finally {
-        setLoading(false);
+      if (isAdmin) {
+        try {
+          setLoading(true);
+          const fetchedUsers = await listUsers();
+          setUsers(fetchedUsers);
+          setError(null);
+        } catch (err: any) {
+          setError(err.message || "An unknown error occurred.");
+        } finally {
+          setLoading(false);
+        }
       }
     };
     
-    if (isAdmin && !authLoading) {
+    if (!authLoading) {
       fetchUsers();
     }
-  }, []);
+  }, [isAdmin, authLoading]);
   
   if (authLoading || !isAdmin) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -89,6 +91,7 @@ export default function UserManagementPage() {
                           <TableRow>
                           <TableHead>User ID</TableHead>
                           <TableHead>Email</TableHead>
+                          <TableHead>Phone Number</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
@@ -98,6 +101,7 @@ export default function UserManagementPage() {
                           <TableRow key={user.uid}>
                               <TableCell className="font-mono text-sm">{user.uid}</TableCell>
                               <TableCell>{user.email || 'N/A'}</TableCell>
+                              <TableCell>{user.phoneNumber || 'N/A'}</TableCell>
                               <TableCell>
                                   <Badge variant={!user.disabled ? 'default' : 'destructive'}>{!user.disabled ? 'Active' : 'Disabled'}</Badge>
                               </TableCell>
