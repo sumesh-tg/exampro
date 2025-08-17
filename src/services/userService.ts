@@ -95,13 +95,11 @@ export const setUserRole = async (uid: string, role: 'admin' | 'user'): Promise<
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ uid, role }),
+            body: JSON.stringify({ uid, claims: { [role]: true } }),
         });
 
         if (!response.ok) {
-            // Try to read the error body as text first.
             const errorText = await response.text();
-            // Attempt to parse it as JSON, but fall back to the raw text if that fails.
             try {
                 const errorData = JSON.parse(errorText);
                 throw new Error(errorData.message || `API error: ${response.status}`);
