@@ -40,15 +40,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     }
 };
 
-const getAuthenticatedUser = (): Promise<User> => {
-  return new Promise((resolve, reject) => {
+const getAuthenticatedUser = (): Promise<User | null> => {
+  return new Promise((resolve) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       unsubscribe();
-      if (user) {
-        resolve(user);
-      } else {
-        reject(new Error("Authentication required."));
-      }
+      resolve(user);
     });
   });
 };
@@ -57,30 +53,25 @@ const getAuthenticatedUser = (): Promise<User> => {
 export const listUsers = async (): Promise<AdminUserRecord[]> => {
     try {
         const user = await getAuthenticatedUser();
-        const idToken = await user.getIdToken();
-        
-        const url = `https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/userListApi-listUsersApi`;
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization':`Bearer ${idToken}`,
-                'Content-Type': 'application/json',
-            }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to list users: ${response.status} ${errorText}`);
+        if (!user) {
+            throw new Error("Authentication required.");
         }
         
-        const result = await response.json();
-        return result as AdminUserRecord[];
+        // Use httpsCallable for a more secure and direct way to call the function
+        const listUsersFunction = httpsCallable(functions, 'userListApi-listUsersApi');
+        const result = await listUsersFunction();
+        
+        // The result from a callable function is in the `data` property
+        return result.data as AdminUserRecord[];
 
     } catch (error) {
-        console.error("Error calling listUsers API:", error);
+        console.error("Error calling listUsers function:", error);
         if (error instanceof Error) {
-            if (error.message.includes('CORS')) {
+            // Check for specific callable function errors
+            if ((error as any).code === 'unauthenticated') {
+                 throw new Error("Authentication failed. Please sign in again.");
+            }
+             if (error.message.includes('CORS')) {
                  throw new Error("A CORS error occurred. Please ensure your Cloud Function is configured to allow requests from this origin.");
             }
             throw error;
