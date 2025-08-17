@@ -70,38 +70,30 @@ export default function UserManagementPage() {
     }
   }, [canManageUsers, authLoading]);
   
-  const handleSetRole = async (uid: string, role: 'admin' | 'user') => {
-    const claims = role === 'admin' ? { admin: true } : { admin: false };
+  const handleUpdateClaims = async (uid: string, newClaims: { admin?: boolean, disabled?: boolean, deleted?: boolean }) => {
+    const user = users.find(u => u.uid === uid);
+    if (!user) return;
+
+    const currentClaims = {
+      admin: user.customClaims?.admin || false,
+      disabled: user.disabled || false,
+      deleted: user.customClaims?.deleted || false,
+    };
+    
+    const claims = { ...currentClaims, ...newClaims };
+
     const result = await updateUserClaims(uid, claims);
     if (result.success) {
-      const action = role === 'admin' ? "Promoted" : "Demoted";
-      toast({ variant: 'success', title: `User ${action}`, description: `The user has been made a${role === 'admin' ? 'n admin' : ' regular user'}.` });
-      fetchUsers(); // Refresh the user list
+      toast({ variant: 'success', title: `User Updated`, description: `The user's properties have been updated.` });
+      fetchUsers();
     } else {
       toast({ variant: 'destructive', title: "Error", description: result.message });
     }
   };
-  
-  const handleToggleUserStatus = async (uid: string, isDisabled: boolean) => {
-    const claims = { disabled: !isDisabled };
-    const result = await updateUserClaims(uid, claims);
-    if (result.success) {
-      toast({ variant: 'success', title: 'User Status Updated', description: `The user has been ${!isDisabled ? 'disabled' : 'enabled'}.` });
-      fetchUsers();
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
-    }
-  };
 
   const handleDeleteUser = async (uid: string) => {
-    const claims = { deleted: true };
-    const result = await updateUserClaims(uid, claims);
-    if (result.success) {
-      toast({ variant: 'success', title: 'User Deleted', description: 'The user has been permanently deleted.' });
-      fetchUsers();
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
-    }
+    await handleUpdateClaims(uid, { deleted: true });
+    toast({ variant: 'success', title: 'User Marked for Deletion', description: 'The user has been marked for deletion.' });
   };
 
   if (authLoading || !canManageUsers) {
@@ -147,7 +139,7 @@ export default function UserManagementPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {users.map((user) => (
+                          {users.filter(u => !u.customClaims?.deleted).map((user) => (
                           <TableRow key={user.uid}>
                               <TableCell className="font-mono text-sm">{user.uid}</TableCell>
                               <TableCell>{user.email || 'N/A'}</TableCell>
@@ -171,15 +163,15 @@ export default function UserManagementPage() {
                                   <DropdownMenuContent align="end">
                                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         {user.customClaims?.admin ? (
-                                            <DropdownMenuItem onClick={() => handleSetRole(user.uid, 'user')}>
+                                            <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: false })}>
                                                 Remove from Admin
                                             </DropdownMenuItem>
                                         ) : (
-                                            <DropdownMenuItem onClick={() => handleSetRole(user.uid, 'admin')}>
+                                            <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: true })}>
                                                 Make as admin
                                             </DropdownMenuItem>
                                         )}
-                                      <DropdownMenuItem onClick={() => handleToggleUserStatus(user.uid, user.disabled)}>
+                                      <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { disabled: !user.disabled })}>
                                           {user.disabled ? 'Enable User' : 'Disable User'}
                                       </DropdownMenuItem>
                                       <AlertDialog>
@@ -195,7 +187,7 @@ export default function UserManagementPage() {
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    This action cannot be undone. This will permanently delete the user account and all associated data.
+                                                    This action cannot be undone. This will permanently mark the user for deletion.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>

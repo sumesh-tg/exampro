@@ -24,7 +24,11 @@ export type AdminUserRecord = {
     disabled: boolean;
     creationTime: string;
     lastSignInTime: string;
-    customClaims?: { [key: string]: any };
+    customClaims?: { 
+        admin?: boolean;
+        deleted?: boolean;
+        [key: string]: any 
+    };
 }
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>) => {
@@ -88,7 +92,13 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
     }
 };
 
-export const updateUserClaims = async (uid: string, claims: { [key: string]: any }): Promise<{ success: boolean; message?: string }> => {
+type FullClaims = {
+  admin: boolean;
+  disabled: boolean;
+  deleted: boolean;
+}
+
+export const updateUserClaims = async (uid: string, claims: FullClaims): Promise<{ success: boolean; message?: string }> => {
     try {
         const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/setCustomUserClaims-customUserClaims', {
             method: 'POST',
