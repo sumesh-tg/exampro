@@ -56,22 +56,28 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
         if (!user) {
             throw new Error("Authentication required.");
         }
-        
-        // Use httpsCallable for a more secure and direct way to call the function
-        const listUsersFunction = httpsCallable(functions, 'userListApi-listUsersApi');
-        const result = await listUsersFunction();
-        
-        // The result from a callable function is in the `data` property
-        return result.data as AdminUserRecord[];
+        const idToken = await user.getIdToken();
+
+        const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/userListApi-listUsersApi', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result.users as AdminUserRecord[];
 
     } catch (error) {
-        console.error("Error calling listUsers function:", error);
+        console.error("Error calling listUsers API:", error);
         if (error instanceof Error) {
-            // Check for specific callable function errors
-            if ((error as any).code === 'unauthenticated') {
-                 throw new Error("Authentication failed. Please sign in again.");
-            }
-             if (error.message.includes('CORS')) {
+            if (error.message.includes('CORS')) {
                  throw new Error("A CORS error occurred. Please ensure your Cloud Function is configured to allow requests from this origin.");
             }
             throw error;
