@@ -22,7 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 export default function UserManagementPage() {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, loading: authLoading } from useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
-      router.push('/auth/admin/signin');
+      router.push('/auth/signin');
     }
   }, [isAdmin, authLoading, router]);
 
@@ -48,7 +48,7 @@ export default function UserManagementPage() {
       }
     };
     
-    if (!authLoading && isAdmin) {
+    if (isAdmin && !authLoading) {
       fetchUsers();
     }
   }, [isAdmin, authLoading]);
