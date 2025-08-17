@@ -76,13 +76,13 @@ export default function UserManagementPage() {
 
     const currentClaims = {
       admin: user.customClaims?.admin || false,
-      disabled: user.disabled || false,
       deleted: user.customClaims?.deleted || false,
     };
     
-    const claims = { ...currentClaims, ...newClaims };
+    // The disabled status is a top-level property on the user record, not a custom claim.
+    const fullClaims = { ...currentClaims, ...newClaims, disabled: newClaims.disabled ?? user.disabled };
 
-    const result = await updateUserClaims(uid, claims);
+    const result = await updateUserClaims(uid, fullClaims);
     if (result.success) {
       toast({ variant: 'success', title: `User Updated`, description: `The user's properties have been updated.` });
       fetchUsers();
