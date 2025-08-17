@@ -35,22 +35,23 @@ export default function UserManagementPage() {
   }, [isAdmin, authLoading, router]);
 
   useEffect(() => {
-    if (isAdmin) {
-      const fetchUsers = async () => {
-        try {
-          setLoading(true);
-          const fetchedUsers = await listUsers();
-          setUsers(fetchedUsers);
-          setError(null);
-        } catch (err: any) {
-          setError(err.message || "An unknown error occurred.");
-        } finally {
-          setLoading(false);
-        }
-      };
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const fetchedUsers = await listUsers();
+        setUsers(fetchedUsers);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || "An unknown error occurred.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (!authLoading && isAdmin) {
       fetchUsers();
     }
-  }, [isAdmin]);
+  }, [isAdmin, authLoading]);
   
   if (authLoading || !isAdmin) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
