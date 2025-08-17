@@ -52,16 +52,9 @@ const getAuthenticatedUser = (): Promise<User | null> => {
 
 export const listUsers = async (): Promise<AdminUserRecord[]> => {
     try {
-        const user = await getAuthenticatedUser();
-        if (!user) {
-            throw new Error("Authentication required.");
-        }
-        const idToken = await user.getIdToken();
-
         const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/userListApi-listUsersApi', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${idToken}`,
                 'Content-Type': 'application/json'
             }
         });
