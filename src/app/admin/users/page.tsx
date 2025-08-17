@@ -139,7 +139,7 @@ export default function UserManagementPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {users.filter(u => !u.customClaims?.deleted).map((user) => (
+                          {users.map((user) => (
                           <TableRow key={user.uid}>
                               <TableCell className="font-mono text-sm">{user.uid}</TableCell>
                               <TableCell>{user.email || 'N/A'}</TableCell>
@@ -150,7 +150,11 @@ export default function UserManagementPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                  <Badge variant={!user.disabled ? 'default' : 'destructive'}>{!user.disabled ? 'Active' : 'Disabled'}</Badge>
+                                {user.customClaims?.deleted ? (
+                                    <Badge variant="destructive">Deleted</Badge>
+                                ) : (
+                                    <Badge variant={!user.disabled ? 'default' : 'destructive'}>{!user.disabled ? 'Active' : 'Disabled'}</Badge>
+                                )}
                               </TableCell>
                               <TableCell className="text-right">
                                 <DropdownMenu>
