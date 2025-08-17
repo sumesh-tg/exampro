@@ -1,4 +1,6 @@
 
+'use client';
+
 import { auth, db, functions } from '@/lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -43,11 +45,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 };
 
 const getAuthenticatedUser = (): Promise<User | null> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       unsubscribe();
       resolve(user);
-    });
+    }, reject);
   });
 };
 
@@ -62,8 +64,13 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `API error: ${response.status}`);
+            const errorText = await response.text();
+            try {
+                const errorData = JSON.parse(errorText);
+                throw new Error(errorData.message || `API error: ${response.status}`);
+            } catch (e) {
+                throw new Error(errorText || `API error: ${response.status}`);
+            }
         }
 
         const result = await response.json();
@@ -92,8 +99,15 @@ export const setUserRole = async (uid: string, role: 'admin' | 'user'): Promise<
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `API error: ${response.status}`);
+            // Try to read the error body as text first.
+            const errorText = await response.text();
+            // Attempt to parse it as JSON, but fall back to the raw text if that fails.
+            try {
+                const errorData = JSON.parse(errorText);
+                throw new Error(errorData.message || `API error: ${response.status}`);
+            } catch (e) {
+                 throw new Error(errorText || `API error: ${response.status}`);
+            }
         }
 
         return { success: true };
