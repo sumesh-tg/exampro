@@ -88,10 +88,8 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
     }
 };
 
-export const setUserRole = async (uid: string, role: 'admin' | 'user'): Promise<{ success: boolean; message?: string }> => {
+export const updateUserClaims = async (uid: string, claims: { [key: string]: any }): Promise<{ success: boolean; message?: string }> => {
     try {
-        const claims = role === 'admin' ? { admin: true } : { admin: false };
-
         const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/setCustomUserClaims-customUserClaims', {
             method: 'POST',
             headers: {
@@ -114,65 +112,6 @@ export const setUserRole = async (uid: string, role: 'admin' | 'user'): Promise<
         return { success: true };
     } catch (error) {
         console.error("Error setting user role:", error);
-        if (error instanceof Error) {
-            return { success: false, message: error.message };
-        }
-        return { success: false, message: 'An unknown error occurred.' };
-    }
-};
-
-export const updateUserStatus = async (uid: string, disabled: boolean): Promise<{ success: boolean; message?: string }> => {
-    try {
-        const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/updateUserStatus-userStatus', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ uid, disabled }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                throw new Error(errorData.message || `API error: ${response.status}`);
-            } catch (e) {
-                 throw new Error(errorText || `API error: ${response.status}`);
-            }
-        }
-        return { success: true };
-    } catch (error) {
-        console.error("Error updating user status:", error);
-        if (error instanceof Error) {
-            return { success: false, message: error.message };
-        }
-        return { success: false, message: 'An unknown error occurred.' };
-    }
-};
-
-
-export const deleteUser = async (uid: string): Promise<{ success: boolean; message?: string }> => {
-    try {
-        const response = await fetch('https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/deleteUser-deleteUserApi', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ uid }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            try {
-                const errorData = JSON.parse(errorText);
-                throw new Error(errorData.message || `API error: ${response.status}`);
-            } catch (e) {
-                 throw new Error(errorText || `API error: ${response.status}`);
-            }
-        }
-        return { success: true };
-    } catch (error) {
-        console.error("Error deleting user:", error);
         if (error instanceof Error) {
             return { success: false, message: error.message };
         }

@@ -17,7 +17,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { listUsers, setUserRole, updateUserStatus, deleteUser, type AdminUserRecord } from '@/services/userService';
+import { updateUserClaims, listUsers, type AdminUserRecord } from '@/services/userService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -71,7 +71,8 @@ export default function UserManagementPage() {
   }, [canManageUsers, authLoading]);
   
   const handleSetRole = async (uid: string, role: 'admin' | 'user') => {
-    const result = await setUserRole(uid, role);
+    const claims = role === 'admin' ? { admin: true } : { admin: false };
+    const result = await updateUserClaims(uid, claims);
     if (result.success) {
       const action = role === 'admin' ? "Promoted" : "Demoted";
       toast({ variant: 'success', title: `User ${action}`, description: `The user has been made a${role === 'admin' ? 'n admin' : ' regular user'}.` });
@@ -82,7 +83,8 @@ export default function UserManagementPage() {
   };
   
   const handleToggleUserStatus = async (uid: string, isDisabled: boolean) => {
-    const result = await updateUserStatus(uid, !isDisabled);
+    const claims = { disabled: !isDisabled };
+    const result = await updateUserClaims(uid, claims);
     if (result.success) {
       toast({ variant: 'success', title: 'User Status Updated', description: `The user has been ${!isDisabled ? 'disabled' : 'enabled'}.` });
       fetchUsers();
@@ -92,7 +94,8 @@ export default function UserManagementPage() {
   };
 
   const handleDeleteUser = async (uid: string) => {
-    const result = await deleteUser(uid);
+    const claims = { deleted: true };
+    const result = await updateUserClaims(uid, claims);
     if (result.success) {
       toast({ variant: 'success', title: 'User Deleted', description: 'The user has been permanently deleted.' });
       fetchUsers();
