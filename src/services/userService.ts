@@ -46,12 +46,8 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
         }
 
         const idToken = await user.getIdToken();
-        const functionName = 'userListApi-listUsersApi';
         
-        // Note: The region might need to be changed if your function is deployed elsewhere.
-        const region = 'us-central1'; 
-        const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-        const url = `https://${region}-${projectId}.cloudfunctions.net/${functionName}`;
+        const url = `https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/userListApi-listUsersApi`;
 
         const response = await fetch(url, {
             method: 'GET',
@@ -71,6 +67,9 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
 
     } catch (error) {
         console.error("Error calling listUsers API:", error);
-        throw new Error("Failed to list users.");
+        if (error instanceof Error && error.message.includes('CORS')) {
+             throw new Error("A CORS error occurred. Please ensure your Cloud Function is configured to allow requests from this origin.");
+        }
+        throw new Error("Failed to list users due to a network or authentication issue.");
     }
 };
