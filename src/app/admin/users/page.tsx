@@ -143,7 +143,7 @@ export default function UserManagementPage() {
                    <Table>
                       <TableHeader>
                           <TableRow>
-                          <TableHead>User ID</TableHead>
+                          <TableHead>Display Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Phone Number</TableHead>
                           <TableHead>Role</TableHead>
@@ -154,7 +154,10 @@ export default function UserManagementPage() {
                       <TableBody>
                           {users.map((user) => (
                           <TableRow key={user.uid} className={user.customClaims?.deleted ? 'opacity-50' : ''}>
-                              <TableCell className="font-mono text-sm">{user.uid}</TableCell>
+                              <TableCell>
+                                <div>{user.displayName || 'N/A'}</div>
+                                <div className="font-mono text-xs text-muted-foreground">{user.uid}</div>
+                              </TableCell>
                               <TableCell>{user.email || 'N/A'}</TableCell>
                               <TableCell>{user.phoneNumber || 'N/A'}</TableCell>
                               <TableCell>
