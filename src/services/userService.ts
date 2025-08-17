@@ -1,5 +1,5 @@
 
-import { db, functions } from '@/lib/firebase';
+import { auth, db, functions } from '@/lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 
@@ -40,13 +40,37 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 
 export const listUsers = async (): Promise<AdminUserRecord[]> => {
     try {
-        const listUsersFunction = httpsCallable(functions, 'listUsersApi');
-        const result = await listUsersFunction();
-        return result.data as AdminUserRecord[];
+        const user = auth.currentUser;
+        if (!user) {
+            throw new Error("Authentication required.");
+        }
+
+        const idToken = await user.getIdToken();
+        const functionName = 'userListApi-listUsersApi';
+        
+        // Note: The region might need to be changed if your function is deployed elsewhere.
+        const region = 'us-central1'; 
+        const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+        const url = `https://${region}-${projectId}.cloudfunctions.net/${functionName}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to list users: ${response.status} ${errorText}`);
+        }
+        
+        const result = await response.json();
+        return result as AdminUserRecord[];
+
     } catch (error) {
-        console.error("Error calling listUsers cloud function:", error);
-        // Depending on your error handling strategy, you might want to re-throw the error
-        // or return an empty array.
+        console.error("Error calling listUsers API:", error);
         throw new Error("Failed to list users.");
     }
 };
