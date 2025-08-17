@@ -2,6 +2,8 @@
 import { auth, db, functions } from '@/lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+
 
 export type UserProfile = {
   uid: string;
@@ -38,13 +40,23 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     }
 };
 
+const getAuthenticatedUser = (): Promise<User> => {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      if (user) {
+        resolve(user);
+      } else {
+        reject(new Error("Authentication required."));
+      }
+    });
+  });
+};
+
+
 export const listUsers = async (): Promise<AdminUserRecord[]> => {
     try {
-        const user = auth.currentUser;
-        if (!user) {
-            throw new Error("Authentication required.");
-        }
-
+        const user = await getAuthenticatedUser();
         const idToken = await user.getIdToken();
         
         const url = `https://us-central1-quizwhiz-gs6fd.cloudfunctions.net/userListApi-listUsersApi`;
@@ -52,7 +64,7 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${idToken}`,
+                'Authorization':`Bearer ${idToken}`,
                 'Content-Type': 'application/json',
             }
         });
@@ -67,9 +79,12 @@ export const listUsers = async (): Promise<AdminUserRecord[]> => {
 
     } catch (error) {
         console.error("Error calling listUsers API:", error);
-        if (error instanceof Error && error.message.includes('CORS')) {
-             throw new Error("A CORS error occurred. Please ensure your Cloud Function is configured to allow requests from this origin.");
+        if (error instanceof Error) {
+            if (error.message.includes('CORS')) {
+                 throw new Error("A CORS error occurred. Please ensure your Cloud Function is configured to allow requests from this origin.");
+            }
+            throw error;
         }
-        throw new Error("Failed to list users due to a network or authentication issue.");
+        throw new Error("An unknown error occurred while listing users.");
     }
 };

@@ -51,7 +51,7 @@ export default function UserManagementPage() {
     if (isAdmin && !authLoading) {
       fetchUsers();
     }
-  }, [isAdmin, authLoading]);
+  }, []);
   
   if (authLoading || !isAdmin) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
