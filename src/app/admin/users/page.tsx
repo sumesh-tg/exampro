@@ -154,8 +154,10 @@ export default function UserManagementPage() {
                               <TableCell>
                                 {user.customClaims?.deleted ? (
                                     <Badge variant="destructive">Deleted</Badge>
+                                ) : user.disabled ? (
+                                    <Badge variant="destructive">Disabled</Badge>
                                 ) : (
-                                    <Badge variant={!user.disabled ? 'default' : 'destructive'}>{!user.disabled ? 'Active' : 'Disabled'}</Badge>
+                                    <Badge variant="default">Active</Badge>
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
