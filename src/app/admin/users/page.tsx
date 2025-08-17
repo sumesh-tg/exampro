@@ -76,10 +76,11 @@ export default function UserManagementPage() {
 
     const currentClaims = {
       admin: user.customClaims?.admin || false,
+      disabled: user.customClaims?.disabled || false,
       deleted: user.customClaims?.deleted || false,
     };
     
-    const fullClaims = { ...currentClaims, ...newClaims, disabled: newClaims.disabled ?? user.disabled };
+    const fullClaims = { ...currentClaims, ...newClaims, disabled: newClaims.disabled ?? currentClaims.disabled };
 
     const result = await updateUserClaims(uid, fullClaims);
     if (result.success) {
@@ -96,6 +97,16 @@ export default function UserManagementPage() {
   
   const handleUndoDelete = async (uid: string) => {
     await handleUpdateClaims(uid, { deleted: false });
+  }
+
+  const handleToggleUserStatus = async (user: AdminUserRecord) => {
+    const isDisabled = user.customClaims?.disabled || false;
+    await handleUpdateClaims(user.uid, { disabled: !isDisabled });
+  }
+  
+  const handleSetRole = async (user: AdminUserRecord) => {
+      const isAdmin = user.customClaims?.admin || false;
+      await handleUpdateClaims(user.uid, { admin: !isAdmin });
   }
 
   if (authLoading || !canManageUsers) {
@@ -154,7 +165,7 @@ export default function UserManagementPage() {
                               <TableCell>
                                 {user.customClaims?.deleted ? (
                                     <Badge variant="destructive">Deleted</Badge>
-                                ) : user.disabled ? (
+                                ) : user.customClaims?.disabled ? (
                                     <Badge variant="destructive">Disabled</Badge>
                                 ) : (
                                     <Badge variant="default">Active</Badge>
@@ -176,17 +187,11 @@ export default function UserManagementPage() {
                                         </DropdownMenuItem>
                                       ) : (
                                         <>
-                                            {user.customClaims?.admin ? (
-                                                <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: false })}>
-                                                    Remove from Admin
-                                                </DropdownMenuItem>
-                                            ) : (
-                                                <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { admin: true })}>
-                                                    Make as admin
-                                                </DropdownMenuItem>
-                                            )}
-                                            <DropdownMenuItem onClick={() => handleUpdateClaims(user.uid, { disabled: !user.disabled })}>
-                                                {user.disabled ? 'Enable User' : 'Disable User'}
+                                            <DropdownMenuItem onClick={() => handleSetRole(user)}>
+                                                {user.customClaims?.admin ? 'Remove from Admin' : 'Make as admin'}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
+                                                {user.customClaims?.disabled ? 'Enable User' : 'Disable User'}
                                             </DropdownMenuItem>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
