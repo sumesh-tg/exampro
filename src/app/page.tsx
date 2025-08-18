@@ -46,6 +46,7 @@ import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
 import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
 import { listUsers, type AdminUserRecord } from '@/services/userService';
 import { CampaignsList } from '@/components/campaigns-list';
+import { JoinedCampaigns } from '@/components/joined-campaigns';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -285,6 +286,9 @@ export default function Home() {
       <main className="flex-1 p-4 md:p-8">
         {(user || isSuperAdmin) ? (
             <div className="mx-auto grid max-w-6xl gap-8">
+                {user && (
+                    <JoinedCampaigns allExams={exams} />
+                )}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
                         <Card className="h-full flex flex-col">
