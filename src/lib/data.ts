@@ -23,3 +23,12 @@ export type ExamHistory = {
   date: string;
   sharedBy?: string;
 };
+
+export type Campaign = {
+  id: string;
+  name: string;
+  examIds: string[];
+  startTime: string;
+  endTime: string;
+  createdBy: string;
+};

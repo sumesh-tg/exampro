@@ -43,6 +43,7 @@ import { getExamHistory } from '@/services/examHistoryService';
 import { useToast } from '@/hooks/use-toast';
 import { AllSharedExamsReportDialog } from '@/components/all-shared-exams-report-dialog';
 import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
+import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -54,6 +55,7 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
+  const [isCreateCampaignOpen, setCreateCampaignOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [isShareReportOpen, setShareReportOpen] = useState(false);
@@ -112,6 +114,11 @@ export default function Home() {
   const handleExamCreated = () => {
     fetchExams();
     setCreateExamOpen(false);
+  }
+  
+  const handleCampaignCreated = () => {
+    // We will add campaign fetching logic later
+    setCreateCampaignOpen(false);
   }
 
   const handleShareExam = (examId: string) => {
@@ -173,7 +180,14 @@ export default function Home() {
                 onExamCreated={handleExamCreated}
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
-              <Button variant="outline" disabled>Create Campaign <Layers className="ml-2 h-4 w-4" /></Button>
+              {isAdmin && (
+                <CreateCampaignDialog
+                  open={isCreateCampaignOpen}
+                  onOpenChange={setCreateCampaignOpen}
+                  onCampaignCreated={handleCampaignCreated}
+                  allExams={exams}
+                />
+              )}
               {user && (
                   <Button variant="outline" onClick={() => setShareReportOpen(true)}>
                       <FileText className="mr-2 h-4 w-4" />
