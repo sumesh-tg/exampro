@@ -45,6 +45,7 @@ import { AllSharedExamsReportDialog } from '@/components/all-shared-exams-report
 import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
 import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
 import { listUsers, type AdminUserRecord } from '@/services/userService';
+import { CampaignsList } from '@/components/campaigns-list';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -283,148 +284,153 @@ export default function Home() {
       </header>
       <main className="flex-1 p-4 md:p-8">
         {(user || isSuperAdmin) ? (
-            <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <Card className="h-full flex flex-col">
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-6 w-6 text-primary" />
-                      <CardTitle>Available Exams</CardTitle>
-                    </div>
-                    <CardDescription>
-                      Choose an exam to test your knowledge.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 flex-1">
-                    {exams.length > 0 ? (
-                      paginatedExams.map((exam) => (
-                      <div
-                        key={exam.id}
-                        className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            {exam.isPremium && <Lock className="h-4 w-4 text-amber-500" />}
-                            <p className="font-semibold">{exam.title}</p>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {exam.description}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                           {user && hasAttemptedExam(exam.id) ? (
-                            <Button variant="secondary" disabled>
-                              <RefreshCcw className="mr-2 h-4 w-4" />
-                              Pay to Re-attempt
-                            </Button>
-                          ) : (
-                             <Button variant="default" size="sm" asChild>
-                              <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                            </Button>
-                          )}
-                          <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
-                                  <Share2 className="mr-2 h-4 w-4" />
-                                  <span>Share</span>
-                                </DropdownMenuItem>
-                                {user && (
-                                    <DropdownMenuItem onClick={() => handleOpenIndividualReport(exam)}>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        <span>View Share Report</span>
-                                    </DropdownMenuItem>
+            <div className="mx-auto grid max-w-6xl gap-8">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2">
+                        <Card className="h-full flex flex-col">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                            <BookOpen className="h-6 w-6 text-primary" />
+                            <CardTitle>Available Exams</CardTitle>
+                            </div>
+                            <CardDescription>
+                            Choose an exam to test your knowledge.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 flex-1">
+                            {exams.length > 0 ? (
+                            paginatedExams.map((exam) => (
+                            <div
+                                key={exam.id}
+                                className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
+                            >
+                                <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    {exam.isPremium && <Lock className="h-4 w-4 text-amber-500" />}
+                                    <p className="font-semibold">{exam.title}</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    {exam.description}
+                                </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                {user && hasAttemptedExam(exam.id) ? (
+                                    <Button variant="secondary" disabled>
+                                    <RefreshCcw className="mr-2 h-4 w-4" />
+                                    Pay to Re-attempt
+                                    </Button>
+                                ) : (
+                                    <Button variant="default" size="sm" asChild>
+                                    <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                                    </Button>
                                 )}
-                                {(isAdmin || isSuperAdmin) && (
-                                  <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
-                                    Delete
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                      </div>
-                    ))
-                    ) : (
-                      <div className="text-center text-muted-foreground h-full flex items-center justify-center">No exams available. Create one to get started.</div>
-                    )}
-                  </CardContent>
-                  {totalPages > 1 && (
-                    <CardFooter className="flex items-center justify-center p-4 gap-4">
-                      <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
-                       <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  )}
-                </Card>
-              </div>
-
-              <div className="row-span-2 flex flex-col gap-8">
-                <TopicSuggester />
-                { user && (
-                    <Card className="flex flex-col">
-                    <CardHeader>
-                        <div className="flex items-center gap-2">
-                        <History className="h-6 w-6 text-primary" />
-                        <CardTitle>Exam History</CardTitle>
-                        </div>
-                        <CardDescription>
-                        Review your past performances.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1">
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>Exam</TableHead>
-                            <TableHead className="text-right">Score</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {paginatedExamHistory.length > 0 ? (
-                            paginatedExamHistory.map((item) => (
-                                <TableRow key={item.id}>
-                                <TableCell className="font-medium">
-                                  <div>{item.examTitle}</div>
-                                  {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
-                                </TableCell>
-                                </TableRow>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
+                                        <Share2 className="mr-2 h-4 w-4" />
+                                        <span>Share</span>
+                                        </DropdownMenuItem>
+                                        {user && (
+                                            <DropdownMenuItem onClick={() => handleOpenIndividualReport(exam)}>
+                                                <FileText className="mr-2 h-4 w-4" />
+                                                <span>View Share Report</span>
+                                            </DropdownMenuItem>
+                                        )}
+                                        {(isAdmin || isSuperAdmin) && (
+                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
+                                            Delete
+                                        </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            </div>
                             ))
                             ) : (
-                            <TableRow>
-                                <TableCell colSpan={2} className="text-center text-muted-foreground">No exam history yet.</TableCell>
-                            </TableRow>
+                            <div className="text-center text-muted-foreground h-full flex items-center justify-center">No exams available. Create one to get started.</div>
                             )}
-                        </TableBody>
-                        </Table>
-                    </CardContent>
-                     {historyTotalPages > 1 && (
-                        <CardFooter className="flex items-center justify-center p-4 gap-4">
-                        <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p - 1)} disabled={historyCurrentPage === 1}>
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium">Page {historyCurrentPage} of {historyTotalPages}</span>
-                        <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === historyTotalPages}>
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                        </CardFooter>
-                    )}
-                    </Card>
+                        </CardContent>
+                        {totalPages > 1 && (
+                            <CardFooter className="flex items-center justify-center p-4 gap-4">
+                            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+                            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            </CardFooter>
+                        )}
+                        </Card>
+                    </div>
+
+                    <div className="row-span-2 flex flex-col gap-8">
+                        <TopicSuggester />
+                        { user && (
+                            <Card className="flex flex-col">
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                <History className="h-6 w-6 text-primary" />
+                                <CardTitle>Exam History</CardTitle>
+                                </div>
+                                <CardDescription>
+                                Review your past performances.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-1">
+                                <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>Exam</TableHead>
+                                    <TableHead className="text-right">Score</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {paginatedExamHistory.length > 0 ? (
+                                    paginatedExamHistory.map((item) => (
+                                        <TableRow key={item.id}>
+                                        <TableCell className="font-medium">
+                                        <div>{item.examTitle}</div>
+                                        {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
+                                        </TableCell>
+                                        </TableRow>
+                                    ))
+                                    ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={2} className="text-center text-muted-foreground">No exam history yet.</TableCell>
+                                    </TableRow>
+                                    )}
+                                </TableBody>
+                                </Table>
+                            </CardContent>
+                            {historyTotalPages > 1 && (
+                                <CardFooter className="flex items-center justify-center p-4 gap-4">
+                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p - 1)} disabled={historyCurrentPage === 1}>
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm font-medium">Page {historyCurrentPage} of {historyTotalPages}</span>
+                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === historyTotalPages}>
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                                </CardFooter>
+                            )}
+                            </Card>
+                        )}
+                    </div>
+                </div>
+                {(isAdmin || isSuperAdmin) && (
+                    <CampaignsList />
                 )}
-              </div>
             </div>
         ) : (
           <div className="text-center">
