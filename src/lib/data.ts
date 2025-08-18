@@ -32,3 +32,10 @@ export type Campaign = {
   endDate: Date;
   createdBy: string; // User ID of the admin who owns the campaign
 };
+
+export type CampaignDetail = {
+    id: string;
+    name: string;
+    description: string;
+    // Add other relevant fields for campaign details
+};

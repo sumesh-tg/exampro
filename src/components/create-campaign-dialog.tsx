@@ -133,7 +133,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select an admin to assign this campaign" />
-                                    </Trigger>
+                                    </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                     {allAdmins.map(admin => (
