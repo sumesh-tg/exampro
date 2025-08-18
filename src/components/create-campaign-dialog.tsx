@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addCampaign } from '@/services/campaignService';
 import { useAuth } from '@/hooks/use-auth';
-import { AdminUserRecord } from '@/services/userService';
+import type { AdminUserRecord } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 
@@ -81,7 +81,8 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
             createdBy: createdBy,
         });
         onCampaignCreated();
-        reset();
+        form.reset();
+        onOpenChange(false); // Close dialog on success
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Error Creating Campaign', description: error.message });
     } finally {
@@ -89,14 +90,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     }
   };
   
-  const reset = () => {
-    form.reset();
-    setLoading(false);
-  }
-
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      reset();
+      form.reset();
+      setLoading(false);
     }
     onOpenChange(isOpen);
   }
