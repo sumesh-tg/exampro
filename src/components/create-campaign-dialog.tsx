@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -79,8 +80,8 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
             endDate: values.endDate,
             createdBy: createdBy,
         });
-        onCampaignCreated();
         form.reset();
+        onCampaignCreated();
         onOpenChange(false);
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Error Creating Campaign', description: error.message });
