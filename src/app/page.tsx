@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -126,6 +126,10 @@ export default function Home() {
     setSelectedExamForReport(exam);
     setIndividualReportOpen(true);
   };
+  
+  const hasAttemptedExam = (examId: string) => {
+    return examHistory.some(h => h.examId === examId);
+  }
   
   if (loading || (!user && !isAdmin)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -264,15 +268,25 @@ export default function Home() {
                         className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
                       >
                         <div className="space-y-1">
-                          <p className="font-semibold">{exam.title}</p>
+                          <div className="flex items-center gap-2">
+                            {exam.isPremium && <Lock className="h-4 w-4 text-amber-500" />}
+                            <p className="font-semibold">{exam.title}</p>
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             {exam.description}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="default" size="sm" asChild>
-                            <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                          </Button>
+                           {user && hasAttemptedExam(exam.id) ? (
+                            <Button variant="secondary" disabled>
+                              <RefreshCcw className="mr-2 h-4 w-4" />
+                              Pay to Re-attempt
+                            </Button>
+                          ) : (
+                             <Button variant="default" size="sm" asChild>
+                              <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                            </Button>
+                          )}
                           <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="h-8 w-8 p-0">

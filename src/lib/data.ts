@@ -10,6 +10,7 @@ export type Exam = {
   title: string;
   description: string;
   questions: Question[];
+  isPremium?: boolean;
 };
 
 export type ExamHistory = {
