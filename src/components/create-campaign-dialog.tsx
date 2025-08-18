@@ -30,6 +30,7 @@ import { addCampaign } from '@/services/campaignService';
 import { useAuth } from '@/hooks/use-auth';
 import { AdminUserRecord } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Badge } from './ui/badge';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
@@ -137,7 +138,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select an admin to assign this campaign" />
-                                    </SelectTrigger>
+                                    </Trigger>
                                 </FormControl>
                                 <SelectContent>
                                     {allAdmins.map(admin => (
