@@ -43,13 +43,10 @@ export default function AdminSignInPage() {
   async function onSubmit(values: z.infer<typeof adminLoginSchema>) {
     setLoading(true);
     
-    // Hardcoded credentials for prototype purposes
-    const adminEmail = "admin@example.com";
-    const adminPassword = "password";
+    const adminEmail = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || "admin@example.com";
+    const adminPassword = process.env.NEXT_PUBLIC_SUPER_ADMIN_PASSWORD || "password";
 
     if (values.email === adminEmail && values.password === adminPassword) {
-      // Set some indication that the user is an admin
-      // For simplicity, using a dedicated state in the auth context.
       if(setAdmin) {
         setAdmin(true);
         sessionStorage.setItem('isSuperAdmin', 'true');
