@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -82,7 +81,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
         });
         onCampaignCreated();
         form.reset();
-        onOpenChange(false); // Close dialog on success
+        onOpenChange(false);
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Error Creating Campaign', description: error.message });
     } finally {
@@ -93,10 +92,9 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       form.reset();
-      setLoading(false);
     }
     onOpenChange(isOpen);
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
