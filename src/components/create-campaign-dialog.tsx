@@ -51,7 +51,7 @@ interface CreateCampaignDialogProps {
 
 export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, allExams, allAdmins }: CreateCampaignDialogProps) {
   const [loading, setLoading] = useState(false);
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, isAdmin } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof campaignSchema>>({
@@ -73,7 +73,8 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
 
-    if (!user) {
+    const loggedInUser = user || isSuperAdmin;
+    if (!loggedInUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a campaign.' });
         setLoading(false);
         return;
@@ -88,8 +89,8 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     try {
         await addCampaignDetail({
             ...values,
-            createdBy: user.uid,
-            assignee: isSuperAdmin ? values.assignee : user.uid,
+            createdBy: user?.uid || 'super-admin',
+            assignee: isSuperAdmin ? values.assignee : user?.uid,
         });
         toast({ title: 'Campaign Created!', description: 'The new campaign has been successfully created.' });
         onCampaignCreated();
