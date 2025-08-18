@@ -43,10 +43,9 @@ export default function AdminSignInPage() {
   async function onSubmit(values: z.infer<typeof adminLoginSchema>) {
     setLoading(true);
     
-    // In a real application, this would be a call to a secure backend.
-    // For this prototype, we'll check against environment variables.
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+    // Hardcoded credentials for prototype purposes
+    const adminEmail = "admin@example.com";
+    const adminPassword = "password";
 
     if (values.email === adminEmail && values.password === adminPassword) {
       // Set some indication that the user is an admin
