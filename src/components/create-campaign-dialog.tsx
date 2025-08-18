@@ -73,6 +73,12 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
 
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a campaign.' });
+        setLoading(false);
+        return;
+    }
+    
     if (isSuperAdmin && !values.assignee) {
         toast({ variant: 'destructive', title: 'Error', description: 'Super Admins must assign the campaign to an admin.' });
         setLoading(false);
@@ -80,10 +86,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     }
 
     try {
-        // Here we are calling the new service to save to `campaign_details`
         await addCampaignDetail({
-            name: values.name,
-            description: values.description,
+            ...values,
+            createdBy: user.uid,
+            assignee: isSuperAdmin ? values.assignee : user.uid,
         });
         toast({ title: 'Campaign Created!', description: 'The new campaign has been successfully created.' });
         onCampaignCreated();

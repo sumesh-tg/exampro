@@ -37,5 +37,9 @@ export type CampaignDetail = {
     id: string;
     name: string;
     description: string;
-    // Add other relevant fields for campaign details
+    examIds: string[];
+    startDate: Date;
+    endDate: Date;
+    createdBy: string;
+    assignee?: string;
 };
