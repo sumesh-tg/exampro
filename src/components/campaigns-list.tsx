@@ -12,27 +12,41 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
+import { useAuth } from '@/hooks/use-auth';
 
 export function CampaignsList() {
   const [campaigns, setCampaigns] = useState<CampaignDetail[]>([]);
   const [users, setUsers] = useState<Record<string, AdminUserRecord>>({});
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user, isSuperAdmin, isAdmin } = useAuth();
 
   useEffect(() => {
     async function fetchData() {
+      if (!user && !isSuperAdmin) return;
+
       try {
         setLoading(true);
         const [campaignData, userData] = await Promise.all([
           getCampaignDetails(),
           listUsers(),
         ]);
-        setCampaigns(campaignData);
+
+        let filteredCampaigns = campaignData;
+        if (isAdmin && !isSuperAdmin && user) {
+          filteredCampaigns = campaignData.filter(
+            (c) => c.createdBy === user.uid || c.assignee === user.uid
+          );
+        }
+
+        setCampaigns(filteredCampaigns);
+        
         const userMap = userData.reduce((acc, user) => {
             acc[user.uid] = user;
             return acc;
         }, {} as Record<string, AdminUserRecord>);
         setUsers(userMap);
+
       } catch (error) {
         console.error("Failed to fetch campaigns or users:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch campaigns.' });
@@ -41,7 +55,7 @@ export function CampaignsList() {
       }
     }
     fetchData();
-  }, [toast]);
+  }, [toast, user, isAdmin, isSuperAdmin]);
   
   const getAssigneeName = (uid: string) => {
     return users[uid]?.displayName || users[uid]?.email || 'N/A';
@@ -88,7 +102,7 @@ export function CampaignsList() {
            <div className="flex justify-center items-center py-10">
              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
            </div>
-        ) : (
+        ) : campaigns.length > 0 ? (
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -127,6 +141,8 @@ export function CampaignsList() {
                     ))}
                 </TableBody>
             </Table>
+        ) : (
+          <div className="text-center text-muted-foreground py-10">No campaigns found for you.</div>
         )}
       </CardContent>
     </Card>
