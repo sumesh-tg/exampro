@@ -61,7 +61,14 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      form.reset();
+    }
+    onOpenChange(isOpen);
+  };
+  
+  async function onSubmit(values: z.infer<typeof campaignSchema>) {
     setLoading(true);
 
     if (isSuperAdmin && !values.assignee) {
@@ -88,14 +95,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     } finally {
         setLoading(false);
     }
-  };
-  
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      form.reset();
-    }
-    onOpenChange(isOpen);
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -154,43 +154,45 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
             )}
 
             <div className="space-y-2">
-              <Label>Select Exams</Label>
               <FormField
                 control={form.control}
                 name="examIds"
                 render={() => (
-                  <FormItem className="max-h-40 overflow-y-auto rounded-md border p-4 space-y-2">
-                    {allExams.map((exam) => (
-                      <FormField
-                        key={exam.id}
-                        control={form.control}
-                        name="examIds"
-                        render={({ field }) => (
-                          <FormItem key={exam.id} className="flex flex-row items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(exam.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...(field.value || []), exam.id])
-                                    : field.onChange(field.value?.filter((value) => value !== exam.id));
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal w-full">
-                                <div className="flex justify-between">
-                                    <span>{exam.title}</span>
-                                    {exam.isPremium && <Badge variant="secondary">Premium</Badge>}
-                                </div>
-                            </FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                    ))}
+                  <FormItem>
+                    <FormLabel>Select Exams</FormLabel>
+                     <div className="max-h-40 overflow-y-auto rounded-md border p-4 space-y-2">
+                        {allExams.map((exam) => (
+                        <FormField
+                            key={exam.id}
+                            control={form.control}
+                            name="examIds"
+                            render={({ field }) => (
+                            <FormItem key={exam.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                <Checkbox
+                                    checked={field.value?.includes(exam.id)}
+                                    onCheckedChange={(checked) => {
+                                    return checked
+                                        ? field.onChange([...(field.value || []), exam.id])
+                                        : field.onChange(field.value?.filter((value) => value !== exam.id));
+                                    }}
+                                />
+                                </FormControl>
+                                <FormLabel className="font-normal w-full">
+                                    <div className="flex justify-between">
+                                        <span>{exam.title}</span>
+                                        {exam.isPremium && <Badge variant="secondary">Premium</Badge>}
+                                    </div>
+                                </FormLabel>
+                            </FormItem>
+                            )}
+                        />
+                        ))}
+                    </div>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormMessage>{form.formState.errors.examIds?.message}</FormMessage>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
