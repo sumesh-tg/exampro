@@ -25,14 +25,16 @@ import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addCampaign } from '@/services/campaignService';
+import { addCampaignDetail } from '@/services/campaignDetailsService';
 import { useAuth } from '@/hooks/use-auth';
 import type { AdminUserRecord } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
+import { Textarea } from './ui/textarea';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
+  description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   examIds: z.array(z.string()).min(1, { message: 'Please select at least one exam.' }),
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
@@ -56,6 +58,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     resolver: zodResolver(campaignSchema),
     defaultValues: {
       name: '',
+      description: '',
       examIds: [],
     },
   });
@@ -76,15 +79,11 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
         return;
     }
 
-    const createdBy = isSuperAdmin ? values.assignee! : user!.uid;
-
     try {
-        await addCampaign({
+        // Here we are calling the new service to save to `campaign_details`
+        await addCampaignDetail({
             name: values.name,
-            examIds: values.examIds,
-            startDate: values.startDate,
-            endDate: values.endDate,
-            createdBy: createdBy,
+            description: values.description,
         });
         toast({ title: 'Campaign Created!', description: 'The new campaign has been successfully created.' });
         onCampaignCreated();
@@ -117,6 +116,18 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                 <FormItem>
                   <FormLabel>Campaign Name</FormLabel>
                   <FormControl><Input placeholder="e.g., Q1 Engineering Onboarding" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Campaign Description</FormLabel>
+                  <FormControl><Textarea placeholder="Describe the purpose of this campaign." {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
