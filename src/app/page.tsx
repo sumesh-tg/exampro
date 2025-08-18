@@ -115,7 +115,7 @@ export default function Home() {
     if (isSuperAdmin) {
         fetchAdmins();
     }
-  }, [user, isSuperAdmin, loading, router]);
+  }, [isSuperAdmin, loading, router]);
 
   const handleSignOut = async () => {
     if (isSuperAdmin && setAdmin) {

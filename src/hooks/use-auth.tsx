@@ -65,14 +65,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check session storage on initial load for Super Admin
     if (typeof window !== 'undefined') {
        const superAdminStatus = sessionStorage.getItem('isSuperAdmin') === 'true';
-       if(superAdminStatus && !isSuperAdmin) {
+       if(superAdminStatus) {
         setAdmin(true);
        }
     }
 
 
     return () => unsubscribe();
-  }, [isSuperAdmin]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, setAdmin }}>
