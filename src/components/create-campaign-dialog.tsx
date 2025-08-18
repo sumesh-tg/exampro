@@ -67,7 +67,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     onOpenChange(isOpen);
   };
   
-  async function onSubmit(values: z.infer<typeof campaignSchema>) {
+  const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
 
     if (isSuperAdmin && !values.assignee) {
@@ -94,7 +94,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     } finally {
         setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
