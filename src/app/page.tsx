@@ -44,13 +44,14 @@ import { useToast } from '@/hooks/use-toast';
 import { AllSharedExamsReportDialog } from '@/components/all-shared-exams-report-dialog';
 import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
 import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
+import { listUsers, type AdminUserRecord } from '@/services/userService';
 
 
 const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
 
 export default function Home() {
-  const { user, loading, isAdmin, setAdmin } = useAuth();
+  const { user, loading, isAdmin, isSuperAdmin, setAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -61,6 +62,7 @@ export default function Home() {
   const [isShareReportOpen, setShareReportOpen] = useState(false);
   const [isIndividualReportOpen, setIndividualReportOpen] = useState(false);
   const [selectedExamForReport, setSelectedExamForReport] = useState<Exam | null>(null);
+  const [allAdmins, setAllAdmins] = useState<AdminUserRecord[]>([]);
   const { toast } = useToast();
   
   const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
@@ -69,6 +71,7 @@ export default function Home() {
   const historyTotalPages = Math.ceil(examHistory.length / EXAM_HISTORY_PAGE_SIZE);
   const paginatedExamHistory = examHistory.slice((historyCurrentPage - 1) * EXAM_HISTORY_PAGE_SIZE, historyCurrentPage * EXAM_HISTORY_PAGE_SIZE);
 
+  const canCreateCampaign = isAdmin || isSuperAdmin;
 
   async function fetchExams() {
     const fetchedExams = await getExams();
@@ -82,10 +85,23 @@ export default function Home() {
     }
   }
 
+  async function fetchAdmins() {
+    if (isSuperAdmin) {
+        try {
+            const allUsers = await listUsers();
+            const adminUsers = allUsers.filter(u => u.customClaims?.admin && !u.customClaims?.deleted);
+            setAllAdmins(adminUsers);
+        } catch (error) {
+            console.error("Failed to fetch admins:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch list of admins.' });
+        }
+    }
+  }
+
   useEffect(() => {
     if (loading) return;
 
-    if (!user && !isAdmin) {
+    if (!user && !isSuperAdmin) {
       router.push('/auth/signin');
       return;
     }
@@ -94,10 +110,13 @@ export default function Home() {
     if (user) {
       fetchExamHistory();
     }
-  }, [user, isAdmin, loading, router]);
+    if (isSuperAdmin) {
+        fetchAdmins();
+    }
+  }, [user, isSuperAdmin, loading, router]);
 
   const handleSignOut = async () => {
-    if (isAdmin && setAdmin) {
+    if (isSuperAdmin && setAdmin) {
         sessionStorage.removeItem('isSuperAdmin');
         setAdmin(false);
     } else {
@@ -118,6 +137,7 @@ export default function Home() {
   
   const handleCampaignCreated = () => {
     // We will add campaign fetching logic later
+    toast({ title: "Campaign Created!", description: "The new campaign has been successfully created." });
     setCreateCampaignOpen(false);
   }
 
@@ -138,7 +158,7 @@ export default function Home() {
     return examHistory.some(h => h.examId === examId);
   }
   
-  if (loading || (!user && !isAdmin)) {
+  if (loading || (!user && !isSuperAdmin)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
@@ -172,7 +192,7 @@ export default function Home() {
           </Link>
         </nav>
         <div className="flex items-center gap-4">
-          {(user || isAdmin) && (
+          {(user || isSuperAdmin) && (
             <>
               <CreateExamDialog 
                 open={isCreateExamOpen}
@@ -180,12 +200,13 @@ export default function Home() {
                 onExamCreated={handleExamCreated}
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
-              {isAdmin && (
+              {canCreateCampaign && (
                 <CreateCampaignDialog
                   open={isCreateCampaignOpen}
                   onOpenChange={setCreateCampaignOpen}
                   onCampaignCreated={handleCampaignCreated}
                   allExams={exams}
+                  allAdmins={allAdmins}
                 />
               )}
               {user && (
@@ -226,7 +247,7 @@ export default function Home() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : isAdmin ? (
+          ) : isSuperAdmin ? (
              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="icon" className="rounded-full">
@@ -262,7 +283,7 @@ export default function Home() {
         </div>
       </header>
       <main className="flex-1 p-4 md:p-8">
-        {(user || isAdmin) ? (
+        {(user || isSuperAdmin) ? (
             <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <Card className="h-full flex flex-col">
@@ -321,7 +342,7 @@ export default function Home() {
                                         <span>View Share Report</span>
                                     </DropdownMenuItem>
                                 )}
-                                {isAdmin && (
+                                {(isAdmin || isSuperAdmin) && (
                                   <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
                                     Delete
                                   </DropdownMenuItem>

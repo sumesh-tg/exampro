@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, Layers, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Layers, Calendar as CalendarIcon, User } from 'lucide-react';
 import type { Exam } from '@/lib/data';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
@@ -26,14 +26,17 @@ import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { addCampaign } from '@/services/campaignService';
+import { useAuth } from '@/hooks/use-auth';
+import { AdminUserRecord } from '@/services/userService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
   examIds: z.array(z.string()).min(1, { message: 'Please select at least one exam.' }),
   startDate: z.date({ required_error: 'A start date is required.' }),
-  startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Invalid time format (HH:MM).' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Invalid time format (HH:MM).' }),
+  assignee: z.string().optional(), // User ID of the admin to assign the campaign to
 });
 
 interface CreateCampaignDialogProps {
@@ -41,10 +44,12 @@ interface CreateCampaignDialogProps {
     onOpenChange: (open: boolean) => void;
     onCampaignCreated: () => void;
     allExams: Exam[];
+    allAdmins: AdminUserRecord[];
 }
 
-export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, allExams }: CreateCampaignDialogProps) {
+export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, allExams, allAdmins }: CreateCampaignDialogProps) {
   const [loading, setLoading] = useState(false);
+  const { user, isSuperAdmin } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof campaignSchema>>({
@@ -52,21 +57,35 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     defaultValues: {
       name: '',
       examIds: [],
-      startTime: '09:00',
-      endTime: '17:00',
     },
   });
 
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
-    console.log('Creating campaign with values:', values);
-    // In a real application, you would call a service to save this campaign.
-    // For now, we'll just simulate it.
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({ title: "Campaign Created!", description: "The campaign has been successfully created." });
-    setLoading(false);
-    onCampaignCreated();
-    reset();
+
+    if (isSuperAdmin && !values.assignee) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Super Admins must assign the campaign to an admin.' });
+        setLoading(false);
+        return;
+    }
+
+    const createdBy = isSuperAdmin ? values.assignee! : user!.uid;
+
+    try {
+        await addCampaign({
+            name: values.name,
+            examIds: values.examIds,
+            startDate: values.startDate,
+            endDate: values.endDate,
+            createdBy: createdBy,
+        });
+        onCampaignCreated();
+        reset();
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error Creating Campaign', description: error.message });
+    } finally {
+        setLoading(false);
+    }
   };
   
   const reset = () => {
@@ -107,6 +126,36 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
               )}
             />
 
+            {isSuperAdmin && (
+                <FormField
+                    control={form.control}
+                    name="assignee"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Assign to Admin</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select an admin to assign this campaign" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {allAdmins.map(admin => (
+                                        <SelectItem key={admin.uid} value={admin.uid}>
+                                            <div className="flex items-center gap-2">
+                                                <User className="h-4 w-4" />
+                                                <span>{admin.displayName || admin.email}</span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            )}
+
             <div className="space-y-2">
               <Label>Select Exams</Label>
               <FormField
@@ -126,7 +175,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                                 checked={field.value?.includes(exam.id)}
                                 onCheckedChange={(checked) => {
                                   return checked
-                                    ? field.onChange([...field.value, exam.id])
+                                    ? field.onChange([...(field.value || []), exam.id])
                                     : field.onChange(field.value?.filter((value) => value !== exam.id));
                                 }}
                               />
@@ -176,19 +225,6 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                 />
                  <FormField
                   control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time</FormLabel>
-                      <FormControl><Input type="time" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            </div>
-             <div className="grid grid-cols-2 gap-4">
-               <FormField
-                  control={form.control}
                   name="endDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
@@ -209,17 +245,6 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                           <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                         </PopoverContent>
                       </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="endTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time</FormLabel>
-                      <FormControl><Input type="time" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

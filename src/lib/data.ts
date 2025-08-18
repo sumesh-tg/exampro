@@ -28,7 +28,7 @@ export type Campaign = {
   id: string;
   name: string;
   examIds: string[];
-  startTime: string;
-  endTime: string;
-  createdBy: string;
+  startDate: Date;
+  endDate: Date;
+  createdBy: string; // User ID of the admin who owns the campaign
 };
