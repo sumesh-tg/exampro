@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -173,6 +173,7 @@ export default function Home() {
                 onExamCreated={handleExamCreated}
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+              <Button variant="outline" disabled>Create Campaign <Layers className="ml-2 h-4 w-4" /></Button>
               {user && (
                   <Button variant="outline" onClick={() => setShareReportOpen(true)}>
                       <FileText className="mr-2 h-4 w-4" />
