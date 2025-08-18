@@ -43,8 +43,8 @@ export default function AdminSignInPage() {
   async function onSubmit(values: z.infer<typeof adminLoginSchema>) {
     setLoading(true);
     
-    const adminEmail = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || "admin@example.com";
-    const adminPassword = process.env.NEXT_PUBLIC_SUPER_ADMIN_PASSWORD || "password";
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "admin@example.com";
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "password";
 
     if (values.email === adminEmail && values.password === adminPassword) {
       if(setAdmin) {
