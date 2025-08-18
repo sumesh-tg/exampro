@@ -20,7 +20,6 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Layers, Calendar as CalendarIcon, User } from 'lucide-react';
 import type { Exam } from '@/lib/data';
 import { Checkbox } from './ui/checkbox';
-import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
@@ -87,9 +86,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
             endDate: values.endDate,
             createdBy: createdBy,
         });
+        toast({ title: 'Campaign Created!', description: 'The new campaign has been successfully created.' });
         form.reset();
         onCampaignCreated();
-        onOpenChange(false);
+        handleOpenChange(false);
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Error Creating Campaign', description: error.message });
     } finally {
@@ -100,7 +100,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>Create Campaign <Layers className="ml-2 h-4 w-4" /></Button>
+        <Button onClick={() => onOpenChange(true)}>Create Campaign <Layers className="ml-2 h-4 w-4" /></Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
@@ -153,50 +153,48 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                 />
             )}
 
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="examIds"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Select Exams</FormLabel>
-                     <div className="max-h-40 overflow-y-auto rounded-md border p-4 space-y-2">
-                        {allExams.map((exam) => (
-                        <FormField
-                            key={exam.id}
-                            control={form.control}
-                            name="examIds"
-                            render={({ field }) => (
-                            <FormItem key={exam.id} className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                <Checkbox
-                                    checked={field.value?.includes(exam.id)}
-                                    onCheckedChange={(checked) => {
-                                    return checked
-                                        ? field.onChange([...(field.value || []), exam.id])
-                                        : field.onChange(field.value?.filter((value) => value !== exam.id));
-                                    }}
-                                />
-                                </FormControl>
-                                <FormLabel className="font-normal w-full">
-                                    <div className="flex justify-between">
-                                        <span>{exam.title}</span>
-                                        {exam.isPremium && <Badge variant="secondary">Premium</Badge>}
-                                    </div>
-                                </FormLabel>
-                            </FormItem>
-                            )}
-                        />
-                        ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="examIds"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Select Exams</FormLabel>
+                    <div className="max-h-40 overflow-y-auto rounded-md border p-4 space-y-2">
+                      {allExams.map((exam) => (
+                      <FormField
+                          key={exam.id}
+                          control={form.control}
+                          name="examIds"
+                          render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                              <Checkbox
+                                  checked={field.value?.includes(exam.id)}
+                                  onCheckedChange={(checked) => {
+                                  return checked
+                                      ? field.onChange([...(field.value || []), exam.id])
+                                      : field.onChange(field.value?.filter((value) => value !== exam.id));
+                                  }}
+                              />
+                              </FormControl>
+                              <FormLabel className="font-normal w-full">
+                                  <div className="flex justify-between">
+                                      <span>{exam.title}</span>
+                                      {exam.isPremium && <Badge variant="secondary">Premium</Badge>}
+                                  </div>
+                              </FormLabel>
+                          </FormItem>
+                          )}
+                      />
+                      ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-2 gap-4">
-               <FormField
+                <FormField
                   control={form.control}
                   name="startDate"
                   render={({ field }) => (
@@ -222,7 +220,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="endDate"
                   render={({ field }) => (
@@ -251,7 +249,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Campaign
