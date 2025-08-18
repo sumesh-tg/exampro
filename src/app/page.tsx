@@ -136,7 +136,6 @@ export default function Home() {
   }
   
   const handleCampaignCreated = () => {
-    // We will add campaign fetching logic later
     toast({ title: "Campaign Created!", description: "The new campaign has been successfully created." });
     setCreateCampaignOpen(false);
   }

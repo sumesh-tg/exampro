@@ -36,7 +36,7 @@ const campaignSchema = z.object({
   examIds: z.array(z.string()).min(1, { message: 'Please select at least one exam.' }),
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
-  assignee: z.string().optional(), // User ID of the admin to assign the campaign to
+  assignee: z.string().optional(),
 });
 
 interface CreateCampaignDialogProps {
@@ -87,7 +87,6 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
             createdBy: createdBy,
         });
         toast({ title: 'Campaign Created!', description: 'The new campaign has been successfully created.' });
-        form.reset();
         onCampaignCreated();
         handleOpenChange(false);
     } catch (error: any) {
