@@ -21,6 +21,7 @@ type AuthContextType = {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   setAdmin?: Dispatch<SetStateAction<boolean>>;
+  setSuperAdmin?: Dispatch<SetStateAction<boolean>>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,10 +34,19 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSuperAdmin, setAdmin] = useState(false);
+  const [isSuperAdmin, setSuperAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Check session storage on initial load for Super Admin
+    // This is necessary to persist state across page refreshes.
+    if (typeof window !== 'undefined') {
+       const superAdminStatus = sessionStorage.getItem('isSuperAdmin') === 'true';
+       if(superAdminStatus) {
+        setSuperAdmin(true);
+       }
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
@@ -55,27 +65,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUser(null);
         setIsAdmin(false);
-        // If firebase auth state changes and there's no user, log out admin too
-        sessionStorage.removeItem('isSuperAdmin');
-        setAdmin(false);
       }
       setLoading(false);
     });
     
-    // Check session storage on initial load for Super Admin
-    if (typeof window !== 'undefined') {
-       const superAdminStatus = sessionStorage.getItem('isSuperAdmin') === 'true';
-       if(superAdminStatus) {
-        setAdmin(true);
-       }
-    }
-
-
     return () => unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, setAdmin }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, setSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   );

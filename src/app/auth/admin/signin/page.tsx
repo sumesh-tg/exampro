@@ -25,7 +25,7 @@ export default function AdminSignInPage() {
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { setAdmin } = useAuth();
+  const { setSuperAdmin } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
@@ -47,11 +47,17 @@ export default function AdminSignInPage() {
     const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "password";
 
     if (values.email === adminEmail && values.password === adminPassword) {
-      if(setAdmin) {
-        setAdmin(true);
+      if(setSuperAdmin) {
+        setSuperAdmin(true);
         sessionStorage.setItem('isSuperAdmin', 'true');
         toast({ title: 'Admin login successful!' });
         router.push('/');
+      } else {
+         toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Could not set admin state.',
+         });
       }
     } else {
       toast({
