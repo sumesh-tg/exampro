@@ -53,7 +53,7 @@ const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
 
 export default function Home() {
-  const { user, loading, isAdmin, isSuperAdmin, setAdmin } = useAuth();
+  const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -115,12 +115,12 @@ export default function Home() {
     if (isSuperAdmin) {
         fetchAdmins();
     }
-  }, [isSuperAdmin, loading, router]);
+  }, [user, isSuperAdmin, loading, router]);
 
   const handleSignOut = async () => {
-    if (isSuperAdmin && setAdmin) {
+    if (isSuperAdmin && setSuperAdmin) {
         sessionStorage.removeItem('isSuperAdmin');
-        setAdmin(false);
+        setSuperAdmin(false);
     } else {
         await signOut(auth);
     }
