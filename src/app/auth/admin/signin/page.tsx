@@ -47,21 +47,18 @@ export default function AdminSignInPage() {
     const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "password";
 
     if (values.email === adminEmail && values.password === adminPassword) {
-      // if(setSuperAdmin) {
-        console.log("Super admin Login Success")
-        setSuperAdmin?.(true);
+      if(setSuperAdmin) {
+        setSuperAdmin(true);
         sessionStorage.setItem('isSuperAdmin', 'true');
         toast({ title: 'Admin login successful!' });
-        console.log("Super admin Login Success :: Router Push")
         router.push('/');
-        console.log("Super admin Login Success :: Router push completed")
-      // } else {
-      //    toast({
-      //       variant: 'destructive',
-      //       title: 'Login Failed',
-      //       description: 'Could not set admin state.',
-      //    });
-      // }
+      } else {
+         toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Could not set admin state.',
+         });
+      }
     } else {
       toast({
         variant: 'destructive',

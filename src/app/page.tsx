@@ -114,7 +114,7 @@ export default function Home() {
   }, [user, isSuperAdmin, loading]);
 
   const handleSignOut = async () => {
-    if (isSuperAdmin && setSuperAdmin) {
+    if (isSuperAdmin) {
         sessionStorage.removeItem('isSuperAdmin');
         setSuperAdmin(false);
         router.push('/auth/admin/signin');

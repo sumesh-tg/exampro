@@ -20,7 +20,7 @@ type AuthContextType = {
   loading: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  setSuperAdmin?: Dispatch<SetStateAction<boolean>>;
+  setSuperAdmin: Dispatch<SetStateAction<boolean>>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -28,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isSuperAdmin: false,
+  setSuperAdmin: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -40,9 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check session storage on initial load for Super Admin
     if (typeof window !== 'undefined') {
        const superAdminStatus = sessionStorage.getItem('isSuperAdmin') === 'true';
-       if(superAdminStatus) {
-        setSuperAdmin(true);
-       }
+       setSuperAdmin(superAdminStatus);
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -83,12 +82,14 @@ export const useRequireAuth = () => {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user && !isSuperAdmin) {
-      if (pathname.startsWith('/auth')) {
-        return;
-      }
-      const redirectUrl = `?redirect=${encodeURIComponent(pathname + window.location.search)}`;
-      router.push(`/auth/signin${redirectUrl}`);
+    if (!loading) {
+        if (!user && !isSuperAdmin) {
+            if (pathname.startsWith('/auth')) {
+                return;
+            }
+            const redirectUrl = `?redirect=${encodeURIComponent(pathname + window.location.search)}`;
+            router.push(`/auth/signin${redirectUrl}`);
+        }
     }
   }, [user, loading, isSuperAdmin, router, pathname]);
 
