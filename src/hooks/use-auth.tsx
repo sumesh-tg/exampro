@@ -38,10 +38,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Check session storage on initial load for Super Admin
+    // Check session storage on initial client-side load for Super Admin
     if (typeof window !== 'undefined') {
        const superAdminStatus = sessionStorage.getItem('isSuperAdmin') === 'true';
-       setSuperAdmin(superAdminStatus);
+       if(superAdminStatus) {
+         setSuperAdmin(superAdminStatus);
+       }
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -82,16 +84,20 @@ export const useRequireAuth = () => {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading) {
-        if (!user && !isSuperAdmin) {
-            if (pathname.startsWith('/auth')) {
-                return;
-            }
-            const redirectUrl = `?redirect=${encodeURIComponent(pathname + window.location.search)}`;
-            router.push(`/auth/signin${redirectUrl}`);
-        }
+    if (loading) return;
+
+    const isAuthPage = pathname.startsWith('/auth');
+
+    // If we're on an auth page, we don't need to do anything.
+    if (isAuthPage) return;
+
+    // If not loading, and not a user, and not a super admin, then redirect.
+    if (!user && !isSuperAdmin) {
+      const redirectUrl = `?redirect=${encodeURIComponent(pathname + window.location.search)}`;
+      router.push(`/auth/signin${redirectUrl}`);
     }
+
   }, [user, loading, isSuperAdmin, router, pathname]);
 
-  return { user, loading };
+  return { user, loading, isSuperAdmin };
 };

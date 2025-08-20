@@ -43,11 +43,13 @@ export default function AdminSignInPage() {
   async function onSubmit(values: z.infer<typeof adminLoginSchema>) {
     setLoading(true);
     
+    // In a real app, these should be securely handled, not hardcoded.
+    // For this prototype, we'll read them from public env vars.
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "admin@example.com";
     const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "password";
 
     if (values.email === adminEmail && values.password === adminPassword) {
-      if(setSuperAdmin) {
+      if (setSuperAdmin) {
         setSuperAdmin(true);
         sessionStorage.setItem('isSuperAdmin', 'true');
         toast({ title: 'Admin login successful!' });
@@ -79,7 +81,7 @@ export default function AdminSignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-         {isClient && (
+         {isClient ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -114,6 +116,10 @@ export default function AdminSignInPage() {
               </Button>
             </form>
           </Form>
+          ) : (
+            <div className="flex justify-center items-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
           )}
           <div className="mt-4 text-center text-sm">
             <Link href="/auth/signin" className="underline">

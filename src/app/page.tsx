@@ -156,7 +156,7 @@ export default function Home() {
     return examHistory.some(h => h.examId === examId);
   }
   
-  if (loading || (!user && !isSuperAdmin)) {
+  if (loading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
@@ -445,10 +445,9 @@ export default function Home() {
                 )}
             </div>
         ) : (
-          <div className="text-center">
-            <h2 className="text-2xl font-bold">Welcome to QuizWhiz</h2>
-            <p className="text-muted-foreground">Please sign in to continue.</p>
-          </div>
+           <div className="flex min-h-screen items-center justify-center">
+             <h2 className="text-2xl font-bold">Welcome to QuizWhiz</h2>
+           </div>
         )}
       </main>
     </div>
