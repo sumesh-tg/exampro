@@ -20,7 +20,6 @@ type AuthContextType = {
   loading: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  setAdmin?: Dispatch<SetStateAction<boolean>>;
   setSuperAdmin?: Dispatch<SetStateAction<boolean>>;
 };
 
@@ -39,7 +38,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Check session storage on initial load for Super Admin
-    // This is necessary to persist state across page refreshes.
     if (typeof window !== 'undefined') {
        const superAdminStatus = sessionStorage.getItem('isSuperAdmin') === 'true';
        if(superAdminStatus) {
@@ -50,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        // Sync user data to Firestore
         updateUserProfile(user.uid, {
             uid: user.uid,
             email: user.email ?? '',
@@ -58,7 +55,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             photoURL: user.photoURL ?? ''
         });
         
-        // Check for admin claims
         const token = await user.getIdTokenResult();
         setIsAdmin(!!token.claims.admin);
 
@@ -88,16 +84,13 @@ export const useRequireAuth = () => {
 
   useEffect(() => {
     if (!loading && !user && !isSuperAdmin) {
-      // Don't redirect if we are already on an auth page
       if (pathname.startsWith('/auth')) {
         return;
       }
-      // If there's a path we want to be redirected to (e.g. a shared exam link)
-      // append it to the signin url
       const redirectUrl = `?redirect=${encodeURIComponent(pathname + window.location.search)}`;
       router.push(`/auth/signin${redirectUrl}`);
     }
-  }, [user, loading, router, isSuperAdmin, pathname]);
+  }, [user, loading, isSuperAdmin, router, pathname]);
 
-  return { user, loading, isSuperAdmin };
+  return { user, loading };
 };

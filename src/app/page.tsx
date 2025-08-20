@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -54,6 +54,7 @@ const EXAM_HISTORY_PAGE_SIZE = 3;
 
 export default function Home() {
   const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
+  useRequireAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -103,11 +104,6 @@ export default function Home() {
   useEffect(() => {
     if (loading) return;
 
-    if (!user && !isSuperAdmin) {
-      router.push('/auth/signin');
-      return;
-    }
-
     fetchExams();
     if (user) {
       fetchExamHistory();
@@ -115,16 +111,17 @@ export default function Home() {
     if (isSuperAdmin) {
         fetchAdmins();
     }
-  }, [user, isSuperAdmin, loading, router]);
+  }, [user, isSuperAdmin, loading]);
 
   const handleSignOut = async () => {
     if (isSuperAdmin && setSuperAdmin) {
         sessionStorage.removeItem('isSuperAdmin');
         setSuperAdmin(false);
+        router.push('/auth/admin/signin');
     } else {
         await signOut(auth);
+        router.push('/auth/signin');
     }
-    router.push('/auth/signin');
   };
 
   const handleDeleteExam = async (id: string) => {
