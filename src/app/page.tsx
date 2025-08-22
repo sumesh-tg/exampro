@@ -108,10 +108,14 @@ export default function Home() {
     if (isSuperAdmin) {
         fetchAdmins();
     }
-  }, [user, isSuperAdmin, loading, router]);
+  }, [user, isSuperAdmin]);
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    if (isSuperAdmin) {
+      // No need to call Firebase signOut for super admin
+    } else {
+      await signOut(auth);
+    }
     router.push('/auth/signin');
   };
 
@@ -183,7 +187,7 @@ export default function Home() {
           </Link>
         </nav>
         <div className="flex items-center gap-4">
-          {(user || isSuperAdmin) && (
+          {(isAdmin || isSuperAdmin) && (
             <>
                <CreateExamDialog 
                 open={isCreateExamOpen}
@@ -192,8 +196,6 @@ export default function Home() {
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
 
-              {(isAdmin || isSuperAdmin) && (
-                <>
                 <CreateCampaignDialog
                   open={isCreateCampaignOpen}
                   onOpenChange={setCreateCampaignOpen}
@@ -205,8 +207,6 @@ export default function Home() {
                       <FileText className="mr-2 h-4 w-4" />
                       View Share Report
                   </Button>
-                </>
-              )}
             </>
           )}
 
@@ -447,3 +447,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
