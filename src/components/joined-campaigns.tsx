@@ -154,8 +154,9 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
                         
                         const attempts = getAttemptsForExam(exam.id);
                         const freeAttemptsDisabled = (campaign.freeAttemptsDisabledFor || []).includes(user?.uid || '');
-                        const hasFreeAttemptsLeft = attempts < campaign.freeAttempts;
-                        const shouldPay = freeAttemptsDisabled || !hasFreeAttemptsLeft;
+                        const hasExceededFreeAttempts = attempts >= campaign.freeAttempts;
+                        
+                        const shouldPay = freeAttemptsDisabled || hasExceededFreeAttempts || exam.isPremium;
 
                         return (
                              <div key={exam.id} className="flex items-center justify-between rounded-lg border p-4">
@@ -163,8 +164,13 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
                                     <p className="font-semibold">{exam.title}</p>
                                     <p className="text-sm text-muted-foreground">{exam.description}</p>
                                 </div>
-                                {shouldPay ? (
+                                {shouldPay && attempts > 0 ? (
                                     <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                      <RefreshCcw className="mr-2 h-4 w-4" />
+                                      Pay to Re-attempt
+                                    </Button>
+                                ) : shouldPay && attempts === 0 ? (
+                                     <Button variant="secondary" onClick={() => handlePayment(exam)}>
                                       <RefreshCcw className="mr-2 h-4 w-4" />
                                       Pay to Attempt
                                     </Button>
