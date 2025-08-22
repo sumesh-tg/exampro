@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -53,7 +53,7 @@ const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
 
 export default function Home() {
-  const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
+  const { user, loading, isAdmin, isSuperAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -66,9 +66,11 @@ export default function Home() {
   const [selectedExamForReport, setSelectedExamForReport] = useState<Exam | null>(null);
   const [allAdmins, setAllAdmins] = useState<AdminUserRecord[]>([]);
   const { toast } = useToast();
+
+  const filteredExams = (isAdmin || isSuperAdmin) ? exams : exams.filter(exam => !exam.isPremium);
   
-  const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
-  const paginatedExams = exams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
+  const totalPages = Math.ceil(filteredExams.length / EXAMS_PAGE_SIZE);
+  const paginatedExams = filteredExams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
 
   const historyTotalPages = Math.ceil(examHistory.length / EXAM_HISTORY_PAGE_SIZE);
   const paginatedExamHistory = examHistory.slice((historyCurrentPage - 1) * EXAM_HISTORY_PAGE_SIZE, historyCurrentPage * EXAM_HISTORY_PAGE_SIZE);
@@ -99,16 +101,6 @@ export default function Home() {
   }
 
   useEffect(() => {
-    if (loading) return;
-
-    const isAuthPage = router.pathname?.startsWith('/auth');
-
-    if (!user && !isSuperAdmin && !isAuthPage) {
-        const redirectUrl = `?redirect=${encodeURIComponent(router.pathname + window.location.search)}`;
-        router.push(`/auth/signin${redirectUrl}`);
-        return;
-    }
-    
     fetchExams();
     if (user) {
       fetchExamHistory();
@@ -119,13 +111,8 @@ export default function Home() {
   }, [user, isSuperAdmin, loading, router]);
 
   const handleSignOut = async () => {
-    if (isSuperAdmin) {
-        setSuperAdmin(false);
-        router.push('/auth/admin/signin');
-    } else {
-        await signOut(auth);
-        router.push('/auth/signin');
-    }
+    await signOut(auth);
+    router.push('/auth/signin');
   };
 
   const handleDeleteExam = async (id: string) => {
@@ -160,6 +147,8 @@ export default function Home() {
     return examHistory.some(h => h.examId === examId);
   }
   
+  useRequireAuth();
+
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
@@ -314,7 +303,7 @@ export default function Home() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 flex-1">
-                            {exams.length > 0 ? (
+                            {filteredExams.length > 0 ? (
                             paginatedExams.map((exam) => (
                             <div
                                 key={exam.id}
