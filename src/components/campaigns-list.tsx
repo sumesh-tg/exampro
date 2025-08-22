@@ -204,7 +204,12 @@ export function CampaignsList() {
                                   <Button variant="outline" size="sm" onClick={() => handleOpenEdit(campaign)}>
                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                   </Button>
-                                  <Button variant="outline" size="sm" onClick={() => handleShareCampaign(campaign.id)}>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleShareCampaign(campaign.id)}
+                                    disabled={new Date() > (campaign.endDate as any).toDate()}
+                                  >
                                       <Share2 className="mr-2 h-4 w-4" />
                                       Share
                                   </Button>
