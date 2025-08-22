@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { useAuth, useRequireAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -54,7 +54,6 @@ const EXAM_HISTORY_PAGE_SIZE = 3;
 
 export default function Home() {
   const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
-  useRequireAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -73,8 +72,6 @@ export default function Home() {
 
   const historyTotalPages = Math.ceil(examHistory.length / EXAM_HISTORY_PAGE_SIZE);
   const paginatedExamHistory = examHistory.slice((historyCurrentPage - 1) * EXAM_HISTORY_PAGE_SIZE, historyCurrentPage * EXAM_HISTORY_PAGE_SIZE);
-
-  const canCreateCampaign = isAdmin || isSuperAdmin;
 
   async function fetchExams() {
     const fetchedExams = await getExams();
@@ -104,6 +101,14 @@ export default function Home() {
   useEffect(() => {
     if (loading) return;
 
+    const isAuthPage = router.pathname?.startsWith('/auth');
+
+    if (!user && !isSuperAdmin && !isAuthPage) {
+        const redirectUrl = `?redirect=${encodeURIComponent(router.pathname + window.location.search)}`;
+        router.push(`/auth/signin${redirectUrl}`);
+        return;
+    }
+    
     fetchExams();
     if (user) {
       fetchExamHistory();
@@ -111,11 +116,10 @@ export default function Home() {
     if (isSuperAdmin) {
         fetchAdmins();
     }
-  }, [user, isSuperAdmin, loading]);
+  }, [user, isSuperAdmin, loading, router]);
 
   const handleSignOut = async () => {
     if (isSuperAdmin) {
-        sessionStorage.removeItem('isSuperAdmin');
         setSuperAdmin(false);
         router.push('/auth/admin/signin');
     } else {
@@ -198,7 +202,7 @@ export default function Home() {
                 onExamCreated={handleExamCreated}
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
-              {canCreateCampaign && (
+              {(isAdmin || isSuperAdmin) && (
                 <CreateCampaignDialog
                   open={isCreateCampaignOpen}
                   onOpenChange={setCreateCampaignOpen}
@@ -239,7 +243,7 @@ export default function Home() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {}}>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {isAdmin && (
+                {(isAdmin || isSuperAdmin) && (
                   <>
                   <DropdownMenuItem asChild>
                     <Link href="/admin/users">
