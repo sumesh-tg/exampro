@@ -26,20 +26,33 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { format } from 'date-fns';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
+import { updateCampaignDetail } from '@/services/campaignDetailsService';
+import { useToast } from '@/hooks/use-toast';
 
 interface CampaignUserReportDialogProps {
   campaign: CampaignDetail;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCampaignUpdated: () => void;
 }
 
 interface UserReport extends UserProfile {
   examHistory: ExamHistory[];
 }
 
-export function CampaignUserReportDialog({ campaign, open, onOpenChange }: CampaignUserReportDialogProps) {
+export function CampaignUserReportDialog({ campaign, open, onOpenChange, onCampaignUpdated }: CampaignUserReportDialogProps) {
   const [reportData, setReportData] = useState<UserReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [freeAttemptsDisabled, setFreeAttemptsDisabled] = useState(campaign.disableFreeAttempts || false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (campaign) {
+      setFreeAttemptsDisabled(campaign.disableFreeAttempts || false);
+    }
+  }, [campaign]);
 
   useEffect(() => {
     if (open) {
@@ -80,14 +93,38 @@ export function CampaignUserReportDialog({ campaign, open, onOpenChange }: Campa
     }
   }, [campaign, open]);
 
+  const handleSwitchChange = async (checked: boolean) => {
+    setFreeAttemptsDisabled(checked);
+    try {
+        await updateCampaignDetail(campaign.id, { disableFreeAttempts: checked });
+        toast({ title: "Campaign Updated", description: `Free attempts have been ${checked ? 'disabled' : 'enabled'}.`});
+        onCampaignUpdated();
+    } catch (error) {
+        setFreeAttemptsDisabled(!checked); // Revert on error
+        toast({ variant: 'destructive', title: "Update Failed", description: "Could not update the campaign setting."});
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>User Report for: {campaign.name}</DialogTitle>
-          <DialogDescription>
-            Details of users who joined this campaign.
-          </DialogDescription>
+          <div className="flex justify-between items-start">
+            <div>
+                <DialogTitle>User Report for: {campaign.name}</DialogTitle>
+                <DialogDescription>
+                    Details of users who joined this campaign.
+                </DialogDescription>
+            </div>
+            <div className="flex items-center space-x-2 pt-1">
+                <Switch 
+                    id="disable-free-attempts-report" 
+                    checked={freeAttemptsDisabled}
+                    onCheckedChange={handleSwitchChange}
+                />
+                <Label htmlFor="disable-free-attempts-report">Disable Free Attempts</Label>
+            </div>
+          </div>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto pr-2">
           {loading ? (

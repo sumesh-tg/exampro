@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -128,6 +129,7 @@ export function CampaignsList() {
             campaign={selectedCampaign}
             open={isReportOpen}
             onOpenChange={setReportOpen}
+            onCampaignUpdated={fetchData}
           />
           <EditCampaignDialog
             campaign={selectedCampaign}
