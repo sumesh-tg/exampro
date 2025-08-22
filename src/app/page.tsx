@@ -52,6 +52,8 @@ import { JoinedCampaigns } from '@/components/joined-campaigns';
 const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
 
+declare const Razorpay: any;
+
 export default function Home() {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
   const router = useRouter();
@@ -149,6 +151,41 @@ export default function Home() {
   
   const hasAttemptedExam = (examId: string) => {
     return examHistory.some(h => h.examId === examId);
+  }
+  
+  const handlePayment = (exam: Exam) => {
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Enter the Key ID generated from the Dashboard
+      amount: "1000", // Amount is in currency subunits. Default currency is INR. Hence, 1000 paise = INR 10.
+      currency: "INR",
+      name: "QuizWhiz Re-attempt",
+      description: `Payment for re-attempting ${exam.title}`,
+      handler: function (response: any) {
+        // On success, redirect to the exam page
+        router.push(`/exam/${exam.id}`);
+      },
+      prefill: {
+        name: user?.displayName || "Anonymous User",
+        email: user?.email || "",
+        contact: user?.phoneNumber || ""
+      },
+      notes: {
+        exam_id: exam.id,
+        user_id: user?.uid
+      },
+      theme: {
+        color: "#72A0C1"
+      }
+    };
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response: any){
+            toast({
+              variant: 'destructive',
+              title: 'Payment Failed',
+              description: response.error.description,
+            });
+    });
+    rzp.open();
   }
   
   useRequireAuth();
@@ -321,9 +358,9 @@ export default function Home() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                 {user && hasAttemptedExam(exam.id) ? (
-                                    <Button variant="secondary" disabled>
-                                    <RefreshCcw className="mr-2 h-4 w-4" />
-                                    Pay to Re-attempt
+                                    <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                      <RefreshCcw className="mr-2 h-4 w-4" />
+                                      Pay to Re-attempt
                                     </Button>
                                 ) : (
                                     <Button variant="default" size="sm" asChild>
