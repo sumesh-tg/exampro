@@ -31,6 +31,7 @@ import type { AdminUserRecord } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { Switch } from './ui/switch';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
@@ -39,6 +40,7 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
+  disableFreeAttempts: z.boolean().default(false),
 });
 
 interface CreateCampaignDialogProps {
@@ -60,6 +62,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
       name: '',
       description: '',
       examIds: [],
+      disableFreeAttempts: false,
     },
   });
 
@@ -115,7 +118,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
             <FormField
               control={form.control}
               name="name"
@@ -264,6 +267,28 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                   )}
                 />
             </div>
+            
+            <FormField
+                control={form.control}
+                name="disableFreeAttempts"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <FormLabel className="text-base">
+                                Disable Free Attempts
+                            </FormLabel>
+                            <FormMessage />
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
+
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>

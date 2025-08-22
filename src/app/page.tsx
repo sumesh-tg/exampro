@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import type { Exam, ExamHistory } from '@/lib/data';
+import type { Exam, ExamHistory, CampaignDetail } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
@@ -55,7 +55,8 @@ const EXAM_HISTORY_PAGE_SIZE = 3;
 declare const Razorpay: any;
 
 export default function Home() {
-  const { user, loading, isAdmin, isSuperAdmin } = useAuth();
+  useRequireAuth();
+  const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -114,7 +115,7 @@ export default function Home() {
 
   const handleSignOut = async () => {
     if (isSuperAdmin) {
-      // No need to call Firebase signOut for super admin
+      setSuperAdmin(false);
     } else {
       await signOut(auth);
     }
@@ -188,7 +189,6 @@ export default function Home() {
     rzp.open();
   }
   
-  useRequireAuth();
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -484,5 +484,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
