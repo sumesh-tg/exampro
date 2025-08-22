@@ -10,6 +10,7 @@ export type Exam = {
   title: string;
   description: string;
   questions: Question[];
+  isPremium?: boolean;
 };
 
 export type ExamHistory = {
@@ -21,4 +22,24 @@ export type ExamHistory = {
   totalQuestions: number;
   date: string;
   sharedBy?: string;
+};
+
+export type Campaign = {
+  id: string;
+  name: string;
+  examIds: string[];
+  startDate: Date;
+  endDate: Date;
+  createdBy: string; // User ID of the admin who owns the campaign
+};
+
+export type CampaignDetail = {
+    id: string;
+    name: string;
+    description: string;
+    examIds: string[];
+    startDate: Date;
+    endDate: Date;
+    createdBy: string;
+    assignee?: string;
 };
