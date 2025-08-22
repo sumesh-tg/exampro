@@ -8,17 +8,22 @@ export const getExamHistory = async (userId: string) => {
     const data = await getDocs(q);
     const history = data.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamHistory));
 
-    // Sort history by date to identify first attempt
     history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    const firstAttempts = new Set<string>();
-
+    // Calculate attempt number for each exam
+    const attemptCounts: Record<string, number> = {};
     return history.map(h => {
-        if (!firstAttempts.has(h.examId)) {
-            firstAttempts.add(h.examId);
-            return { ...h, attemptType: 'Free' };
+        const examId = h.examId;
+        if (!attemptCounts[examId]) {
+            attemptCounts[examId] = 0;
         }
-        return { ...h, attemptType: 'Paid' };
+        attemptCounts[examId]++;
+        
+        return { 
+            ...h, 
+            attemptNumber: attemptCounts[examId],
+            attemptType: attemptCounts[examId] === 1 ? 'Free' : 'Paid'
+        };
     });
 }
 

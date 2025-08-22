@@ -23,6 +23,7 @@ export type ExamHistory = {
   date: string;
   sharedBy?: string;
   attemptType?: 'Free' | 'Paid';
+  attemptNumber?: number;
 };
 
 export type Campaign = {
@@ -43,5 +44,6 @@ export type CampaignDetail = {
     endDate: Date;
     createdBy: string;
     assignee?: string;
+    freeAttempts: number;
     freeAttemptsDisabledFor?: string[];
 };

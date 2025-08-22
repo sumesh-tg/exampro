@@ -37,11 +37,11 @@ export const updateCampaignDetail = async (id: string, updates: Partial<Omit<Cam
     const updateData: any = { ...updates };
 
     // Convert Date objects to Firestore Timestamps if they exist
-    if (updates.startDate) {
-        updateData.startDate = Timestamp.fromDate(updates.startDate as Date);
+    if (updates.startDate && updates.startDate instanceof Date) {
+        updateData.startDate = Timestamp.fromDate(updates.startDate);
     }
-    if (updates.endDate) {
-        updateData.endDate = Timestamp.fromDate(updates.endDate as Date);
+    if (updates.endDate && updates.endDate instanceof Date) {
+        updateData.endDate = Timestamp.fromDate(updates.endDate);
     }
 
     return await updateDoc(campaignDetailDoc, updateData);

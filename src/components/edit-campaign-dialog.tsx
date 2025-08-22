@@ -38,6 +38,7 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
+  freeAttempts: z.coerce.number().min(0).default(1),
 });
 
 interface EditCampaignDialogProps {
@@ -61,6 +62,7 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
         description: '',
         examIds: [],
         assignee: '',
+        freeAttempts: 1,
     },
   });
 
@@ -73,6 +75,7 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
         startDate: (campaign.startDate as any).toDate(),
         endDate: (campaign.endDate as any).toDate(),
         assignee: campaign.assignee,
+        freeAttempts: campaign.freeAttempts,
       });
     }
   }, [campaign, form]);
@@ -88,7 +91,6 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
     setLoading(true);
 
     try {
-        // We preserve the freeAttemptsDisabledFor field, as it's managed separately
         await updateCampaignDetail(campaign.id, {
             ...values,
             freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || []
@@ -167,6 +169,18 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
                     )}
                 />
             )}
+            
+            <FormField
+              control={form.control}
+              name="freeAttempts"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Number of Free Attempts</FormLabel>
+                  <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                   <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

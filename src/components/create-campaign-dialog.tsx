@@ -39,6 +39,7 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
+  freeAttempts: z.coerce.number().min(0).default(1),
 });
 
 interface CreateCampaignDialogProps {
@@ -60,6 +61,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
       name: '',
       description: '',
       examIds: [],
+      freeAttempts: 1,
     },
   });
 
@@ -170,6 +172,18 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                     )}
                 />
             )}
+            
+            <FormField
+              control={form.control}
+              name="freeAttempts"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Number of Free Attempts</FormLabel>
+                  <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                   <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
