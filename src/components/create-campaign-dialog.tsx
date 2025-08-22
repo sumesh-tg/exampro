@@ -62,6 +62,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
       description: '',
       examIds: [],
       freeAttempts: 1,
+      startDate: new Date(),
     },
   });
 
@@ -245,7 +246,13 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                          <Calendar 
+                            mode="single" 
+                            selected={field.value} 
+                            onSelect={field.onChange} 
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                            initialFocus 
+                          />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -271,7 +278,12 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                          <Calendar 
+                            mode="single" 
+                            selected={field.value} 
+                            onSelect={field.onChange} 
+                            disabled={(date) => date < (form.getValues("startDate") || new Date())}
+                            initialFocus />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
