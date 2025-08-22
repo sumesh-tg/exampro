@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,19 +13,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, Layers, Calendar as CalendarIcon, User } from 'lucide-react';
-import type { Exam } from '@/lib/data';
+import { Loader2, Calendar as CalendarIcon, User } from 'lucide-react';
+import type { Exam, CampaignDetail } from '@/lib/data';
 import { Checkbox } from './ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addCampaignDetail } from '@/services/campaignDetailsService';
+import { updateCampaignDetail } from '@/services/campaignDetailsService';
 import { useAuth } from '@/hooks/use-auth';
 import type { AdminUserRecord } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -42,29 +41,44 @@ const campaignSchema = z.object({
   freeAttempts: z.coerce.number().min(0).default(1),
 });
 
-interface CreateCampaignDialogProps {
+interface EditCampaignDialogProps {
+    campaign: CampaignDetail;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onCampaignCreated: () => void;
+    onCampaignUpdated: () => void;
     allExams: Exam[];
     allAdmins: AdminUserRecord[];
 }
 
-export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, allExams, allAdmins }: CreateCampaignDialogProps) {
+export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpdated, allExams, allAdmins }: EditCampaignDialogProps) {
   const [loading, setLoading] = useState(false);
-  const { user, isSuperAdmin, isAdmin } = useAuth();
+  const { isSuperAdmin } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof campaignSchema>>({
     resolver: zodResolver(campaignSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      examIds: [],
-      freeAttempts: 1,
-      startDate: new Date(),
+        name: '',
+        description: '',
+        examIds: [],
+        assignee: '',
+        freeAttempts: 1,
     },
   });
+
+  useEffect(() => {
+    if (campaign) {
+      form.reset({
+        name: campaign.name,
+        description: campaign.description,
+        examIds: campaign.examIds,
+        startDate: (campaign.startDate as any).toDate(),
+        endDate: (campaign.endDate as any).toDate(),
+        assignee: campaign.assignee,
+        freeAttempts: campaign.freeAttempts,
+      });
+    }
+  }, [campaign, form]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -76,31 +90,16 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
 
-    const loggedInUser = user || isSuperAdmin;
-    if (!loggedInUser) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a campaign.' });
-        setLoading(false);
-        return;
-    }
-    
-    if (isSuperAdmin && !values.assignee) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Super Admins must assign the campaign to an admin.' });
-        setLoading(false);
-        return;
-    }
-
     try {
-        await addCampaignDetail({
+        await updateCampaignDetail(campaign.id, {
             ...values,
-            createdBy: user?.uid || 'super-admin',
-            assignee: isSuperAdmin ? values.assignee : user?.uid,
-            freeAttemptsDisabledFor: [],
+            freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || []
         });
-        toast({ title: 'Campaign Created!', description: 'The new campaign has been successfully created.' });
-        onCampaignCreated();
+        toast({ title: 'Campaign Updated!', description: 'The campaign has been successfully updated.' });
+        onCampaignUpdated();
         handleOpenChange(false);
     } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Error Creating Campaign', description: error.message });
+        toast({ variant: 'destructive', title: 'Error Updating Campaign', description: error.message });
     } finally {
         setLoading(false);
     }
@@ -108,14 +107,11 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button onClick={() => onOpenChange(true)}>Create Campaign <Layers className="ml-2 h-4 w-4" /></Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Create a New Campaign</DialogTitle>
+          <DialogTitle>Edit Campaign</DialogTitle>
           <DialogDescription>
-            Group exams into a campaign with a specific active window.
+            Modify the details of your campaign.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -246,13 +242,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar 
-                            mode="single" 
-                            selected={field.value} 
-                            onSelect={field.onChange} 
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                            initialFocus 
-                          />
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -278,12 +268,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar 
-                            mode="single" 
-                            selected={field.value} 
-                            onSelect={field.onChange} 
-                            disabled={(date) => date < (form.getValues("startDate") || new Date())}
-                            initialFocus />
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -296,7 +281,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Campaign
+                Save Changes
               </Button>
             </DialogFooter>
           </form>

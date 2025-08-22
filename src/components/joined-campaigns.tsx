@@ -5,13 +5,18 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { getCampaignDetail } from '@/services/campaignDetailsService';
-import type { CampaignDetail, Exam } from '@/lib/data';
+import type { CampaignDetail, Exam, ExamHistory } from '@/lib/data';
 import { useAuth } from '@/hooks/use-auth';
 import { getUserCampaigns } from '@/services/userCampaignsService';
-import { Loader2, BookOpen, Layers } from 'lucide-react';
+import { getExamHistory } from '@/services/examHistoryService';
+import { Loader2, Layers, RefreshCcw } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+
+declare const Razorpay: any;
 
 interface JoinedCampaignsProps {
     allExams: Exam[];
@@ -19,15 +24,22 @@ interface JoinedCampaignsProps {
 
 export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
   const { user } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
   const [joinedCampaigns, setJoinedCampaigns] = useState<CampaignDetail[]>([]);
+  const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchJoinedCampaigns() {
+    async function fetchData() {
       if (!user) return;
       setLoading(true);
       try {
-        const userCampaigns = await getUserCampaigns(user.uid);
+        const [userCampaigns, history] = await Promise.all([
+            getUserCampaigns(user.uid),
+            getExamHistory(user.uid)
+        ]);
+
         const campaignIds = userCampaigns.map(uc => (uc as any).campaignId);
         
         const campaignDetails = await Promise.all(
@@ -35,15 +47,60 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
         );
 
         setJoinedCampaigns(campaignDetails.filter(Boolean) as CampaignDetail[]);
+        setExamHistory(history as ExamHistory[]);
+
       } catch (error) {
         console.error("Failed to fetch joined campaigns:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchJoinedCampaigns();
+    fetchData();
   }, [user]);
+
+  const handlePayment = (exam: Exam) => {
+    if (!user) return;
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: "1000", 
+      currency: "INR",
+      name: "QuizWhiz Re-attempt",
+      description: `Payment for re-attempting ${exam.title}`,
+      handler: function (response: any) {
+        router.push(`/exam/${exam.id}`);
+      },
+      prefill: {
+        name: user.displayName || "Anonymous User",
+        email: user.email || "",
+        contact: user.phoneNumber || ""
+      },
+      notes: {
+        exam_id: exam.id,
+        user_id: user.uid
+      },
+      theme: {
+        color: "#72A0C1"
+      }
+    };
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response: any){
+            toast({
+              variant: 'destructive',
+              title: 'Payment Failed',
+              description: response.error.description,
+            });
+    });
+    rzp.open();
+  }
   
+  const getExamById = (id: string) => {
+    return allExams.find(exam => exam.id === id);
+  }
+  
+  const getAttemptsForExam = (examId: string) => {
+      return examHistory.filter(h => h.examId === examId).length;
+  }
+
   if (loading) {
     return (
         <Card>
@@ -61,11 +118,7 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
   }
 
   if (joinedCampaigns.length === 0) {
-    return null; // Don't show the card if there are no joined campaigns
-  }
-  
-  const getExamById = (id: string) => {
-    return allExams.find(exam => exam.id === id);
+    return null;
   }
 
   return (
@@ -98,15 +151,28 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
                     {campaign.examIds.map(examId => {
                         const exam = getExamById(examId);
                         if (!exam) return null;
+                        
+                        const attempts = getAttemptsForExam(exam.id);
+                        const freeAttemptsDisabled = (campaign.freeAttemptsDisabledFor || []).includes(user?.uid || '');
+                        const hasFreeAttemptsLeft = attempts < campaign.freeAttempts;
+                        const shouldPay = freeAttemptsDisabled || !hasFreeAttemptsLeft;
+
                         return (
                              <div key={exam.id} className="flex items-center justify-between rounded-lg border p-4">
                                 <div className="space-y-1">
                                     <p className="font-semibold">{exam.title}</p>
                                     <p className="text-sm text-muted-foreground">{exam.description}</p>
                                 </div>
-                                <Button variant="default" size="sm" asChild>
-                                    <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                                </Button>
+                                {shouldPay ? (
+                                    <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                      <RefreshCcw className="mr-2 h-4 w-4" />
+                                      Pay to Attempt
+                                    </Button>
+                                ) : (
+                                    <Button variant="default" size="sm" asChild>
+                                        <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                                    </Button>
+                                )}
                             </div>
                         )
                     })}
@@ -119,4 +185,3 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
     </Card>
   );
 }
-

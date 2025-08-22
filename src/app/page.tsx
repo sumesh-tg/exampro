@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import type { Exam, ExamHistory } from '@/lib/data';
+import type { Exam, ExamHistory, CampaignDetail } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory } from '@/services/examHistoryService';
@@ -52,9 +52,11 @@ import { JoinedCampaigns } from '@/components/joined-campaigns';
 const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
 
+declare const Razorpay: any;
+
 export default function Home() {
-  const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
   useRequireAuth();
+  const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -67,14 +69,14 @@ export default function Home() {
   const [selectedExamForReport, setSelectedExamForReport] = useState<Exam | null>(null);
   const [allAdmins, setAllAdmins] = useState<AdminUserRecord[]>([]);
   const { toast } = useToast();
+
+  const filteredExams = (isAdmin || isSuperAdmin) ? exams : exams.filter(exam => !exam.isPremium);
   
-  const totalPages = Math.ceil(exams.length / EXAMS_PAGE_SIZE);
-  const paginatedExams = exams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
+  const totalPages = Math.ceil(filteredExams.length / EXAMS_PAGE_SIZE);
+  const paginatedExams = filteredExams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
 
   const historyTotalPages = Math.ceil(examHistory.length / EXAM_HISTORY_PAGE_SIZE);
   const paginatedExamHistory = examHistory.slice((historyCurrentPage - 1) * EXAM_HISTORY_PAGE_SIZE, historyCurrentPage * EXAM_HISTORY_PAGE_SIZE);
-
-  const canCreateCampaign = isAdmin || isSuperAdmin;
 
   async function fetchExams() {
     const fetchedExams = await getExams();
@@ -102,8 +104,6 @@ export default function Home() {
   }
 
   useEffect(() => {
-    if (loading) return;
-
     fetchExams();
     if (user) {
       fetchExamHistory();
@@ -111,17 +111,15 @@ export default function Home() {
     if (isSuperAdmin) {
         fetchAdmins();
     }
-  }, [user, isSuperAdmin, loading]);
+  }, [user, isSuperAdmin]);
 
   const handleSignOut = async () => {
     if (isSuperAdmin) {
-        sessionStorage.removeItem('isSuperAdmin');
-        setSuperAdmin(false);
-        router.push('/auth/admin/signin');
+      setSuperAdmin(false);
     } else {
-        await signOut(auth);
-        router.push('/auth/signin');
+      await signOut(auth);
     }
+    router.push('/auth/signin');
   };
 
   const handleDeleteExam = async (id: string) => {
@@ -156,6 +154,42 @@ export default function Home() {
     return examHistory.some(h => h.examId === examId);
   }
   
+  const handlePayment = (exam: Exam) => {
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Enter the Key ID generated from the Dashboard
+      amount: "1000", // Amount is in currency subunits. Default currency is INR. Hence, 1000 paise = INR 10.
+      currency: "INR",
+      name: "QuizWhiz Re-attempt",
+      description: `Payment for re-attempting ${exam.title}`,
+      handler: function (response: any) {
+        // On success, redirect to the exam page
+        router.push(`/exam/${exam.id}`);
+      },
+      prefill: {
+        name: user?.displayName || "Anonymous User",
+        email: user?.email || "",
+        contact: user?.phoneNumber || ""
+      },
+      notes: {
+        exam_id: exam.id,
+        user_id: user?.uid
+      },
+      theme: {
+        color: "#72A0C1"
+      }
+    };
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response: any){
+            toast({
+              variant: 'destructive',
+              title: 'Payment Failed',
+              description: response.error.description,
+            });
+    });
+    rzp.open();
+  }
+  
+
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
@@ -190,15 +224,15 @@ export default function Home() {
           </Link>
         </nav>
         <div className="flex items-center gap-4">
-          {(user || isSuperAdmin) && (
+          {(isAdmin || isSuperAdmin) && (
             <>
-              <CreateExamDialog 
+               <CreateExamDialog 
                 open={isCreateExamOpen}
                 onOpenChange={setCreateExamOpen}
                 onExamCreated={handleExamCreated}
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
-              {canCreateCampaign && (
+
                 <CreateCampaignDialog
                   open={isCreateCampaignOpen}
                   onOpenChange={setCreateCampaignOpen}
@@ -206,13 +240,10 @@ export default function Home() {
                   allExams={exams}
                   allAdmins={allAdmins}
                 />
-              )}
-              {user && (
-                  <Button variant="outline" onClick={() => setShareReportOpen(true)}>
+                 <Button variant="outline" onClick={() => setShareReportOpen(true)}>
                       <FileText className="mr-2 h-4 w-4" />
                       View Share Report
                   </Button>
-              )}
             </>
           )}
 
@@ -239,7 +270,7 @@ export default function Home() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {}}>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {isAdmin && (
+                {(isAdmin || isSuperAdmin) && (
                   <>
                   <DropdownMenuItem asChild>
                     <Link href="/admin/users">
@@ -310,7 +341,7 @@ export default function Home() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 flex-1">
-                            {exams.length > 0 ? (
+                            {filteredExams.length > 0 ? (
                             paginatedExams.map((exam) => (
                             <div
                                 key={exam.id}
@@ -327,9 +358,9 @@ export default function Home() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                 {user && hasAttemptedExam(exam.id) ? (
-                                    <Button variant="secondary" disabled>
-                                    <RefreshCcw className="mr-2 h-4 w-4" />
-                                    Pay to Re-attempt
+                                    <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                      <RefreshCcw className="mr-2 h-4 w-4" />
+                                      Pay to Re-attempt
                                     </Button>
                                 ) : (
                                     <Button variant="default" size="sm" asChild>
