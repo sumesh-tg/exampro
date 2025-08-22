@@ -1,14 +1,15 @@
-
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, getDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, getDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { CampaignDetail } from '@/lib/data';
 
 const campaignDetailsCollectionRef = collection(db, 'campaign_details');
 
 // CREATE
-export const addCampaignDetail = async (campaignDetail: Omit<CampaignDetail, 'id'>) => {
+export const addCampaignDetail = async (campaignDetail: Omit<CampaignDetail, 'id' | 'startDate' | 'endDate'> & { startDate: Date; endDate: Date }) => {
     return await addDoc(campaignDetailsCollectionRef, {
         ...campaignDetail,
+        startDate: Timestamp.fromDate(campaignDetail.startDate),
+        endDate: Timestamp.fromDate(campaignDetail.endDate),
         createdAt: serverTimestamp(),
     });
 }
@@ -33,7 +34,17 @@ export const getCampaignDetail = async (id: string): Promise<CampaignDetail | nu
 // UPDATE
 export const updateCampaignDetail = async (id: string, updates: Partial<Omit<CampaignDetail, 'id'>>) => {
     const campaignDetailDoc = doc(db, 'campaign_details', id);
-    return await updateDoc(campaignDetailDoc, updates);
+    const updateData: any = { ...updates };
+
+    // Convert Date objects to Firestore Timestamps if they exist
+    if (updates.startDate) {
+        updateData.startDate = Timestamp.fromDate(updates.startDate as Date);
+    }
+    if (updates.endDate) {
+        updateData.endDate = Timestamp.fromDate(updates.endDate as Date);
+    }
+
+    return await updateDoc(campaignDetailDoc, updateData);
 }
 
 // DELETE
