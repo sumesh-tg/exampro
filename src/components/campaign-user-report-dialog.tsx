@@ -25,6 +25,7 @@ import { getExamHistory } from '@/services/examHistoryService';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { format } from 'date-fns';
 
 interface CampaignUserReportDialogProps {
   campaign: CampaignDetail;
@@ -116,6 +117,8 @@ export function CampaignUserReportDialog({ campaign, open, onOpenChange }: Campa
                       <TableHeader>
                         <TableRow>
                           <TableHead>Exam Title</TableHead>
+                          <TableHead>Attempt Date</TableHead>
+                          <TableHead>Attempt Type</TableHead>
                           <TableHead className="text-right">Score</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -124,6 +127,12 @@ export function CampaignUserReportDialog({ campaign, open, onOpenChange }: Campa
                            userReport.examHistory.map(history => (
                             <TableRow key={history.id}>
                                 <TableCell>{history.examTitle}</TableCell>
+                                <TableCell>{format(new Date(history.date), "PPP p")}</TableCell>
+                                <TableCell>
+                                    <Badge variant={history.attemptType === 'Paid' ? 'secondary' : 'outline'}>
+                                        {history.attemptType}
+                                    </Badge>
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Badge>{`${history.score}/${history.totalQuestions}`}</Badge>
                                 </TableCell>
@@ -131,7 +140,7 @@ export function CampaignUserReportDialog({ campaign, open, onOpenChange }: Campa
                            ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={2} className="text-center text-muted-foreground">
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">
                                     No exams attempted in this campaign yet.
                                 </TableCell>
                             </TableRow>

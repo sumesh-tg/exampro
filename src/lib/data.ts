@@ -22,6 +22,7 @@ export type ExamHistory = {
   totalQuestions: number;
   date: string;
   sharedBy?: string;
+  attemptType?: 'Free' | 'Paid';
 };
 
 export type Campaign = {
