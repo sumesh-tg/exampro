@@ -207,7 +207,8 @@ export function CampaignsList() {
                                   {campaignUserCounts[campaign.id] ?? 0}
                                 </Button>
                               </TableCell>
-                              <TableCell className="text-right space-x-2">
+                              <TableCell className="text-right">
+                                <div className="flex justify-end items-center space-x-2">
                                   <Button variant="outline" size="sm" onClick={() => handleOpenEdit(campaign)}>
                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                   </Button>
@@ -220,6 +221,7 @@ export function CampaignsList() {
                                       <Share2 className="mr-2 h-4 w-4" />
                                       Share
                                   </Button>
+                                </div>
                               </TableCell>
                           </TableRow>
                       ))}
