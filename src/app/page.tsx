@@ -185,13 +185,15 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {(user || isSuperAdmin) && (
             <>
-              <CreateExamDialog 
+               <CreateExamDialog 
                 open={isCreateExamOpen}
                 onOpenChange={setCreateExamOpen}
                 onExamCreated={handleExamCreated}
               />
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+
               {(isAdmin || isSuperAdmin) && (
+                <>
                 <CreateCampaignDialog
                   open={isCreateCampaignOpen}
                   onOpenChange={setCreateCampaignOpen}
@@ -199,12 +201,11 @@ export default function Home() {
                   allExams={exams}
                   allAdmins={allAdmins}
                 />
-              )}
-              {user && (
-                  <Button variant="outline" onClick={() => setShareReportOpen(true)}>
+                 <Button variant="outline" onClick={() => setShareReportOpen(true)}>
                       <FileText className="mr-2 h-4 w-4" />
                       View Share Report
                   </Button>
+                </>
               )}
             </>
           )}
