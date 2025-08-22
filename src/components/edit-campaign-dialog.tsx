@@ -90,17 +90,13 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
     
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to update a campaign.' });
-        setLoading(false);
-        return;
-    }
+    const updaterId = user?.uid ?? 'System';
 
     try {
         await updateCampaignDetail(campaign.id, {
             ...values,
             freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || [],
-            updatedBy: user.uid,
+            updatedBy: updaterId,
         });
         toast({ title: 'Campaign Updated!', description: 'The campaign has been successfully updated.' });
         onCampaignUpdated();
