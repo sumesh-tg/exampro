@@ -52,7 +52,7 @@ interface EditCampaignDialogProps {
 
 export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpdated, allExams, allAdmins }: EditCampaignDialogProps) {
   const [loading, setLoading] = useState(false);
-  const { isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof campaignSchema>>({
@@ -89,11 +89,18 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
   
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
+    
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to update a campaign.' });
+        setLoading(false);
+        return;
+    }
 
     try {
         await updateCampaignDetail(campaign.id, {
             ...values,
-            freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || []
+            freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || [],
+            updatedBy: user.uid,
         });
         toast({ title: 'Campaign Updated!', description: 'The campaign has been successfully updated.' });
         onCampaignUpdated();

@@ -96,9 +96,11 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     }
 
     try {
+        const creatorId = user?.uid || 'super-admin';
         await addCampaignDetail({
             ...values,
-            createdBy: user?.uid || 'super-admin',
+            createdBy: creatorId,
+            updatedBy: creatorId,
             assignee: isSuperAdmin ? values.assignee : user?.uid,
             freeAttemptsDisabledFor: [],
         });

@@ -48,5 +48,7 @@ export type CampaignDetail = {
     freeAttemptsDisabledFor?: string[];
     createdAt: Date;
     updatedAt: Date;
+    updatedBy: string;
 };
+
 
