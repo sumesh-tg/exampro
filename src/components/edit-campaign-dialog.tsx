@@ -38,7 +38,7 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
-  freeAttempts: z.coerce.number().min(0).default(1),
+  freeAttempts: z.coerce.number().min(0).max(100, { message: 'Cannot exceed 100 free attempts.' }).default(1),
 });
 
 interface EditCampaignDialogProps {
@@ -176,7 +176,7 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Number of Free Attempts</FormLabel>
-                  <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                  <FormControl><Input type="number" min="0" max="100" {...field} /></FormControl>
                    <FormMessage />
                 </FormItem>
               )}
