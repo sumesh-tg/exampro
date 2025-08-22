@@ -57,6 +57,13 @@ export function CampaignsList() {
         );
       }
 
+      // Sort campaigns by updatedAt date in descending order
+      filteredCampaigns.sort((a, b) => {
+        const dateA = (a.updatedAt as any)?.toDate() || 0;
+        const dateB = (b.updatedAt as any)?.toDate() || 0;
+        return dateB - dateA;
+      });
+
       setCampaigns(filteredCampaigns);
       setAllExams(examData as Exam[]);
       
