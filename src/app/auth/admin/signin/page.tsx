@@ -25,7 +25,7 @@ export default function AdminSignInPage() {
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { setAdmin } = useAuth();
+  const { setSuperAdmin } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
@@ -43,19 +43,23 @@ export default function AdminSignInPage() {
   async function onSubmit(values: z.infer<typeof adminLoginSchema>) {
     setLoading(true);
     
-    // In a real application, this would be a call to a secure backend.
-    // For this prototype, we'll check against environment variables.
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+    // In a real app, these should be securely handled, not hardcoded.
+    // For this prototype, we'll read them from public env vars.
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "admin@example.com";
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "password";
 
     if (values.email === adminEmail && values.password === adminPassword) {
-      // Set some indication that the user is an admin
-      // For simplicity, using a dedicated state in the auth context.
-      if(setAdmin) {
-        setAdmin(true);
+      if (setSuperAdmin) {
+        setSuperAdmin(true);
         sessionStorage.setItem('isSuperAdmin', 'true');
         toast({ title: 'Admin login successful!' });
         router.push('/');
+      } else {
+         toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Could not set admin state.',
+         });
       }
     } else {
       toast({
@@ -77,7 +81,7 @@ export default function AdminSignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-         {isClient && (
+         {isClient ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -112,6 +116,10 @@ export default function AdminSignInPage() {
               </Button>
             </form>
           </Form>
+          ) : (
+            <div className="flex justify-center items-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
           )}
           <div className="mt-4 text-center text-sm">
             <Link href="/auth/signin" className="underline">

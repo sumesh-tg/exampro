@@ -19,52 +19,58 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
-  setAdmin?: Dispatch<SetStateAction<boolean>>;
+  isSuperAdmin: boolean;
+  setSuperAdmin: Dispatch<SetStateAction<boolean>>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAdmin: false,
+  isSuperAdmin: false,
+  setSuperAdmin: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setAdmin] = useState(false);
-  const router = useRouter();
+  const [isSuperAdmin, setSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    // Check session storage on initial client-side load for Super Admin
+    if (typeof window !== 'undefined') {
+       const superAdminStatus = sessionStorage.getItem('isSuperAdmin') === 'true';
+       if(superAdminStatus) {
+         setSuperAdmin(superAdminStatus);
+       }
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        // Sync user data to Firestore
         updateUserProfile(user.uid, {
             uid: user.uid,
             email: user.email ?? '',
             displayName: user.displayName ?? '',
             photoURL: user.photoURL ?? ''
         });
+        
+        const token = await user.getIdTokenResult();
+        setIsAdmin(!!token.claims.admin);
+
       } else {
         setUser(null);
-        // If firebase auth state changes and there's no user, log out admin too
-        sessionStorage.removeItem('isSuperAdmin');
-        setAdmin(false);
+        setIsAdmin(false);
       }
       setLoading(false);
     });
     
-    // Check session storage on initial load
-    if (typeof window !== 'undefined' && sessionStorage.getItem('isSuperAdmin') === 'true') {
-        setAdmin(true);
-    }
-
-
     return () => unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, setAdmin }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, setSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   );
@@ -73,22 +79,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => useContext(AuthContext);
 
 export const useRequireAuth = () => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user && !isAdmin) {
-      // Don't redirect if we are already on an auth page
-      if (pathname.startsWith('/auth')) {
-        return;
-      }
-      // If there's a path we want to be redirected to (e.g. a shared exam link)
-      // append it to the signin url
+    if (loading) return;
+
+    const isAuthPage = pathname.startsWith('/auth');
+
+    // If we're on an auth page, we don't need to do anything.
+    if (isAuthPage) return;
+
+    // If not loading, and not a user, and not a super admin, then redirect.
+    if (!user && !isSuperAdmin) {
       const redirectUrl = `?redirect=${encodeURIComponent(pathname + window.location.search)}`;
       router.push(`/auth/signin${redirectUrl}`);
     }
-  }, [user, loading, router, isAdmin, pathname]);
 
-  return { user, loading, isAdmin };
+  }, [user, loading, isSuperAdmin, router, pathname]);
+
+  return { user, loading, isSuperAdmin };
 };

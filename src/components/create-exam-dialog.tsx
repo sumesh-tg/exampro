@@ -25,10 +25,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import type { Exam } from '@/lib/data';
 import { addExam } from '@/services/examService';
+import { Checkbox } from './ui/checkbox';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
+  isPremium: z.boolean().default(false),
 });
 
 const step2Schema = z.object({
@@ -51,7 +53,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { title: '', description: '' },
+    defaultValues: { title: '', description: '', isPremium: false },
   });
 
   const step2Form = useForm<z.infer<typeof step2Schema>>({
@@ -158,6 +160,26 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                             <FormMessage />
                         </FormItem>
                     )} />
+                     <FormField
+                        control={step1Form.control}
+                        name="isPremium"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                Premium Exam
+                                </FormLabel>
+                                <FormMessage />
+                            </div>
+                            </FormItem>
+                        )}
+                    />
                     <DialogFooter>
                         <Button type="submit">Next</Button>
                     </DialogFooter>
