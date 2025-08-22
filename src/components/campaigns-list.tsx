@@ -13,11 +13,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { useAuth } from '@/hooks/use-auth';
+import { getUsersForCampaign } from '@/services/userCampaignsService';
+import { CampaignUserReportDialog } from './campaign-user-report-dialog';
 
 export function CampaignsList() {
   const [campaigns, setCampaigns] = useState<CampaignDetail[]>([]);
   const [users, setUsers] = useState<Record<string, AdminUserRecord>>({});
+  const [campaignUserCounts, setCampaignUserCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignDetail | null>(null);
+  const [isReportOpen, setReportOpen] = useState(false);
   const { toast } = useToast();
   const { user, isSuperAdmin, isAdmin } = useAuth();
 
@@ -47,6 +52,14 @@ export function CampaignsList() {
         }, {} as Record<string, AdminUserRecord>);
         setUsers(userMap);
 
+        // Fetch user counts for each campaign
+        const counts: Record<string, number> = {};
+        for (const campaign of filteredCampaigns) {
+          const joinedUsers = await getUsersForCampaign(campaign.id);
+          counts[campaign.id] = joinedUsers.length;
+        }
+        setCampaignUserCounts(counts);
+
       } catch (error) {
         console.error("Failed to fetch campaigns or users:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch campaigns.' });
@@ -67,13 +80,18 @@ export function CampaignsList() {
   
   const getAssigneeFallback = (uid: string) => {
       const name = getAssigneeName(uid);
-      return name.substring(0, 2).toUpperCase();
+      return name ? name.substring(0, 2).toUpperCase() : '??';
   }
   
   const handleShareCampaign = (campaignId: string) => {
     const url = `${window.location.origin}/campaign/${campaignId}`;
     navigator.clipboard.writeText(url);
     toast({ title: "Link Copied!", description: "Campaign link copied to clipboard." });
+  };
+
+  const handleOpenReport = (campaign: CampaignDetail) => {
+    setSelectedCampaign(campaign);
+    setReportOpen(true);
   };
   
   const getStatus = (campaign: CampaignDetail) => {
@@ -87,64 +105,79 @@ export function CampaignsList() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" />
-            <CardTitle>Created Campaigns</CardTitle>
-        </div>
-        <CardDescription>
-          A list of all campaigns that have been created.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-           <div className="flex justify-center items-center py-10">
-             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-           </div>
-        ) : campaigns.length > 0 ? (
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Campaign Name</TableHead>
-                        <TableHead>Assignee</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {campaigns.map((campaign) => (
-                        <TableRow key={campaign.id}>
-                            <TableCell>
-                                <div className="font-medium">{campaign.name}</div>
-                                <div className="text-sm text-muted-foreground">{campaign.description}</div>
-                            </TableCell>
-                            <TableCell>
-                                {campaign.assignee ? (
-                                     <div className="flex items-center gap-2">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={getAssigneeAvatar(campaign.assignee)} />
-                                            <AvatarFallback>{getAssigneeFallback(campaign.assignee)}</AvatarFallback>
-                                        </Avatar>
-                                        <span>{getAssigneeName(campaign.assignee)}</span>
-                                    </div>
-                                ) : 'N/A'}
-                            </TableCell>
-                            <TableCell>{getStatus(campaign)}</TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="outline" size="sm" onClick={() => handleShareCampaign(campaign.id)}>
-                                    <Share2 className="mr-2 h-4 w-4" />
-                                    Share
+    <>
+      {selectedCampaign && (
+        <CampaignUserReportDialog
+          campaign={selectedCampaign}
+          open={isReportOpen}
+          onOpenChange={setReportOpen}
+        />
+      )}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+              <Users className="h-6 w-6 text-primary" />
+              <CardTitle>Created Campaigns</CardTitle>
+          </div>
+          <CardDescription>
+            A list of all campaigns that have been created.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : campaigns.length > 0 ? (
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Campaign Name</TableHead>
+                          <TableHead>Assignee</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Joined Users</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {campaigns.map((campaign) => (
+                          <TableRow key={campaign.id}>
+                              <TableCell>
+                                  <div className="font-medium">{campaign.name}</div>
+                                  <div className="text-sm text-muted-foreground">{campaign.description}</div>
+                              </TableCell>
+                              <TableCell>
+                                  {campaign.assignee ? (
+                                      <div className="flex items-center gap-2">
+                                          <Avatar className="h-8 w-8">
+                                              <AvatarImage src={getAssigneeAvatar(campaign.assignee)} />
+                                              <AvatarFallback>{getAssigneeFallback(campaign.assignee)}</AvatarFallback>
+                                          </Avatar>
+                                          <span>{getAssigneeName(campaign.assignee)}</span>
+                                      </div>
+                                  ) : 'N/A'}
+                              </TableCell>
+                              <TableCell>{getStatus(campaign)}</TableCell>
+                              <TableCell>
+                                <Button variant="link" className="p-0 h-auto" onClick={() => handleOpenReport(campaign)}>
+                                  {campaignUserCounts[campaign.id] ?? 0}
                                 </Button>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        ) : (
-          <div className="text-center text-muted-foreground py-10">No campaigns found for you.</div>
-        )}
-      </CardContent>
-    </Card>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                  <Button variant="outline" size="sm" onClick={() => handleShareCampaign(campaign.id)}>
+                                      <Share2 className="mr-2 h-4 w-4" />
+                                      Share
+                                  </Button>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+          ) : (
+            <div className="text-center text-muted-foreground py-10">No campaigns found for you.</div>
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }
