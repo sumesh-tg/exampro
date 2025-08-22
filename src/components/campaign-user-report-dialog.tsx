@@ -45,12 +45,12 @@ interface UserReport extends UserProfile {
 export function CampaignUserReportDialog({ campaign, open, onOpenChange, onCampaignUpdated }: CampaignUserReportDialogProps) {
   const [reportData, setReportData] = useState<UserReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [freeAttemptsDisabled, setFreeAttemptsDisabled] = useState(campaign.disableFreeAttempts || false);
+  const [localCampaign, setLocalCampaign] = useState<CampaignDetail>(campaign);
   const { toast } = useToast();
 
   useEffect(() => {
     if (campaign) {
-      setFreeAttemptsDisabled(campaign.disableFreeAttempts || false);
+      setLocalCampaign(campaign);
     }
   }, [campaign]);
 
@@ -93,15 +93,26 @@ export function CampaignUserReportDialog({ campaign, open, onOpenChange, onCampa
     }
   }, [campaign, open]);
 
-  const handleSwitchChange = async (checked: boolean) => {
-    setFreeAttemptsDisabled(checked);
+  const handleSwitchChange = async (checked: boolean, userId: string) => {
+    const currentDisabledList = localCampaign.freeAttemptsDisabledFor || [];
+    let updatedList;
+    if (checked) {
+      updatedList = [...currentDisabledList, userId];
+    } else {
+      updatedList = currentDisabledList.filter(id => id !== userId);
+    }
+    
+    // Optimistic UI update
+    setLocalCampaign(prev => ({...prev, freeAttemptsDisabledFor: updatedList }));
+
     try {
-        await updateCampaignDetail(campaign.id, { disableFreeAttempts: checked });
-        toast({ title: "Campaign Updated", description: `Free attempts have been ${checked ? 'disabled' : 'enabled'}.`});
+        await updateCampaignDetail(campaign.id, { freeAttemptsDisabledFor: updatedList });
+        toast({ title: "User Setting Updated", description: `Free attempts for this user have been ${checked ? 'disabled' : 'enabled'}.`});
         onCampaignUpdated();
     } catch (error) {
-        setFreeAttemptsDisabled(!checked); // Revert on error
-        toast({ variant: 'destructive', title: "Update Failed", description: "Could not update the campaign setting."});
+        // Revert on error
+        setLocalCampaign(prev => ({...prev, freeAttemptsDisabledFor: currentDisabledList}));
+        toast({ variant: 'destructive', title: "Update Failed", description: "Could not update the user setting."});
     }
   }
 
@@ -115,14 +126,6 @@ export function CampaignUserReportDialog({ campaign, open, onOpenChange, onCampa
                 <DialogDescription>
                     Details of users who joined this campaign.
                 </DialogDescription>
-            </div>
-            <div className="flex items-center space-x-2 pt-1">
-                <Switch 
-                    id="disable-free-attempts-report" 
-                    checked={freeAttemptsDisabled}
-                    onCheckedChange={handleSwitchChange}
-                />
-                <Label htmlFor="disable-free-attempts-report">Disable Free Attempts</Label>
             </div>
           </div>
         </DialogHeader>
@@ -150,6 +153,17 @@ export function CampaignUserReportDialog({ campaign, open, onOpenChange, onCampa
                         </div>
                     </AccordionTrigger>
                   <AccordionContent>
+                    <div className="flex items-center justify-between rounded-lg border p-4 mb-4">
+                        <div className="space-y-0.5">
+                            <Label className="text-base">Disable Free Attempts</Label>
+                            <p className="text-sm text-muted-foreground">If enabled, this user must pay for all exam attempts in this campaign.</p>
+                        </div>
+                        <Switch 
+                            checked={(localCampaign.freeAttemptsDisabledFor || []).includes(userReport.uid)}
+                            onCheckedChange={(checked) => handleSwitchChange(checked, userReport.uid)}
+                        />
+                    </div>
+
                     <Table>
                       <TableHeader>
                         <TableRow>

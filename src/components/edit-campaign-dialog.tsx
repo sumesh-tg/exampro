@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,7 +30,6 @@ import type { AdminUserRecord } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
-import { Switch } from './ui/switch';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
@@ -38,7 +38,6 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
-  disableFreeAttempts: z.boolean().default(false),
 });
 
 interface EditCampaignDialogProps {
@@ -62,7 +61,6 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
         description: '',
         examIds: [],
         assignee: '',
-        disableFreeAttempts: false,
     },
   });
 
@@ -75,7 +73,6 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
         startDate: (campaign.startDate as any).toDate(),
         endDate: (campaign.endDate as any).toDate(),
         assignee: campaign.assignee,
-        disableFreeAttempts: campaign.disableFreeAttempts || false,
       });
     }
   }, [campaign, form]);
@@ -91,7 +88,11 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
     setLoading(true);
 
     try {
-        await updateCampaignDetail(campaign.id, values);
+        // We preserve the freeAttemptsDisabledFor field, as it's managed separately
+        await updateCampaignDetail(campaign.id, {
+            ...values,
+            freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || []
+        });
         toast({ title: 'Campaign Updated!', description: 'The campaign has been successfully updated.' });
         onCampaignUpdated();
         handleOpenChange(false);
@@ -261,27 +262,6 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
                   )}
                 />
             </div>
-            
-            <FormField
-                control={form.control}
-                name="disableFreeAttempts"
-                render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                                Disable Free Attempts
-                            </FormLabel>
-                             <FormMessage />
-                        </div>
-                        <FormControl>
-                            <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                    </FormItem>
-                )}
-            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>

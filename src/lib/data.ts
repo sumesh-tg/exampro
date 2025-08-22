@@ -43,5 +43,5 @@ export type CampaignDetail = {
     endDate: Date;
     createdBy: string;
     assignee?: string;
-    disableFreeAttempts?: boolean;
+    freeAttemptsDisabledFor?: string[];
 };
