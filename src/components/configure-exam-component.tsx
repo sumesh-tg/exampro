@@ -11,27 +11,29 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import Link from 'next/link';
 
-export function ConfigureExamComponent({ exam }: { exam: Exam }) {
+export function ConfigureExamComponent({ exam: initialExam }: { exam: Exam }) {
   const router = useRouter();
 
-  const [numQuestions, setNumQuestions] = useState(exam.questions.length);
-  const [timeLimit, setTimeLimit] = useState(Math.ceil(exam.questions.length * 0.5)); // Default 30s per question
+  const [numQuestions, setNumQuestions] = useState(initialExam.questions.length);
+  const [timeLimit, setTimeLimit] = useState(Math.ceil(initialExam.questions.length * 0.5)); // Default 30s per question
 
   const handleStartExam = () => {
     // Give the exam a temporary ID for history tracking if it doesn't have one
-    const examToStart = {
-        ...exam,
-        id: exam.id || `custom-${Date.now()}`
+    const examToStart: Exam = {
+        ...initialExam,
+        id: initialExam.id || `custom-${Date.now()}`,
+        timeLimit: timeLimit,
+        questions: initialExam.questions.slice(0, numQuestions),
     };
     sessionStorage.setItem('tempExam', JSON.stringify(examToStart));
-    router.push(`/exam/custom?questions=${numQuestions}&time=${timeLimit}`);
+    router.push(`/exam/custom`);
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-2xl">Configure Exam: {exam.title}</CardTitle>
+          <CardTitle className="text-2xl">Configure Exam: {initialExam.title}</CardTitle>
           <CardDescription>Adjust the settings for your exam session.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -40,7 +42,7 @@ export function ConfigureExamComponent({ exam }: { exam: Exam }) {
             <Slider
               id="num-questions"
               min={1}
-              max={exam.questions.length}
+              max={initialExam.questions.length}
               step={1}
               value={[numQuestions]}
               onValueChange={(value) => setNumQuestions(value[0])}

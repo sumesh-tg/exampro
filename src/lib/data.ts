@@ -12,6 +12,8 @@ export type Exam = {
   description: string;
   questions: Question[];
   isPremium?: boolean;
+  winPercentage?: number;
+  timeLimit?: number; // in minutes
   createdAt?: Date;
   updatedAt?: Date;
   createdBy?: string;

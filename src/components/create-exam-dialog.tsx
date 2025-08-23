@@ -30,11 +30,14 @@ import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useAuth } from '@/hooks/use-auth';
+import { Slider } from './ui/slider';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   isPremium: z.boolean().default(false),
+  winPercentage: z.number().min(1).max(100).default(50),
+  timeLimit: z.coerce.number().min(0).max(180, { message: 'Time limit cannot exceed 180 minutes.' }).optional(),
 });
 
 const step2Schema = z.object({
@@ -65,8 +68,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { title: '', description: '', isPremium: false },
+    defaultValues: { title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: 180 },
   });
+  
+  const winPercentage = step1Form.watch('winPercentage');
 
   const step2Form = useForm<z.infer<typeof step2Schema>>({
     resolver: zodResolver(step2Schema),
@@ -78,14 +83,16 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         step1Form.reset({
             title: examToEdit.title,
             description: examToEdit.description,
-            isPremium: examToEdit.isPremium || false
+            isPremium: examToEdit.isPremium || false,
+            winPercentage: examToEdit.winPercentage || 50,
+            timeLimit: examToEdit.timeLimit,
         });
         setQuestions(examToEdit.questions);
-        setStep(3); // Start at the review step in edit mode
+        setStep(1); // Start at the details step in edit mode
     } else {
         reset();
     }
-  }, [examToEdit, isEditMode, open]);
+  }, [examToEdit, isEditMode, open, step1Form]);
 
   useEffect(() => {
     if (activeAccordionItem && questionsContainerRef.current) {
@@ -99,7 +106,13 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     }
   }, [activeAccordionItem, questions.length]);
 
-  const handleNext = () => setStep(s => s + 1);
+  const handleStep1Submit = () => {
+    if (isEditMode) {
+      setStep(3); // Skip to questions if editing
+    } else {
+      setStep(2); // Go to AI generation if creating
+    }
+  };
 
   const handleGenerateQuestions = async (values: z.infer<typeof step2Schema>) => {
     setLoading(true);
@@ -203,12 +216,15 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         return;
     }
     
-    if (!validateQuestions(questions)) {
+    if (!validateQuestions(questions, { checkAll: false })) {
       return;
     }
 
     setLoading(true);
     const examDetails = step1Form.getValues();
+    if (examDetails.timeLimit === 0 || !examDetails.timeLimit) {
+        examDetails.timeLimit = 180;
+    }
     
     const updaterId = isSuperAdmin ? 'System' : user?.uid;
     if (!updaterId) {
@@ -248,7 +264,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   };
 
   const reset = () => {
-    step1Form.reset({ title: '', description: '', isPremium: false });
+    step1Form.reset({ title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: 180 });
     step2Form.reset({ topic: '', numQuestions: 5 });
     setQuestions([]);
     setStep(1);
@@ -364,7 +380,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         
         {step === 1 && (
             <Form {...step1Form}>
-                <form onSubmit={step1Form.handleSubmit(handleNext)} className="space-y-4 py-4">
+                <form onSubmit={step1Form.handleSubmit(handleStep1Submit)} className="space-y-4 py-4">
                     <FormField control={step1Form.control} name="title" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Exam Title</FormLabel>
@@ -379,6 +395,34 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                             <FormMessage />
                         </FormItem>
                     )} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={step1Form.control}
+                            name="winPercentage"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Win Percentage: {field.value}%</FormLabel>
+                                <FormControl>
+                                    <Slider
+                                        min={1}
+                                        max={100}
+                                        step={1}
+                                        value={[field.value]}
+                                        onValueChange={(value) => field.onChange(value[0])}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField control={step1Form.control} name="timeLimit" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Time Limit (minutes)</FormLabel>
+                                <FormControl><Input type="number" min="0" max="180" placeholder="Defaults to 180" {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
                      <FormField
                         control={step1Form.control}
                         name="isPremium"
@@ -553,3 +597,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     </Dialog>
   );
 }
+
+    
+
+    

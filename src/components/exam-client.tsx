@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Exam, ExamHistory } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,55 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     setShuffledExam({ ...exam, questions: randomizedQuestions });
   }, [exam]);
 
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitted || !shuffledExam) return;
+    
+    let finalScore = 0;
+    const analysis: TagAnalysis = {};
+
+    shuffledExam.questions.forEach((q, index) => {
+      const isCorrect = selectedAnswers[index] === q.correctAnswer;
+      if (isCorrect) {
+        finalScore++;
+      }
+      if (q.tag && q.tag.trim() !== '') {
+        const tag = q.tag;
+        if (!analysis[tag]) {
+          analysis[tag] = { correct: 0, total: 0 };
+        }
+        analysis[tag].total++;
+        if (isCorrect) {
+          analysis[tag].correct++;
+        }
+      }
+    });
+
+    setScore(finalScore);
+    setTagAnalysis(analysis);
+    setIsSubmitted(true);
+
+    if (user) {
+      const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
+        userId: user.uid,
+        examId: shuffledExam.id,
+        examTitle: shuffledExam.title,
+        score: finalScore,
+        totalQuestions: shuffledExam.questions.length,
+        date: new Date().toISOString(),
+        createdBy: user.uid,
+        updatedBy: user.uid,
+      };
+      if (sharedBy) {
+        try {
+            historyEntry.sharedBy = atob(sharedBy);
+        } catch (e) {
+            console.error("Failed to decode sharedBy param:", e);
+        }
+      }
+      await addExamHistory(historyEntry);
+    }
+  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy]);
+  
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (timeLimit) {
@@ -87,7 +136,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isSubmitted, timeLimit]);
+  }, [isSubmitted, timeLimit, handleSubmit]);
   
   useEffect(() => {
     setVisited((prev) => new Set(prev).add(currentQuestionIndex));
@@ -124,54 +173,6 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     });
   };
 
-  const handleSubmit = async () => {
-    if (isSubmitted || !shuffledExam) return;
-    let finalScore = 0;
-    const analysis: TagAnalysis = {};
-
-    shuffledExam.questions.forEach((q, index) => {
-      const isCorrect = selectedAnswers[index] === q.correctAnswer;
-      if (isCorrect) {
-        finalScore++;
-      }
-      if (q.tag) {
-        const tag = q.tag;
-        if (!analysis[tag]) {
-          analysis[tag] = { correct: 0, total: 0 };
-        }
-        analysis[tag].total++;
-        if (isCorrect) {
-          analysis[tag].correct++;
-        }
-      }
-    });
-    setScore(finalScore);
-    setTagAnalysis(analysis);
-    setIsSubmitted(true);
-
-    if (user) {
-      const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
-        userId: user.uid,
-        examId: shuffledExam.id,
-        examTitle: shuffledExam.title,
-        score: finalScore,
-        totalQuestions: shuffledExam.questions.length,
-        date: new Date().toISOString(),
-        createdBy: user.uid,
-        updatedBy: user.uid,
-      };
-      if (sharedBy) {
-        try {
-            // In a real app, you might want to fetch the user's name from their UID
-            historyEntry.sharedBy = atob(sharedBy);
-        } catch (e) {
-            console.error("Failed to decode sharedBy param:", e);
-        }
-      }
-      await addExamHistory(historyEntry);
-    }
-  };
-
   const handleDownloadPdf = async () => {
     const input = resultCardRef.current;
     if (input) {
@@ -190,6 +191,10 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   }
 
   if (isSubmitted) {
+    const winPercentage = shuffledExam.winPercentage || 50;
+    const userPercentage = (score / shuffledExam.questions.length) * 100;
+    const hasPassed = userPercentage >= winPercentage;
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg">
@@ -198,9 +203,17 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             <CardDescription>Here's your result for "{shuffledExam.title}".</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-full bg-primary/10 p-8 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4 border-primary">
+            <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4",
+              hasPassed ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500"
+            )}>
               <p className="text-muted-foreground">You scored</p>
-              <p className="text-5xl font-bold text-primary">{score} / {shuffledExam.questions.length}</p>
+              <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600" : "text-red-600")}>
+                {score} / {shuffledExam.questions.length}
+              </p>
+               <p className="text-lg text-muted-foreground font-semibold">({userPercentage.toFixed(1)}%)</p>
+               <Badge variant={hasPassed ? 'default' : 'destructive'} className="mt-2 text-base">
+                {hasPassed ? 'Pass' : 'Fail'}
+              </Badge>
             </div>
             <div className="flex flex-wrap justify-around text-lg gap-4">
                 <div className="flex items-center gap-2">

@@ -221,7 +221,6 @@ export default function Home() {
       name: "QuizWhiz Re-attempt",
       description: `Payment for re-attempting ${exam.title}`,
       handler: function (response: any) {
-        // On success, redirect to the exam page
         router.push(`/exam/${exam.id}`);
       },
       prefill: {
@@ -445,6 +444,11 @@ export default function Home() {
                                     {exam.description}
                                 </p>
                                 <div className="flex items-center gap-4 pt-1">
+                                    {exam.timeLimit && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Time limit: {exam.timeLimit} minutes
+                                        </p>
+                                    )}
                                     {(exam.updatedAt as any)?.toDate && (
                                         <p className="text-xs text-muted-foreground">
                                             Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
