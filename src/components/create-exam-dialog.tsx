@@ -58,6 +58,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const questionsContainerRef = useRef<HTMLDivElement>(null);
+  const newQuestionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { toast } = useToast();
   const { user, isSuperAdmin } = useAuth();
   const isEditMode = !!examToEdit;
@@ -87,12 +88,13 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   }, [examToEdit, isEditMode, open]);
 
   useEffect(() => {
-    // This effect ensures that when a new question is added and the accordion item is activated,
-    // the container scrolls to the bottom to show the new question.
     if (activeAccordionItem && questionsContainerRef.current) {
         const lastItemIndex = questions.length - 1;
         if (`item-${lastItemIndex}` === activeAccordionItem) {
-            questionsContainerRef.current.scrollTop = questionsContainerRef.current.scrollHeight;
+            setTimeout(() => {
+                questionsContainerRef.current!.scrollTop = questionsContainerRef.current!.scrollHeight;
+                newQuestionTextareaRef.current?.focus();
+            }, 100);
         }
     }
   }, [activeAccordionItem, questions.length]);
@@ -130,15 +132,18 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     setQuestions(questions.filter((_, i) => i !== index));
   };
   
-  const validateQuestions = (questionList: Question[]): boolean => {
-    for (let i = 0; i < questionList.length; i++) {
-        const q = questionList[i];
+  const validateQuestions = (questionList: Question[], options: { checkAll: boolean } = { checkAll: true }): boolean => {
+    const listToValidate = options.checkAll ? questionList : questionList.slice(0, -1);
+
+    for (let i = 0; i < listToValidate.length; i++) {
+        const q = listToValidate[i];
         if (!q.questionText || q.questionText.trim() === '') {
             toast({
                 variant: 'destructive',
                 title: `Validation Error for Q${i + 1}`,
                 description: 'Question text cannot be empty.',
             });
+            setActiveAccordionItem(`item-${i}`);
             return false;
         }
         for (let j = 0; j < q.options.length; j++) {
@@ -149,6 +154,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                     title: `Validation Error for Q${i + 1}`,
                     description: `Option ${j + 1} cannot be empty.`,
                 });
+                setActiveAccordionItem(`item-${i}`);
                 return false;
             }
         }
@@ -158,6 +164,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                 title: `Validation Error for Q${i + 1}`,
                 description: 'Please select a correct answer.',
             });
+            setActiveAccordionItem(`item-${i}`);
             return false;
         }
         if (!q.options.map(o => o.trim()).includes(q.correctAnswer.trim())) {
@@ -166,6 +173,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                 title: `Invalid Answer for Q${i + 1}`,
                 description: `The correct answer must be one of the provided options.`,
             });
+            setActiveAccordionItem(`item-${i}`);
             return false;
         }
     }
@@ -173,8 +181,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   }
   
   const handleAddQuestion = () => {
-    if (!validateQuestions(questions)) {
-      return; // Stop if validation fails
+    if (!validateQuestions(questions, { checkAll: true })) {
+      return;
     }
     
     const newQuestion = {
@@ -183,9 +191,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         correctAnswer: ''
     };
     const newQuestionIndex = questions.length;
-    // Append the new question to the end of the array
     setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
-    // Set the last item as active (expanded)
     setActiveAccordionItem(`item-${newQuestionIndex}`);
   };
 
@@ -474,6 +480,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                                 <div className="space-y-2">
                                     <Label>Question Text</Label>
                                     <Textarea
+                                    ref={qIndex === questions.length - 1 ? newQuestionTextareaRef : null}
                                     value={q.questionText}
                                     onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
                                     className="text-base"
