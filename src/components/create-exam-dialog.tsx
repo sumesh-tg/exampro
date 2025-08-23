@@ -144,16 +144,18 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                 {step === 3 && "Review the generated questions and save your exam."}
               </DialogDescription>
             </div>
-            <div className="flex gap-2">
-               <Button variant="outline" size="sm" disabled>
-                 <Upload className="mr-2 h-4 w-4" />
-                 Import
-               </Button>
+            {step === 2 && (
+              <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled>
-                 <Download className="mr-2 h-4 w-4" />
-                 Download Template
-               </Button>
-            </div>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
+                  <Button variant="outline" size="sm" disabled>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Template
+                </Button>
+              </div>
+            )}
           </div>
         </DialogHeader>
         
