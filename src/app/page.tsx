@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -48,6 +48,17 @@ import { listUsers, type AdminUserRecord } from '@/services/userService';
 import { CampaignsList } from '@/components/campaigns-list';
 import { JoinedCampaigns } from '@/components/joined-campaigns';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -127,6 +138,7 @@ export default function Home() {
   const handleDeleteExam = async (id: string) => {
     await deleteExam(id);
     fetchExams();
+    toast({ title: "Exam Deleted", description: "The exam has been successfully deleted." });
   }
   
   const handleExamCreated = () => {
@@ -234,7 +246,6 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {(isAdmin || isSuperAdmin) && (
             <>
-              <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
               <CreateExamDialog 
                 open={isCreateExamOpen}
                 onOpenChange={(isOpen) => {
@@ -383,38 +394,63 @@ export default function Home() {
                                     <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                                     </Button>
                                 )}
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                        <span className="sr-only">Open menu</span>
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
-                                        <Share2 className="mr-2 h-4 w-4" />
-                                        <span>Share</span>
-                                        </DropdownMenuItem>
-                                        {user && (
-                                            <DropdownMenuItem onClick={() => handleOpenIndividualReport(exam)}>
-                                                <FileText className="mr-2 h-4 w-4" />
-                                                <span>View Share Report</span>
+                                <AlertDialog>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
+                                            <Share2 className="mr-2 h-4 w-4" />
+                                            <span>Share</span>
                                             </DropdownMenuItem>
-                                        )}
-                                        {(isAdmin || isSuperAdmin) && (
-                                        <>
-                                            <DropdownMenuItem onClick={() => handleOpenEditDialog(exam)}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                <span>Edit</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
-                                                Delete
-                                            </DropdownMenuItem>
-                                        </>
-                                        )}
-                                    </DropdownMenuContent>
+                                            {user && (
+                                                <DropdownMenuItem onClick={() => handleOpenIndividualReport(exam)}>
+                                                    <FileText className="mr-2 h-4 w-4" />
+                                                    <span>View Share Report</span>
+                                                </DropdownMenuItem>
+                                            )}
+                                            {(isAdmin || isSuperAdmin) && (
+                                            <>
+                                                <DropdownMenuItem onClick={() => handleOpenEditDialog(exam)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    <span>Edit</span>
+                                                </DropdownMenuItem>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem
+                                                        className="text-destructive"
+                                                        onSelect={(e) => e.preventDefault()}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                            </>
+                                            )}
+                                        </DropdownMenuContent>
                                     </DropdownMenu>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the exam
+                                                and all associated data.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-destructive hover:bg-destructive/90"
+                                                onClick={() => handleDeleteExam(exam.id)}>
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                                 </div>
                             </div>
                             ))
