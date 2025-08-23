@@ -47,6 +47,7 @@ import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
 import { listUsers, type AdminUserRecord } from '@/services/userService';
 import { CampaignsList } from '@/components/campaigns-list';
 import { JoinedCampaigns } from '@/components/joined-campaigns';
+import { formatDistanceToNow } from 'date-fns';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -365,6 +366,11 @@ export default function Home() {
                                 <p className="text-sm text-muted-foreground">
                                     {exam.description}
                                 </p>
+                                {(exam.updatedAt as any)?.toDate && (
+                                    <p className="text-xs text-muted-foreground pt-1">
+                                        Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
+                                    </p>
+                                )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                 {user && hasAttemptedExam(exam.id) ? (
