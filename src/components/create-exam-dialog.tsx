@@ -37,7 +37,7 @@ const step1Schema = z.object({
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   isPremium: z.boolean().default(false),
   winPercentage: z.number().min(1).max(100).default(50),
-  timeLimit: z.coerce.number().min(0).optional(),
+  timeLimit: z.coerce.number().min(0).max(180, { message: 'Time limit cannot exceed 180 minutes.' }).optional(),
 });
 
 const step2Schema = z.object({
@@ -68,7 +68,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: undefined },
+    defaultValues: { title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: 180 },
   });
   
   const winPercentage = step1Form.watch('winPercentage');
@@ -216,6 +216,9 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
 
     setLoading(true);
     const examDetails = step1Form.getValues();
+    if (examDetails.timeLimit === 0 || !examDetails.timeLimit) {
+        examDetails.timeLimit = 180;
+    }
     
     const updaterId = isSuperAdmin ? 'System' : user?.uid;
     if (!updaterId) {
@@ -255,7 +258,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   };
 
   const reset = () => {
-    step1Form.reset({ title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: undefined });
+    step1Form.reset({ title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: 180 });
     step2Form.reset({ topic: '', numQuestions: 5 });
     setQuestions([]);
     setStep(1);
@@ -409,7 +412,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                          <FormField control={step1Form.control} name="timeLimit" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Time Limit (minutes)</FormLabel>
-                                <FormControl><Input type="number" min="0" placeholder="Leave blank for no limit" {...field} onChange={event => field.onChange(+event.target.value)} /></FormControl>
+                                <FormControl><Input type="number" min="0" max="180" placeholder="Defaults to 180" {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
@@ -588,3 +591,5 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     </Dialog>
   );
 }
+
+    
