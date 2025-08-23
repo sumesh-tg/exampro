@@ -32,14 +32,14 @@ export type AdminUserRecord = {
 }
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>) => {
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
     // Using setDoc with merge: true will create the doc if it doesn't exist,
     // and update it if it does.
     await setDoc(userDocRef, data, { merge: true });
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
         return docSnap.data() as UserProfile;
