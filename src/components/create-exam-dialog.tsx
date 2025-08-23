@@ -29,6 +29,7 @@ import { Checkbox } from './ui/checkbox';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useAuth } from '@/hooks/use-auth';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -56,6 +57,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   const isEditMode = !!examToEdit;
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
@@ -117,6 +119,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   };
   
   const handleSaveExam = async () => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to save an exam.' });
+        return;
+    }
     // Validation check
     for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
@@ -132,16 +138,24 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
 
     setLoading(true);
     const examDetails = step1Form.getValues();
-    const newExamData: Omit<Exam, 'id'> = {
-      ...examDetails,
-      questions: questions,
-    };
+    
 
     try {
         if(isEditMode && examToEdit) {
-            await updateExam(examToEdit.id, newExamData);
+            const updatedExamData: Partial<Exam> = {
+                ...examDetails,
+                questions: questions,
+                updatedBy: user.uid
+            };
+            await updateExam(examToEdit.id, updatedExamData);
             toast({ title: 'Success', description: 'Exam updated successfully.' });
         } else {
+             const newExamData: Omit<Exam, 'id'> = {
+                ...examDetails,
+                questions: questions,
+                createdBy: user.uid,
+                updatedBy: user.uid,
+            };
             await addExam(newExamData);
             toast({ title: 'Success', description: 'Exam created successfully.' });
         }

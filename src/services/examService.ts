@@ -40,7 +40,7 @@ export const getExam = async (id: string) => {
     }
 }
 
-export const addExam = async (exam: Omit<Exam, 'id' | 'createdAt'>) => {
+export const addExam = async (exam: Omit<Exam, 'id' | 'createdAt' | 'updatedAt'>) => {
     return await addDoc(examsCollectionRef, {
         ...exam,
         createdAt: serverTimestamp(),
