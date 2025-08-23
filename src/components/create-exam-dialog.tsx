@@ -57,7 +57,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const isEditMode = !!examToEdit;
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
@@ -119,7 +119,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   };
   
   const handleSaveExam = async () => {
-    if (!user) {
+    const loggedInUser = user || isSuperAdmin;
+    if (!loggedInUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to save an exam.' });
         return;
     }
@@ -139,13 +140,19 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     setLoading(true);
     const examDetails = step1Form.getValues();
     
+    const updaterId = isSuperAdmin ? 'System' : user?.uid;
+    if (!updaterId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not determine updater information.' });
+        setLoading(false);
+        return;
+    }
 
     try {
         if(isEditMode && examToEdit) {
             const updatedExamData: Partial<Exam> = {
                 ...examDetails,
                 questions: questions,
-                updatedBy: user.uid
+                updatedBy: updaterId,
             };
             await updateExam(examToEdit.id, updatedExamData);
             toast({ title: 'Success', description: 'Exam updated successfully.' });
@@ -153,8 +160,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
              const newExamData: Omit<Exam, 'id'> = {
                 ...examDetails,
                 questions: questions,
-                createdBy: user.uid,
-                updatedBy: user.uid,
+                createdBy: updaterId,
+                updatedBy: updaterId,
             };
             await addExam(newExamData);
             toast({ title: 'Success', description: 'Exam created successfully.' });
@@ -443,3 +450,5 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     </Dialog>
   );
 }
+
+    
