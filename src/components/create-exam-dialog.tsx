@@ -118,6 +118,14 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     setQuestions(questions.filter((_, i) => i !== index));
   };
   
+  const handleAddQuestion = () => {
+    setQuestions([...questions, {
+      questionText: '',
+      options: ['', '', '', ''],
+      correctAnswer: ''
+    }]);
+  };
+
   const handleSaveExam = async () => {
     const loggedInUser = user || isSuperAdmin;
     if (!loggedInUser) {
@@ -269,7 +277,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
               <DialogTitle>{isEditMode ? "Edit Exam" : "Create a New Exam"}</DialogTitle>
               <DialogDescription>
                 {step === 1 && "Start by providing the basic details for your exam."}
-                {step === 2 && "Now, let's configure the AI to generate questions for you."}
+                {step === 2 && "Generate questions with AI, import a file, or add them manually."}
                 {step === 3 && "Review the questions and save your exam."}
               </DialogDescription>
             </div>
@@ -281,7 +289,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleDownloadTemplate} disabled={loading}>
                   <Download className="mr-2 h-4 w-4" />
-                  Download Template
+                  Template
                 </Button>
               </div>
             )}
@@ -369,9 +377,12 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                     </Card>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>
+                         <Button type="button" variant="secondary" onClick={() => setStep(3)}>
+                            Add Manually
+                        </Button>
                         <Button type="submit" disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Generate Questions
+                            Generate
                         </Button>
                     </DialogFooter>
                 </form>
@@ -380,63 +391,77 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
 
         {step === 3 && (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                <h3 className="text-xl font-bold">Questions</h3>
-                <Accordion type="single" collapsible className="w-full space-y-4">
-                  {questions.map((q, qIndex) => (
-                    <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
-                      <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex justify-between items-center w-full gap-2">
-                           <span className="font-semibold text-left flex-1 line-clamp-2">{`Q${qIndex + 1}: ${q.questionText}`}</span>
-                           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveQuestion(qIndex); }} className="text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0">
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="p-6 pt-0">
-                         <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Question Text</Label>
-                                <Textarea
-                                value={q.questionText}
-                                onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
-                                className="text-base"
-                                rows={3}
-                                />
+                <div className="flex justify-between items-center">
+                    <h3 className="text-xl font-bold">Questions ({questions.length})</h3>
+                    <Button variant="outline" size="sm" onClick={handleAddQuestion}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Question
+                    </Button>
+                </div>
+                {questions.length > 0 ? (
+                    <Accordion type="single" collapsible className="w-full space-y-4">
+                    {questions.map((q, qIndex) => (
+                        <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
+                        <AccordionTrigger className="p-4 hover:no-underline">
+                            <div className="flex justify-between items-center w-full gap-2">
+                            <span className="font-semibold text-left flex-1 line-clamp-2">{`Q${qIndex + 1}: ${q.questionText || 'New Question'}`}</span>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveQuestion(qIndex); }} className="text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
                             </div>
-                            <div className="space-y-2">
-                              <Label>Options</Label>
-                              {q.options.map((option, oIndex) => (
-                                <div key={oIndex} className="flex items-center gap-2">
-                                  <Input
-                                    value={option}
-                                    onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
-                                  />
+                        </AccordionTrigger>
+                        <AccordionContent className="p-6 pt-0">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Question Text</Label>
+                                    <Textarea
+                                    value={q.questionText}
+                                    onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
+                                    className="text-base"
+                                    rows={3}
+                                    placeholder="Enter the question text here"
+                                    />
                                 </div>
-                              ))}
+                                <div className="space-y-2">
+                                <Label>Options</Label>
+                                {q.options.map((option, oIndex) => (
+                                    <div key={oIndex} className="flex items-center gap-2">
+                                    <Input
+                                        value={option}
+                                        onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                                        placeholder={`Option ${oIndex + 1}`}
+                                    />
+                                    </div>
+                                ))}
+                                </div>
+                                <div className="space-y-2">
+                                <Label>Correct Answer</Label>
+                                    <Select
+                                        value={q.correctAnswer}
+                                        onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select the correct answer" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {q.options.filter(opt => opt.trim() !== '').map((option, oIndex) => (
+                                                <SelectItem key={oIndex} value={option}>
+                                                    {option}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                             <div className="space-y-2">
-                              <Label>Correct Answer</Label>
-                                <Select
-                                    value={q.correctAnswer}
-                                    onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select the correct answer" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {q.options.map((option, oIndex) => (
-                                            <SelectItem key={oIndex} value={option}>
-                                                {option}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+                        </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                    </Accordion>
+                ) : (
+                    <div className="text-center text-muted-foreground py-10">
+                        No questions yet. Add your first question to get started.
+                    </div>
+                )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setStep(isEditMode ? 1 : 2)}>Back</Button>
                     <Button onClick={handleSaveExam} disabled={loading || questions.length === 0}>
@@ -450,6 +475,3 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     </Dialog>
   );
 }
-
-    
-    
