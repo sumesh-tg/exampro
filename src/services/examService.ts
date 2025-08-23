@@ -10,10 +10,10 @@ export const getExams = async () => {
     const data = await getDocs(q);
     const exams = data.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Exam[];
 
-    // Custom sort to handle null or undefined createdAt
+    // Custom sort to handle null or undefined updatedAt
     exams.sort((a, b) => {
-        const aDate = (a.createdAt as any)?.toDate();
-        const bDate = (b.createdAt as any)?.toDate();
+        const aDate = (a.updatedAt as any)?.toDate();
+        const bDate = (b.updatedAt as any)?.toDate();
 
         if (aDate && bDate) {
             return bDate.getTime() - aDate.getTime(); // Most recent first
