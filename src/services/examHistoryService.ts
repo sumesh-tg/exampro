@@ -1,7 +1,9 @@
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import type { ExamHistory } from '@/lib/data';
+
+const examHistoryCollectionRef = collection(db, 'exam_history');
 
 export const getExamHistory = async (userId: string) => {
     const q = query(examHistoryCollectionRef, where("userId", "==", userId));
@@ -41,7 +43,6 @@ export const getExamHistory = async (userId: string) => {
     return historyWithAttempts;
 }
 
-const examHistoryCollectionRef = collection(db, 'exam_history');
 
 export const getAllExamHistoryBySharer = async (sharerId: string) => {
     const q = query(
@@ -59,3 +60,11 @@ export const addExamHistory = async (examHistory: Omit<ExamHistory, 'id' | 'crea
         updatedAt: serverTimestamp(),
     });
 }
+
+export const updateExamHistory = async (id: string, updates: Partial<Pick<ExamHistory, 'rating' | 'feedback' | 'updatedBy'>>) => {
+    const historyDoc = doc(db, 'exam_history', id);
+    return await updateDoc(historyDoc, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+    });
+};

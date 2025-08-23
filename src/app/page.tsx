@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2 } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -59,6 +59,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { RatingDialog } from '@/components/rating-dialog';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -80,6 +81,8 @@ export default function Home() {
   const [isShareReportOpen, setShareReportOpen] = useState(false);
   const [isIndividualReportOpen, setIndividualReportOpen] = useState(false);
   const [selectedExamForReport, setSelectedExamForReport] = useState<Exam | null>(null);
+  const [selectedHistoryForRating, setSelectedHistoryForRating] = useState<ExamHistory | null>(null);
+  const [isRatingDialogOpen, setRatingDialogOpen] = useState(false);
   const [allAdmins, setAllAdmins] = useState<AdminUserRecord[]>([]);
   const { toast } = useToast();
 
@@ -208,6 +211,16 @@ export default function Home() {
     });
     rzp.open();
   }
+
+  const handleOpenRatingDialog = (historyItem: ExamHistory) => {
+    setSelectedHistoryForRating(historyItem);
+    setRatingDialogOpen(true);
+  }
+  
+  const handleRatingSubmitted = () => {
+    fetchExamHistory();
+    setRatingDialogOpen(false);
+  }
   
 
   if (loading) {
@@ -230,6 +243,14 @@ export default function Home() {
                     open={isIndividualReportOpen}
                     onOpenChange={setIndividualReportOpen}
                 />
+            )}
+            {selectedHistoryForRating && (
+              <RatingDialog 
+                open={isRatingDialogOpen}
+                onOpenChange={setRatingDialogOpen}
+                historyItem={selectedHistoryForRating}
+                onRatingSubmitted={handleRatingSubmitted}
+              />
             )}
         </>
       )}
@@ -490,7 +511,8 @@ export default function Home() {
                                 <TableHeader>
                                     <TableRow>
                                     <TableHead>Exam</TableHead>
-                                    <TableHead className="text-right">Score</TableHead>
+                                    <TableHead>Score</TableHead>
+                                    <TableHead className="text-right">Rating</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -501,14 +523,26 @@ export default function Home() {
                                         <div>{item.examTitle}</div>
                                         {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell>
                                             <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {item.rating ? (
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span className="text-sm font-bold">{item.rating}</span>
+                                                    <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                                                </div>
+                                            ) : (
+                                                <Button variant="outline" size="sm" onClick={() => handleOpenRatingDialog(item)}>
+                                                    Rate
+                                                </Button>
+                                            )}
                                         </TableCell>
                                         </TableRow>
                                     ))
                                     ) : (
                                     <TableRow>
-                                        <TableCell colSpan={2} className="text-center text-muted-foreground">No exam history yet.</TableCell>
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground">No exam history yet.</TableCell>
                                     </TableRow>
                                     )}
                                 </TableBody>
@@ -542,5 +576,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
