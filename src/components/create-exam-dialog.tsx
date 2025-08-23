@@ -37,6 +37,7 @@ const step1Schema = z.object({
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   isPremium: z.boolean().default(false),
   winPercentage: z.number().min(1).max(100).default(50),
+  timeLimit: z.coerce.number().min(0).optional(),
 });
 
 const step2Schema = z.object({
@@ -67,7 +68,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { title: '', description: '', isPremium: false, winPercentage: 50 },
+    defaultValues: { title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: undefined },
   });
   
   const winPercentage = step1Form.watch('winPercentage');
@@ -84,6 +85,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
             description: examToEdit.description,
             isPremium: examToEdit.isPremium || false,
             winPercentage: examToEdit.winPercentage || 50,
+            timeLimit: examToEdit.timeLimit,
         });
         setQuestions(examToEdit.questions);
         setStep(3); // Start at the review step in edit mode
@@ -253,7 +255,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   };
 
   const reset = () => {
-    step1Form.reset({ title: '', description: '', isPremium: false, winPercentage: 50 });
+    step1Form.reset({ title: '', description: '', isPremium: false, winPercentage: 50, timeLimit: undefined });
     step2Form.reset({ topic: '', numQuestions: 5 });
     setQuestions([]);
     setStep(1);
@@ -384,25 +386,34 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                             <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField
-                      control={step1Form.control}
-                      name="winPercentage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Win Percentage: {field.value}%</FormLabel>
-                          <FormControl>
-                             <Slider
-                                min={1}
-                                max={100}
-                                step={1}
-                                value={[field.value]}
-                                onValueChange={(value) => field.onChange(value[0])}
-                              />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={step1Form.control}
+                            name="winPercentage"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Win Percentage: {field.value}%</FormLabel>
+                                <FormControl>
+                                    <Slider
+                                        min={1}
+                                        max={100}
+                                        step={1}
+                                        value={[field.value]}
+                                        onValueChange={(value) => field.onChange(value[0])}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField control={step1Form.control} name="timeLimit" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Time Limit (minutes)</FormLabel>
+                                <FormControl><Input type="number" min="0" placeholder="Leave blank for no limit" {...field} onChange={event => field.onChange(+event.target.value)} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
                      <FormField
                         control={step1Form.control}
                         name="isPremium"

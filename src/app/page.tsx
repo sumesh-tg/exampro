@@ -221,8 +221,8 @@ export default function Home() {
       name: "QuizWhiz Re-attempt",
       description: `Payment for re-attempting ${exam.title}`,
       handler: function (response: any) {
-        // On success, redirect to the exam page
-        router.push(`/exam/${exam.id}`);
+        const query = exam.timeLimit ? `?time=${exam.timeLimit * 60}` : '';
+        router.push(`/exam/${exam.id}${query}`);
       },
       prefill: {
         name: user?.displayName || "Anonymous User",
@@ -445,6 +445,11 @@ export default function Home() {
                                     {exam.description}
                                 </p>
                                 <div className="flex items-center gap-4 pt-1">
+                                    {exam.timeLimit && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Time limit: {exam.timeLimit} minutes
+                                        </p>
+                                    )}
                                     {(exam.updatedAt as any)?.toDate && (
                                         <p className="text-xs text-muted-foreground">
                                             Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
@@ -460,7 +465,7 @@ export default function Home() {
                                     </Button>
                                 ) : (
                                     <Button variant="default" size="sm" asChild>
-                                    <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                                    <Link href={`/exam/${exam.id}${exam.timeLimit ? `?time=${exam.timeLimit * 60}` : ''}`}>Start Exam</Link>
                                     </Button>
                                 )}
                                 <AlertDialog>
