@@ -275,7 +275,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
             </div>
             {step === 2 && (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+                <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
                   <Upload className="mr-2 h-4 w-4" />
                   Import
                 </Button>
@@ -451,4 +451,5 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   );
 }
 
+    
     
