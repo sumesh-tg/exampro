@@ -176,7 +176,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                                 Premium Exam
                                 </FormLabel>
                                 <FormDescription>
-                                  User have pay for to attend this exam
+                                  Users have to pay to attend this exam.
                                 </FormDescription>
                                 <FormMessage />
                             </div>
