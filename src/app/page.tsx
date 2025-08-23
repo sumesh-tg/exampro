@@ -428,14 +428,11 @@ export default function Home() {
                                 className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
                             >
                                 <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    {exam.isPremium && <Lock className="h-4 w-4 text-amber-500" />}
-                                    <p className="font-semibold">{exam.title}</p>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {exam.description}
-                                </p>
-                                <div className="flex items-center gap-4 pt-1">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        {exam.isPremium && <Lock className="h-4 w-4 text-amber-500" />}
+                                        <p className="font-semibold">{exam.title}</p>
+                                    </div>
                                     {exam.averageRating !== undefined && exam.ratingCount !== undefined && (
                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                             <Star className={cn("h-4 w-4", exam.averageRating > 0 ? "text-amber-400 fill-amber-400" : "text-gray-300")} />
@@ -443,6 +440,11 @@ export default function Home() {
                                             <span>({exam.ratingCount} ratings)</span>
                                         </div>
                                     )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    {exam.description}
+                                </p>
+                                <div className="flex items-center gap-4 pt-1">
                                     {(exam.updatedAt as any)?.toDate && (
                                         <p className="text-xs text-muted-foreground">
                                             Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
@@ -600,7 +602,7 @@ export default function Home() {
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
                                 <span className="text-sm font-medium">Page {historyCurrentPage} of {historyTotalPages}</span>
-                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === historyTotalPages}>
+                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === totalPages}>
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>
                                 </CardFooter>
