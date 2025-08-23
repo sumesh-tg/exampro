@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
@@ -175,6 +175,9 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                                 <FormLabel>
                                 Premium Exam
                                 </FormLabel>
+                                <FormDescription>
+                                  User have pay for to attend this exam
+                                </FormDescription>
                                 <FormMessage />
                             </div>
                             </FormItem>
