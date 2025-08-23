@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,6 +26,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import type { Exam } from '@/lib/data';
 import { addExam } from '@/services/examService';
 import { Checkbox } from './ui/checkbox';
+import * as XLSX from 'xlsx';
+import { useToast } from '@/hooks/use-toast';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -50,6 +52,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
@@ -72,6 +76,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
       setStep(3);
     } catch (error) {
       console.error('Failed to generate questions:', error);
+       toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate questions.' });
     } finally {
       setLoading(false);
     }
@@ -106,8 +111,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
         onExamCreated();
         reset();
         onOpenChange(false);
+        toast({ title: 'Success', description: 'Exam created successfully.' });
     } catch (error) {
         console.error("Failed to save exam to Firestore:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the exam.' });
     } finally {
         setLoading(false);
     }
@@ -127,6 +134,58 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     }
     onOpenChange(isOpen);
   }
+  
+  const handleDownloadTemplate = () => {
+    const worksheet = XLSX.utils.json_to_sheet([
+        { questionText: "What is the capital of France?", option1: "Berlin", option2: "Madrid", option3: "Paris", option4: "Rome", correctAnswer: "Paris" }
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
+    XLSX.writeFile(workbook, "exam_template.xlsx");
+  };
+  
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+            const importedQuestions: Question[] = json.map(row => {
+                const options = [row.option1, row.option2, row.option3, row.option4].filter(Boolean);
+                if (options.length !== 4 || !row.questionText || !row.correctAnswer) {
+                    throw new Error("Invalid file format. Each row must have a question, 4 options, and a correct answer.");
+                }
+                return {
+                    questionText: row.questionText,
+                    options: options,
+                    correctAnswer: row.correctAnswer,
+                };
+            });
+            setQuestions(importedQuestions);
+            setStep(3);
+            toast({ title: 'Success', description: `Successfully imported ${importedQuestions.length} questions.` });
+        } catch (error: any) {
+            console.error("Failed to import file:", error);
+            toast({ variant: 'destructive', title: 'Import Error', description: error.message || "An unknown error occurred during import." });
+        } finally {
+            setLoading(false);
+            // Reset file input
+            if(fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -134,6 +193,13 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
         <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={handleFileImport}
+        />
         <DialogHeader>
           <div className="flex justify-between items-start">
             <div>
@@ -146,11 +212,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
             </div>
             {step === 2 && (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
                   <Upload className="mr-2 h-4 w-4" />
                   Import
                 </Button>
-                  <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" onClick={handleDownloadTemplate} disabled={loading}>
                   <Download className="mr-2 h-4 w-4" />
                   Download Template
                 </Button>
