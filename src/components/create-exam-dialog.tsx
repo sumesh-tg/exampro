@@ -99,6 +99,19 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   };
   
   const handleSaveExam = async () => {
+    // Validation check
+    for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (!q.options.includes(q.correctAnswer)) {
+            toast({
+                variant: 'destructive',
+                title: `Invalid Answer for Q${i + 1}`,
+                description: `The correct answer "${q.correctAnswer}" is not one of the provided options.`,
+            });
+            return;
+        }
+    }
+
     setLoading(true);
     const examDetails = step1Form.getValues();
     const newExamData: Omit<Exam, 'id'> = {
@@ -366,7 +379,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                 </Accordion>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-                    <Button onClick={handleSaveExam} disabled={loading}>
+                    <Button onClick={handleSaveExam} disabled={loading || questions.length === 0}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Exam
                     </Button>
