@@ -194,6 +194,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
             const worksheet = workbook.Sheets[sheetName];
             const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
+            if (json.length > 100) {
+              throw new Error("You can only import up to 100 questions at a time.");
+            }
+
             const importedQuestions: Question[] = json.map(row => {
                 const options = [row.option1, row.option2, row.option3, row.option4].filter(Boolean);
                 if (options.length !== 4 || !row.questionText || !row.correctAnswer) {
