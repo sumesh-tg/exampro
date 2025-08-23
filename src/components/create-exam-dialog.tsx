@@ -28,6 +28,7 @@ import { addExam } from '@/services/examService';
 import { Checkbox } from './ui/checkbox';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -364,13 +365,23 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                                 </div>
                               ))}
                             </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                               <Label>Correct Answer</Label>
-                              <Input
-                                value={q.correctAnswer}
-                                onChange={(e) => handleQuestionChange(qIndex, 'correctAnswer', e.target.value)}
-                                placeholder="Correct answer"
-                              />
+                                <Select
+                                    value={q.correctAnswer}
+                                    onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select the correct answer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {q.options.map((option, oIndex) => (
+                                            <SelectItem key={oIndex} value={option}>
+                                                {option}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                          </div>
                       </AccordionContent>
