@@ -130,7 +130,53 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     setQuestions(questions.filter((_, i) => i !== index));
   };
   
+  const validateQuestions = (questionList: Question[]): boolean => {
+    for (let i = 0; i < questionList.length; i++) {
+        const q = questionList[i];
+        if (!q.questionText || q.questionText.trim() === '') {
+            toast({
+                variant: 'destructive',
+                title: `Validation Error for Q${i + 1}`,
+                description: 'Question text cannot be empty.',
+            });
+            return false;
+        }
+        for (let j = 0; j < q.options.length; j++) {
+            const option = q.options[j];
+            if (!option || option.trim() === '') {
+                toast({
+                    variant: 'destructive',
+                    title: `Validation Error for Q${i + 1}`,
+                    description: `Option ${j + 1} cannot be empty.`,
+                });
+                return false;
+            }
+        }
+        if (!q.correctAnswer || q.correctAnswer.trim() === '') {
+            toast({
+                variant: 'destructive',
+                title: `Validation Error for Q${i + 1}`,
+                description: 'Please select a correct answer.',
+            });
+            return false;
+        }
+        if (!q.options.map(o => o.trim()).includes(q.correctAnswer.trim())) {
+            toast({
+                variant: 'destructive',
+                title: `Invalid Answer for Q${i + 1}`,
+                description: `The correct answer must be one of the provided options.`,
+            });
+            return false;
+        }
+    }
+    return true;
+  }
+  
   const handleAddQuestion = () => {
+    if (!validateQuestions(questions)) {
+      return; // Stop if validation fails
+    }
+    
     const newQuestion = {
         questionText: '',
         options: ['', '', '', ''],
@@ -149,44 +195,9 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to save an exam.' });
         return;
     }
-    // Validation checks
-    for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        if (!q.questionText || q.questionText.trim() === '') {
-            toast({
-                variant: 'destructive',
-                title: `Validation Error for Q${i + 1}`,
-                description: 'Question text cannot be empty.',
-            });
-            return;
-        }
-        for (let j = 0; j < q.options.length; j++) {
-            const option = q.options[j];
-            if (!option || option.trim() === '') {
-                toast({
-                    variant: 'destructive',
-                    title: `Validation Error for Q${i + 1}`,
-                    description: `Option ${j + 1} cannot be empty.`,
-                });
-                return;
-            }
-        }
-        if (!q.correctAnswer || q.correctAnswer.trim() === '') {
-            toast({
-                variant: 'destructive',
-                title: `Validation Error for Q${i + 1}`,
-                description: 'Please select a correct answer.',
-            });
-            return;
-        }
-        if (!q.options.map(o => o.trim()).includes(q.correctAnswer.trim())) {
-            toast({
-                variant: 'destructive',
-                title: `Invalid Answer for Q${i + 1}`,
-                description: `The correct answer must be one of the provided options.`,
-            });
-            return;
-        }
+    
+    if (!validateQuestions(questions)) {
+      return;
     }
 
     setLoading(true);
