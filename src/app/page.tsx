@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -35,11 +35,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { Exam, ExamHistory, CampaignDetail } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
-import { getExamHistory } from '@/services/examHistoryService';
+import { getExamHistory, getAllExamHistory } from '@/services/examHistoryService';
 import { useToast } from '@/hooks/use-toast';
 import { AllSharedExamsReportDialog } from '@/components/all-shared-exams-report-dialog';
 import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
@@ -47,6 +47,20 @@ import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
 import { listUsers, type AdminUserRecord } from '@/services/userService';
 import { CampaignsList } from '@/components/campaigns-list';
 import { JoinedCampaigns } from '@/components/joined-campaigns';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { RatingDialog } from '@/components/rating-dialog';
+import { cn } from '@/lib/utils';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -60,17 +74,49 @@ export default function Home() {
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
+  const [allExamHistory, setAllExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
+  const [examToEdit, setExamToEdit] = useState<Exam | null>(null);
   const [isCreateCampaignOpen, setCreateCampaignOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [isShareReportOpen, setShareReportOpen] = useState(false);
   const [isIndividualReportOpen, setIndividualReportOpen] = useState(false);
   const [selectedExamForReport, setSelectedExamForReport] = useState<Exam | null>(null);
+  const [selectedHistoryForRating, setSelectedHistoryForRating] = useState<ExamHistory | null>(null);
+  const [isRatingDialogOpen, setRatingDialogOpen] = useState(false);
   const [allAdmins, setAllAdmins] = useState<AdminUserRecord[]>([]);
   const { toast } = useToast();
 
-  const filteredExams = (isAdmin || isSuperAdmin) ? exams : exams.filter(exam => !exam.isPremium);
+  const examsWithRatings = useMemo(() => {
+    if (allExamHistory.length === 0) return exams;
+
+    const ratingsMap = allExamHistory.reduce((acc, historyItem) => {
+      if (historyItem.rating) {
+        if (!acc[historyItem.examId]) {
+          acc[historyItem.examId] = { total: 0, count: 0 };
+        }
+        acc[historyItem.examId].total += historyItem.rating;
+        acc[historyItem.examId].count++;
+      }
+      return acc;
+    }, {} as Record<string, { total: number; count: number }>);
+    
+    return exams.map(exam => {
+      const ratingData = ratingsMap[exam.id];
+      if (ratingData) {
+        return {
+          ...exam,
+          averageRating: ratingData.total / ratingData.count,
+          ratingCount: ratingData.count
+        }
+      }
+      return exam;
+    });
+
+  }, [exams, allExamHistory]);
+  
+  const filteredExams = (isAdmin || isSuperAdmin) ? examsWithRatings : examsWithRatings.filter(exam => !exam.isPremium);
   
   const totalPages = Math.ceil(filteredExams.length / EXAMS_PAGE_SIZE);
   const paginatedExams = filteredExams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
@@ -90,6 +136,11 @@ export default function Home() {
     }
   }
 
+  async function fetchAllExamHistory() {
+    const allHistory = await getAllExamHistory();
+    setAllExamHistory(allHistory as ExamHistory[]);
+  }
+
   async function fetchAdmins() {
     if (isSuperAdmin) {
         try {
@@ -105,6 +156,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchExams();
+    fetchAllExamHistory();
     if (user) {
       fetchExamHistory();
     }
@@ -125,11 +177,13 @@ export default function Home() {
   const handleDeleteExam = async (id: string) => {
     await deleteExam(id);
     fetchExams();
+    toast({ title: "Exam Deleted", description: "The exam has been successfully deleted." });
   }
   
   const handleExamCreated = () => {
     fetchExams();
     setCreateExamOpen(false);
+    setExamToEdit(null);
   }
   
   const handleCampaignCreated = () => {
@@ -148,6 +202,11 @@ export default function Home() {
   const handleOpenIndividualReport = (exam: Exam) => {
     setSelectedExamForReport(exam);
     setIndividualReportOpen(true);
+  };
+  
+  const handleOpenEditDialog = (exam: Exam) => {
+    setExamToEdit(exam);
+    setCreateExamOpen(true);
   };
   
   const hasAttemptedExam = (examId: string) => {
@@ -188,6 +247,17 @@ export default function Home() {
     });
     rzp.open();
   }
+
+  const handleOpenRatingDialog = (historyItem: ExamHistory) => {
+    setSelectedHistoryForRating(historyItem);
+    setRatingDialogOpen(true);
+  }
+  
+  const handleRatingSubmitted = () => {
+    fetchExamHistory();
+    fetchAllExamHistory(); // Refetch all history to update average ratings
+    setRatingDialogOpen(false);
+  }
   
 
   if (loading) {
@@ -211,6 +281,14 @@ export default function Home() {
                     onOpenChange={setIndividualReportOpen}
                 />
             )}
+            {selectedHistoryForRating && (
+              <RatingDialog 
+                open={isRatingDialogOpen}
+                onOpenChange={setRatingDialogOpen}
+                historyItem={selectedHistoryForRating}
+                onRatingSubmitted={handleRatingSubmitted}
+              />
+            )}
         </>
       )}
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -226,24 +304,26 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {(isAdmin || isSuperAdmin) && (
             <>
-               <CreateExamDialog 
+              <CreateExamDialog 
                 open={isCreateExamOpen}
-                onOpenChange={setCreateExamOpen}
+                onOpenChange={(isOpen) => {
+                  setCreateExamOpen(isOpen);
+                  if (!isOpen) setExamToEdit(null);
+                }}
                 onExamCreated={handleExamCreated}
+                examToEdit={examToEdit}
               />
-              <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
-
-                <CreateCampaignDialog
-                  open={isCreateCampaignOpen}
-                  onOpenChange={setCreateCampaignOpen}
-                  onCampaignCreated={handleCampaignCreated}
-                  allExams={exams}
-                  allAdmins={allAdmins}
-                />
-                 <Button variant="outline" onClick={() => setShareReportOpen(true)}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      View Share Report
-                  </Button>
+              <CreateCampaignDialog
+                open={isCreateCampaignOpen}
+                onOpenChange={setCreateCampaignOpen}
+                onCampaignCreated={handleCampaignCreated}
+                allExams={exams}
+                allAdmins={allAdmins}
+              />
+              <Button variant="outline" onClick={() => setShareReportOpen(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Share Report
+              </Button>
             </>
           )}
 
@@ -348,13 +428,29 @@ export default function Home() {
                                 className="flex items-center justify-between rounded-lg border p-4 transition-all hover:bg-accent/10"
                             >
                                 <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    {exam.isPremium && <Lock className="h-4 w-4 text-amber-500" />}
-                                    <p className="font-semibold">{exam.title}</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        {exam.isPremium && <Lock className="h-4 w-4 text-amber-500" />}
+                                        <p className="font-semibold">{exam.title}</p>
+                                    </div>
+                                    {exam.averageRating !== undefined && exam.ratingCount !== undefined && (
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                            <Star className={cn("h-4 w-4", exam.averageRating > 0 ? "text-amber-400 fill-amber-400" : "text-gray-300")} />
+                                            <span className="font-bold">{exam.averageRating.toFixed(1)}</span>
+                                            <span>({exam.ratingCount} ratings)</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                     {exam.description}
                                 </p>
+                                <div className="flex items-center gap-4 pt-1">
+                                    {(exam.updatedAt as any)?.toDate && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
+                                        </p>
+                                    )}
+                                </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                 {user && hasAttemptedExam(exam.id) ? (
@@ -367,32 +463,63 @@ export default function Home() {
                                     <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                                     </Button>
                                 )}
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                        <span className="sr-only">Open menu</span>
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
-                                        <Share2 className="mr-2 h-4 w-4" />
-                                        <span>Share</span>
-                                        </DropdownMenuItem>
-                                        {user && (
-                                            <DropdownMenuItem onClick={() => handleOpenIndividualReport(exam)}>
-                                                <FileText className="mr-2 h-4 w-4" />
-                                                <span>View Share Report</span>
+                                <AlertDialog>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => handleShareExam(exam.id)}>
+                                            <Share2 className="mr-2 h-4 w-4" />
+                                            <span>Share</span>
                                             </DropdownMenuItem>
-                                        )}
-                                        {(isAdmin || isSuperAdmin) && (
-                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
-                                            Delete
-                                        </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
+                                            {user && (
+                                                <DropdownMenuItem onClick={() => handleOpenIndividualReport(exam)}>
+                                                    <FileText className="mr-2 h-4 w-4" />
+                                                    <span>View Share Report</span>
+                                                </DropdownMenuItem>
+                                            )}
+                                            {(isAdmin || isSuperAdmin) && (
+                                            <>
+                                                <DropdownMenuItem onClick={() => handleOpenEditDialog(exam)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    <span>Edit</span>
+                                                </DropdownMenuItem>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem
+                                                        className="text-destructive"
+                                                        onSelect={(e) => e.preventDefault()}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                            </>
+                                            )}
+                                        </DropdownMenuContent>
                                     </DropdownMenu>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the exam
+                                                and all associated data.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-destructive hover:bg-destructive/90"
+                                                onClick={() => handleDeleteExam(exam.id)}>
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                                 </div>
                             </div>
                             ))
@@ -432,7 +559,8 @@ export default function Home() {
                                 <TableHeader>
                                     <TableRow>
                                     <TableHead>Exam</TableHead>
-                                    <TableHead className="text-right">Score</TableHead>
+                                    <TableHead>Score</TableHead>
+                                    <TableHead className="text-right">Rating</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -443,14 +571,26 @@ export default function Home() {
                                         <div>{item.examTitle}</div>
                                         {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell>
                                             <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {item.rating ? (
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span className="text-sm font-bold">{item.rating}</span>
+                                                    <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                                                </div>
+                                            ) : (
+                                                <Button variant="outline" size="sm" onClick={() => handleOpenRatingDialog(item)}>
+                                                    Rate
+                                                </Button>
+                                            )}
                                         </TableCell>
                                         </TableRow>
                                     ))
                                     ) : (
                                     <TableRow>
-                                        <TableCell colSpan={2} className="text-center text-muted-foreground">No exam history yet.</TableCell>
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground">No exam history yet.</TableCell>
                                     </TableRow>
                                     )}
                                 </TableBody>
@@ -462,7 +602,7 @@ export default function Home() {
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
                                 <span className="text-sm font-medium">Page {historyCurrentPage} of {historyTotalPages}</span>
-                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === historyTotalPages}>
+                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === totalPages}>
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>
                                 </CardFooter>

@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { getUsersForCampaign } from '@/services/userCampaignsService';
 import { CampaignUserReportDialog } from './campaign-user-report-dialog';
 import { EditCampaignDialog } from './edit-campaign-dialog';
+import { formatDistanceToNow } from 'date-fns';
 
 const CAMPAIGNS_PAGE_SIZE = 5;
 
@@ -189,6 +190,11 @@ export function CampaignsList() {
                               <TableCell>
                                   <div className="font-medium">{campaign.name}</div>
                                   <div className="text-sm text-muted-foreground">{campaign.description}</div>
+                                   {(campaign.updatedAt as any)?.toDate && (
+                                    <p className="text-xs text-muted-foreground pt-1">
+                                        Last updated: {formatDistanceToNow((campaign.updatedAt as any).toDate(), { addSuffix: true })}
+                                    </p>
+                                )}
                               </TableCell>
                               <TableCell>
                                   {campaign.assignee ? (
