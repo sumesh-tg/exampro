@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,10 +15,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Sparkles, Trash2, Upload, Download } from 'lucide-react';
 import { generateExamQuestions, type GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import type { Exam } from '@/lib/data';
 import { addExam } from '@/services/examService';
 import { Checkbox } from './ui/checkbox';
+import * as XLSX from 'xlsx';
+import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -50,6 +53,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
@@ -72,6 +77,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
       setStep(3);
     } catch (error) {
       console.error('Failed to generate questions:', error);
+       toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate questions.' });
     } finally {
       setLoading(false);
     }
@@ -94,6 +100,19 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   };
   
   const handleSaveExam = async () => {
+    // Validation check
+    for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (!q.options.includes(q.correctAnswer)) {
+            toast({
+                variant: 'destructive',
+                title: `Invalid Answer for Q${i + 1}`,
+                description: `The correct answer "${q.correctAnswer}" is not one of the provided options.`,
+            });
+            return;
+        }
+    }
+
     setLoading(true);
     const examDetails = step1Form.getValues();
     const newExamData: Omit<Exam, 'id'> = {
@@ -106,8 +125,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
         onExamCreated();
         reset();
         onOpenChange(false);
+        toast({ title: 'Success', description: 'Exam created successfully.' });
     } catch (error) {
         console.error("Failed to save exam to Firestore:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the exam.' });
     } finally {
         setLoading(false);
     }
@@ -127,6 +148,58 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     }
     onOpenChange(isOpen);
   }
+  
+  const handleDownloadTemplate = () => {
+    const worksheet = XLSX.utils.json_to_sheet([
+        { questionText: "What is the capital of France?", option1: "Berlin", option2: "Madrid", option3: "Paris", option4: "Rome", correctAnswer: "Paris" }
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
+    XLSX.writeFile(workbook, "exam_template.xlsx");
+  };
+  
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+            const importedQuestions: Question[] = json.map(row => {
+                const options = [row.option1, row.option2, row.option3, row.option4].filter(Boolean);
+                if (options.length !== 4 || !row.questionText || !row.correctAnswer) {
+                    throw new Error("Invalid file format. Each row must have a question, 4 options, and a correct answer.");
+                }
+                return {
+                    questionText: row.questionText,
+                    options: options,
+                    correctAnswer: row.correctAnswer,
+                };
+            });
+            setQuestions(importedQuestions);
+            setStep(3);
+            toast({ title: 'Success', description: `Successfully imported ${importedQuestions.length} questions.` });
+        } catch (error: any) {
+            console.error("Failed to import file:", error);
+            toast({ variant: 'destructive', title: 'Import Error', description: error.message || "An unknown error occurred during import." });
+        } finally {
+            setLoading(false);
+            // Reset file input
+            if(fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -134,13 +207,36 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
         <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={handleFileImport}
+        />
         <DialogHeader>
-          <DialogTitle>Create a New Exam</DialogTitle>
-          <DialogDescription>
-            {step === 1 && "Start by providing the basic details for your exam."}
-            {step === 2 && "Now, let's configure the AI to generate questions for you."}
-            {step === 3 && "Review the generated questions and save your exam."}
-          </DialogDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle>Create a New Exam</DialogTitle>
+              <DialogDescription>
+                {step === 1 && "Start by providing the basic details for your exam."}
+                {step === 2 && "Now, let's configure the AI to generate questions for you."}
+                {step === 3 && "Review the generated questions and save your exam."}
+              </DialogDescription>
+            </div>
+            {step === 2 && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDownloadTemplate} disabled={loading}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Template
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogHeader>
         
         {step === 1 && (
@@ -175,6 +271,9 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                                 <FormLabel>
                                 Premium Exam
                                 </FormLabel>
+                                <FormDescription>
+                                  Users have to pay to attend this exam.
+                                </FormDescription>
                                 <FormMessage />
                             </div>
                             </FormItem>
@@ -237,22 +336,26 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                   {questions.map((q, qIndex) => (
                     <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
                       <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex justify-between items-center w-full">
-                           <span className="font-semibold text-left">Question {qIndex + 1}</span>
-                           <Button variant="ghost" size="icon" onClick={() => handleRemoveQuestion(qIndex)} className="text-destructive hover:text-destructive-foreground hover:bg-destructive">
+                        <div className="flex justify-between items-center w-full gap-2">
+                           <span className="font-semibold text-left flex-1 line-clamp-2">{`Q${qIndex + 1}: ${q.questionText}`}</span>
+                           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveQuestion(qIndex); }} className="text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0">
                              <Trash2 className="h-4 w-4" />
                            </Button>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="p-6 pt-0">
                          <div className="space-y-4">
-                           <Textarea
-                              value={q.questionText}
-                              onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
-                              className="text-base"
-                              rows={3}
-                            />
                             <div className="space-y-2">
+                                <Label>Question Text</Label>
+                                <Textarea
+                                value={q.questionText}
+                                onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
+                                className="text-base"
+                                rows={3}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Options</Label>
                               {q.options.map((option, oIndex) => (
                                 <div key={oIndex} className="flex items-center gap-2">
                                   <Input
@@ -262,13 +365,23 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                                 </div>
                               ))}
                             </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                               <Label>Correct Answer</Label>
-                              <Input
-                                value={q.correctAnswer}
-                                onChange={(e) => handleQuestionChange(qIndex, 'correctAnswer', e.target.value)}
-                                placeholder="Correct answer"
-                              />
+                                <Select
+                                    value={q.correctAnswer}
+                                    onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select the correct answer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {q.options.map((option, oIndex) => (
+                                            <SelectItem key={oIndex} value={option}>
+                                                {option}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                          </div>
                       </AccordionContent>
@@ -277,7 +390,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                 </Accordion>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-                    <Button onClick={handleSaveExam} disabled={loading}>
+                    <Button onClick={handleSaveExam} disabled={loading || questions.length === 0}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Exam
                     </Button>
