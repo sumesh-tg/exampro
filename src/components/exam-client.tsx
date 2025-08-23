@@ -202,14 +202,15 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             <CardDescription>Here's your result for "{shuffledExam.title}".</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className={cn("rounded-full p-8 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4",
+            <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4",
               hasPassed ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500"
             )}>
               <p className="text-muted-foreground">You scored</p>
               <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600" : "text-red-600")}>
                 {score} / {shuffledExam.questions.length}
               </p>
-               <Badge variant={hasPassed ? 'default' : 'destructive'} className="mt-2 text-lg">
+               <p className="text-lg text-muted-foreground font-semibold">({userPercentage.toFixed(1)}%)</p>
+               <Badge variant={hasPassed ? 'default' : 'destructive'} className="mt-2 text-base">
                 {hasPassed ? 'Pass' : 'Fail'}
               </Badge>
             </div>
