@@ -88,7 +88,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
             timeLimit: examToEdit.timeLimit,
         });
         setQuestions(examToEdit.questions);
-        setStep(3); // Start at the review step in edit mode
+        setStep(1); // Start at the details step in edit mode
     } else {
         reset();
     }
@@ -106,7 +106,13 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     }
   }, [activeAccordionItem, questions.length]);
 
-  const handleNext = () => setStep(s => s + 1);
+  const handleStep1Submit = () => {
+    if (isEditMode) {
+      setStep(3); // Skip to questions if editing
+    } else {
+      setStep(2); // Go to AI generation if creating
+    }
+  };
 
   const handleGenerateQuestions = async (values: z.infer<typeof step2Schema>) => {
     setLoading(true);
@@ -210,7 +216,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         return;
     }
     
-    if (!validateQuestions(questions)) {
+    if (!validateQuestions(questions, { checkAll: false })) {
       return;
     }
 
@@ -374,7 +380,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         
         {step === 1 && (
             <Form {...step1Form}>
-                <form onSubmit={step1Form.handleSubmit(handleNext)} className="space-y-4 py-4">
+                <form onSubmit={step1Form.handleSubmit(handleStep1Submit)} className="space-y-4 py-4">
                     <FormField control={step1Form.control} name="title" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Exam Title</FormLabel>
@@ -591,5 +597,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     </Dialog>
   );
 }
+
+    
 
     
