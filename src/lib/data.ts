@@ -3,6 +3,7 @@ export type Question = {
   questionText: string;
   options: string[];
   correctAnswer: string;
+  tag?: string;
 };
 
 export type Exam = {
