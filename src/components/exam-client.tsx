@@ -15,6 +15,8 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { addExamHistory } from '@/services/examHistoryService';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Badge } from './ui/badge';
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -32,6 +34,13 @@ function formatTime(seconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+type TagAnalysis = {
+  [tag: string]: {
+    correct: number;
+    total: number;
+  }
+}
+
 export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimit?: number, sharedBy?: string | null }) {
   useRequireAuth();
   const { user } = useAuth();
@@ -40,6 +49,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [tagAnalysis, setTagAnalysis] = useState<TagAnalysis>({});
   const [time, setTime] = useState(timeLimit ?? 0);
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
@@ -117,12 +127,24 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const handleSubmit = async () => {
     if (isSubmitted || !shuffledExam) return;
     let finalScore = 0;
+    const analysis: TagAnalysis = {};
+
     shuffledExam.questions.forEach((q, index) => {
-      if (selectedAnswers[index] === q.correctAnswer) {
+      const isCorrect = selectedAnswers[index] === q.correctAnswer;
+      if (isCorrect) {
         finalScore++;
+      }
+      const tag = q.tag || 'Uncategorized';
+      if (!analysis[tag]) {
+        analysis[tag] = { correct: 0, total: 0 };
+      }
+      analysis[tag].total++;
+      if (isCorrect) {
+        analysis[tag].correct++;
       }
     });
     setScore(finalScore);
+    setTagAnalysis(analysis);
     setIsSubmitted(true);
 
     if (user) {
@@ -192,7 +214,34 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                     <span>{formatTime(timeLimit ? timeLimit - time : time)}</span>
                 </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-4">
+
+            {Object.keys(tagAnalysis).length > 0 && (
+              <div className="text-left pt-4">
+                <h3 className="text-xl font-semibold mb-2 text-center">Performance Breakdown</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(tagAnalysis).map(([tag, data]) => (
+                      <TableRow key={tag}>
+                        <TableCell className="font-medium">{tag}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={data.correct === data.total ? "default" : "secondary"}>
+                            {data.correct} / {data.total}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Button asChild className="w-full md:w-auto" size="lg">
                 <Link href="/">Back to Home</Link>
               </Button>
@@ -295,5 +344,3 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     </div>
   );
 }
-
-    

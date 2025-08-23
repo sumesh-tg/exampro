@@ -185,10 +185,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
       return;
     }
     
-    const newQuestion = {
+    const newQuestion: Question = {
         questionText: '',
         options: ['', '', '', ''],
-        correctAnswer: ''
+        correctAnswer: '',
+        tag: ''
     };
     const newQuestionIndex = questions.length;
     setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
@@ -263,7 +264,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   
   const handleDownloadTemplate = () => {
     const worksheet = XLSX.utils.json_to_sheet([
-        { questionText: "What is the capital of France?", option1: "Berlin", option2: "Madrid", option3: "Paris", option4: "Rome", correctAnswer: "Paris" }
+        { questionText: "What is the capital of France?", option1: "Berlin", option2: "Madrid", option3: "Paris", option4: "Rome", correctAnswer: "Paris", tag: "Geography" }
     ]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
@@ -300,6 +301,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                     questionText: String(row.questionText),
                     options: options,
                     correctAnswer: String(row.correctAnswer),
+                    tag: row.tag ? String(row.tag) : '',
                 };
             });
             setQuestions(importedQuestions);
@@ -500,23 +502,33 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                                     </div>
                                 ))}
                                 </div>
-                                <div className="space-y-2">
-                                <Label>Correct Answer</Label>
-                                    <Select
-                                        value={q.correctAnswer}
-                                        onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select the correct answer" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {q.options.filter(opt => opt.trim() !== '').map((option, oIndex) => (
-                                                <SelectItem key={oIndex} value={option}>
-                                                    {option}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                  <Label>Correct Answer</Label>
+                                      <Select
+                                          value={q.correctAnswer}
+                                          onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
+                                      >
+                                          <SelectTrigger>
+                                              <SelectValue placeholder="Select the correct answer" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                              {q.options.filter(opt => opt.trim() !== '').map((option, oIndex) => (
+                                                  <SelectItem key={oIndex} value={option}>
+                                                      {option}
+                                                  </SelectItem>
+                                              ))}
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Tag</Label>
+                                    <Input 
+                                      value={q.tag || ''}
+                                      onChange={(e) => handleQuestionChange(qIndex, 'tag', e.target.value)}
+                                      placeholder="e.g. History"
+                                    />
+                                  </div>
                                 </div>
                             </div>
                         </AccordionContent>
