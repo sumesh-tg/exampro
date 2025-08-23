@@ -240,22 +240,26 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                   {questions.map((q, qIndex) => (
                     <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
                       <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex justify-between items-center w-full">
-                           <span className="font-semibold text-left">Question {qIndex + 1}</span>
-                           <Button variant="ghost" size="icon" onClick={() => handleRemoveQuestion(qIndex)} className="text-destructive hover:text-destructive-foreground hover:bg-destructive">
+                        <div className="flex justify-between items-center w-full gap-2">
+                           <span className="font-semibold text-left flex-1 truncate">{`Q${qIndex + 1}: ${q.questionText}`}</span>
+                           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveQuestion(qIndex); }} className="text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0">
                              <Trash2 className="h-4 w-4" />
                            </Button>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="p-6 pt-0">
                          <div className="space-y-4">
-                           <Textarea
-                              value={q.questionText}
-                              onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
-                              className="text-base"
-                              rows={3}
-                            />
                             <div className="space-y-2">
+                                <Label>Question Text</Label>
+                                <Textarea
+                                value={q.questionText}
+                                onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
+                                className="text-base"
+                                rows={3}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Options</Label>
                               {q.options.map((option, oIndex) => (
                                 <div key={oIndex} className="flex items-center gap-2">
                                   <Input
