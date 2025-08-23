@@ -35,11 +35,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { Exam, ExamHistory, CampaignDetail } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
-import { getExamHistory } from '@/services/examHistoryService';
+import { getExamHistory, getAllExamHistory } from '@/services/examHistoryService';
 import { useToast } from '@/hooks/use-toast';
 import { AllSharedExamsReportDialog } from '@/components/all-shared-exams-report-dialog';
 import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
@@ -60,6 +60,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { RatingDialog } from '@/components/rating-dialog';
+import { cn } from '@/lib/utils';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -73,6 +74,7 @@ export default function Home() {
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
+  const [allExamHistory, setAllExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [examToEdit, setExamToEdit] = useState<Exam | null>(null);
   const [isCreateCampaignOpen, setCreateCampaignOpen] = useState(false);
@@ -86,7 +88,35 @@ export default function Home() {
   const [allAdmins, setAllAdmins] = useState<AdminUserRecord[]>([]);
   const { toast } = useToast();
 
-  const filteredExams = (isAdmin || isSuperAdmin) ? exams : exams.filter(exam => !exam.isPremium);
+  const examsWithRatings = useMemo(() => {
+    if (allExamHistory.length === 0) return exams;
+
+    const ratingsMap = allExamHistory.reduce((acc, historyItem) => {
+      if (historyItem.rating) {
+        if (!acc[historyItem.examId]) {
+          acc[historyItem.examId] = { total: 0, count: 0 };
+        }
+        acc[historyItem.examId].total += historyItem.rating;
+        acc[historyItem.examId].count++;
+      }
+      return acc;
+    }, {} as Record<string, { total: number; count: number }>);
+    
+    return exams.map(exam => {
+      const ratingData = ratingsMap[exam.id];
+      if (ratingData) {
+        return {
+          ...exam,
+          averageRating: ratingData.total / ratingData.count,
+          ratingCount: ratingData.count
+        }
+      }
+      return exam;
+    });
+
+  }, [exams, allExamHistory]);
+  
+  const filteredExams = (isAdmin || isSuperAdmin) ? examsWithRatings : examsWithRatings.filter(exam => !exam.isPremium);
   
   const totalPages = Math.ceil(filteredExams.length / EXAMS_PAGE_SIZE);
   const paginatedExams = filteredExams.slice((currentPage - 1) * EXAMS_PAGE_SIZE, currentPage * EXAMS_PAGE_SIZE);
@@ -106,6 +136,11 @@ export default function Home() {
     }
   }
 
+  async function fetchAllExamHistory() {
+    const allHistory = await getAllExamHistory();
+    setAllExamHistory(allHistory as ExamHistory[]);
+  }
+
   async function fetchAdmins() {
     if (isSuperAdmin) {
         try {
@@ -121,6 +156,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchExams();
+    fetchAllExamHistory();
     if (user) {
       fetchExamHistory();
     }
@@ -219,6 +255,7 @@ export default function Home() {
   
   const handleRatingSubmitted = () => {
     fetchExamHistory();
+    fetchAllExamHistory(); // Refetch all history to update average ratings
     setRatingDialogOpen(false);
   }
   
@@ -398,11 +435,20 @@ export default function Home() {
                                 <p className="text-sm text-muted-foreground">
                                     {exam.description}
                                 </p>
-                                {(exam.updatedAt as any)?.toDate && (
-                                    <p className="text-xs text-muted-foreground pt-1">
-                                        Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
-                                    </p>
-                                )}
+                                <div className="flex items-center gap-4 pt-1">
+                                    {exam.averageRating !== undefined && exam.ratingCount !== undefined && (
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                            <Star className={cn("h-4 w-4", exam.averageRating > 0 ? "text-amber-400 fill-amber-400" : "text-gray-300")} />
+                                            <span className="font-bold">{exam.averageRating.toFixed(1)}</span>
+                                            <span>({exam.ratingCount} ratings)</span>
+                                        </div>
+                                    )}
+                                    {(exam.updatedAt as any)?.toDate && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
+                                        </p>
+                                    )}
+                                </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                 {user && hasAttemptedExam(exam.id) ? (

@@ -15,6 +15,8 @@ export type Exam = {
   updatedAt?: Date;
   createdBy?: string;
   updatedBy?: string;
+  averageRating?: number;
+  ratingCount?: number;
 };
 
 export type ExamHistory = {

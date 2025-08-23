@@ -53,6 +53,11 @@ export const getAllExamHistoryBySharer = async (sharerId: string) => {
     return data.docs.map(doc => ({...doc.data(), id: doc.id}));
 }
 
+export const getAllExamHistory = async (): Promise<ExamHistory[]> => {
+    const data = await getDocs(examHistoryCollectionRef);
+    return data.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamHistory));
+}
+
 export const addExamHistory = async (examHistory: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'>) => {
     return await addDoc(examHistoryCollectionRef, {
         ...examHistory,
