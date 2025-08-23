@@ -134,13 +134,15 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
       if (isCorrect) {
         finalScore++;
       }
-      const tag = q.tag || 'Uncategorized';
-      if (!analysis[tag]) {
-        analysis[tag] = { correct: 0, total: 0 };
-      }
-      analysis[tag].total++;
-      if (isCorrect) {
-        analysis[tag].correct++;
+      if (q.tag) {
+        const tag = q.tag;
+        if (!analysis[tag]) {
+          analysis[tag] = { correct: 0, total: 0 };
+        }
+        analysis[tag].total++;
+        if (isCorrect) {
+          analysis[tag].correct++;
+        }
       }
     });
     setScore(finalScore);
