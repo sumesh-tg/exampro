@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import type { ExamHistory } from '@/lib/data';
 
 export const getExamHistory = async (userId: string) => {
@@ -38,6 +38,10 @@ export const getAllExamHistoryBySharer = async (sharerId: string) => {
     return data.docs.map(doc => ({...doc.data(), id: doc.id}));
 }
 
-export const addExamHistory = async (examHistory: Omit<ExamHistory, 'id'>) => {
-    return await addDoc(examHistoryCollectionRef, examHistory);
+export const addExamHistory = async (examHistory: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'>) => {
+    return await addDoc(examHistoryCollectionRef, {
+        ...examHistory,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
 }

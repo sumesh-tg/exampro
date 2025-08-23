@@ -126,13 +126,15 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     setIsSubmitted(true);
 
     if (user) {
-      const historyEntry: Omit<ExamHistory, 'id'> = {
+      const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
         examId: shuffledExam.id,
         examTitle: shuffledExam.title,
         score: finalScore,
         totalQuestions: shuffledExam.questions.length,
         date: new Date().toISOString(),
+        createdBy: user.uid,
+        updatedBy: user.uid,
       };
       if (sharedBy) {
         try {

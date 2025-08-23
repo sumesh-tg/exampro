@@ -55,7 +55,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const questionsContainerRef = useRef<HTMLDivElement>(null);
+  const newQuestionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { toast } = useToast();
   const { user, isSuperAdmin } = useAuth();
   const isEditMode = !!examToEdit;
@@ -84,6 +87,17 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     }
   }, [examToEdit, isEditMode, open]);
 
+  useEffect(() => {
+    if (activeAccordionItem && questionsContainerRef.current) {
+        const lastItemIndex = questions.length - 1;
+        if (`item-${lastItemIndex}` === activeAccordionItem) {
+            setTimeout(() => {
+                questionsContainerRef.current!.scrollTop = questionsContainerRef.current!.scrollHeight;
+                newQuestionTextareaRef.current?.focus();
+            }, 100);
+        }
+    }
+  }, [activeAccordionItem, questions.length]);
 
   const handleNext = () => setStep(s => s + 1);
 
@@ -118,12 +132,67 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     setQuestions(questions.filter((_, i) => i !== index));
   };
   
+  const validateQuestions = (questionList: Question[], options: { checkAll: boolean } = { checkAll: true }): boolean => {
+    const listToValidate = options.checkAll ? questionList : questionList.slice(0, -1);
+
+    for (let i = 0; i < listToValidate.length; i++) {
+        const q = listToValidate[i];
+        if (!q.questionText || q.questionText.trim() === '') {
+            toast({
+                variant: 'destructive',
+                title: `Validation Error for Q${i + 1}`,
+                description: 'Question text cannot be empty.',
+            });
+            setActiveAccordionItem(`item-${i}`);
+            return false;
+        }
+        for (let j = 0; j < q.options.length; j++) {
+            const option = q.options[j];
+            if (!option || option.trim() === '') {
+                toast({
+                    variant: 'destructive',
+                    title: `Validation Error for Q${i + 1}`,
+                    description: `Option ${j + 1} cannot be empty.`,
+                });
+                setActiveAccordionItem(`item-${i}`);
+                return false;
+            }
+        }
+        if (!q.correctAnswer || q.correctAnswer.trim() === '') {
+            toast({
+                variant: 'destructive',
+                title: `Validation Error for Q${i + 1}`,
+                description: 'Please select a correct answer.',
+            });
+            setActiveAccordionItem(`item-${i}`);
+            return false;
+        }
+        if (!q.options.map(o => o.trim()).includes(q.correctAnswer.trim())) {
+            toast({
+                variant: 'destructive',
+                title: `Invalid Answer for Q${i + 1}`,
+                description: `The correct answer must be one of the provided options.`,
+            });
+            setActiveAccordionItem(`item-${i}`);
+            return false;
+        }
+    }
+    return true;
+  }
+  
   const handleAddQuestion = () => {
-    setQuestions([...questions, {
-      questionText: '',
-      options: ['', '', '', ''],
-      correctAnswer: ''
-    }]);
+    if (!validateQuestions(questions, { checkAll: true })) {
+      return;
+    }
+    
+    const newQuestion = {
+        questionText: '',
+        options: ['', '', '', ''],
+        correctAnswer: ''
+    };
+    const newQuestionIndex = questions.length;
+    setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
+    setActiveAccordionItem(`item-${newQuestionIndex}`);
   };
 
   const handleSaveExam = async () => {
@@ -132,17 +201,9 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to save an exam.' });
         return;
     }
-    // Validation check
-    for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        if (!q.options.includes(q.correctAnswer)) {
-            toast({
-                variant: 'destructive',
-                title: `Invalid Answer for Q${i + 1}`,
-                description: `The correct answer "${q.correctAnswer}" is not one of the provided options.`,
-            });
-            return;
-        }
+    
+    if (!validateQuestions(questions)) {
+      return;
     }
 
     setLoading(true);
@@ -228,14 +289,17 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
             }
 
             const importedQuestions: Question[] = json.map(row => {
-                const options = [row.option1, row.option2, row.option3, row.option4].filter(Boolean);
+                const options = [row.option1, row.option2, row.option3, row.option4].filter(val => val !== undefined && val !== null).map(String);
                 if (options.length !== 4 || !row.questionText || !row.correctAnswer) {
-                    throw new Error("Invalid file format. Each row must have a question, 4 options, and a correct answer.");
+                    throw new Error("Invalid file format. Each row must have a questionText, option1, option2, option3, option4, and a correctAnswer.");
+                }
+                if (!options.includes(String(row.correctAnswer))) {
+                     throw new Error(`For question "${row.questionText}", the correct answer "${row.correctAnswer}" is not in the options.`);
                 }
                 return {
-                    questionText: row.questionText,
+                    questionText: String(row.questionText),
                     options: options,
-                    correctAnswer: row.correctAnswer,
+                    correctAnswer: String(row.correctAnswer),
                 };
             });
             setQuestions(importedQuestions);
@@ -260,7 +324,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {!isEditMode && (
         <DialogTrigger asChild>
-          <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
+          <Button onClick={() => onOpenChange(true)}>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-[600px]">
@@ -337,7 +401,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                         )}
                     />
                     <DialogFooter>
-                        <Button type="submit">Next</Button>
+                       {isEditMode && <Button type="button" variant="secondary" onClick={() => setStep(3)}>Skip to Questions</Button>}
+                       <Button type="submit">Next</Button>
                     </DialogFooter>
                 </form>
             </Form>
@@ -377,7 +442,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                     </Card>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>
-                         <Button type="button" variant="secondary" onClick={() => setStep(3)}>
+                         <Button type="button" variant="secondary" onClick={() => { setQuestions([]); setStep(3); }}>
                             Add Manually
                         </Button>
                         <Button type="submit" disabled={loading}>
@@ -390,7 +455,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         )}
 
         {step === 3 && (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div ref={questionsContainerRef} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                 <div className="flex justify-between items-center">
                     <h3 className="text-xl font-bold">Questions ({questions.length})</h3>
                     <Button variant="outline" size="sm" onClick={handleAddQuestion}>
@@ -399,7 +464,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                     </Button>
                 </div>
                 {questions.length > 0 ? (
-                    <Accordion type="single" collapsible className="w-full space-y-4">
+                    <Accordion type="single" collapsible className="w-full space-y-4" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
                     {questions.map((q, qIndex) => (
                         <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
                         <AccordionTrigger className="p-4 hover:no-underline">
@@ -415,6 +480,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                                 <div className="space-y-2">
                                     <Label>Question Text</Label>
                                     <Textarea
+                                    ref={qIndex === questions.length - 1 ? newQuestionTextareaRef : null}
                                     value={q.questionText}
                                     onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
                                     className="text-base"
