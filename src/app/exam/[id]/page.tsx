@@ -10,7 +10,6 @@ import { getExam } from '@/services/examService';
 export default function ExamPage({ params }: { params: { id: string } }) {
   const [examData, setExamData] = useState<Exam | null | undefined>(undefined);
   const searchParams = useSearchParams();
-  const timeLimitParam = searchParams.get('time');
   const sharedByParam = searchParams.get('shared_by');
 
   useEffect(() => {
@@ -52,8 +51,8 @@ export default function ExamPage({ params }: { params: { id: string } }) {
     notFound();
   }
   
-  const timeLimit = timeLimitParam ? parseInt(timeLimitParam, 10) : undefined;
+  const timeLimitInSeconds = examData.timeLimit ? examData.timeLimit * 60 : undefined;
 
 
-  return <ExamClient exam={examData} timeLimit={timeLimit} sharedBy={sharedByParam} />;
+  return <ExamClient exam={examData} timeLimit={timeLimitInSeconds} sharedBy={sharedByParam} />;
 }

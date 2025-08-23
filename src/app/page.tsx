@@ -221,8 +221,7 @@ export default function Home() {
       name: "QuizWhiz Re-attempt",
       description: `Payment for re-attempting ${exam.title}`,
       handler: function (response: any) {
-        const query = exam.timeLimit ? `?time=${exam.timeLimit * 60}` : '';
-        router.push(`/exam/${exam.id}${query}`);
+        router.push(`/exam/${exam.id}`);
       },
       prefill: {
         name: user?.displayName || "Anonymous User",
@@ -465,7 +464,7 @@ export default function Home() {
                                     </Button>
                                 ) : (
                                     <Button variant="default" size="sm" asChild>
-                                    <Link href={`/exam/${exam.id}${exam.timeLimit ? `?time=${exam.timeLimit * 60}` : ''}`}>Start Exam</Link>
+                                    <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                                     </Button>
                                 )}
                                 <AlertDialog>
