@@ -4,7 +4,7 @@
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 
-const userCampaignsCollectionRef = collection(db, 'user_campaigns');
+const userCampaignsCollectionRef = collection(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USER_CAMPAIGNS || 'user_campaigns');
 
 export const addUserToCampaign = async (userId: string, campaignId: string) => {
     return await addDoc(userCampaignsCollectionRef, {

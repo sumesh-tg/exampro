@@ -2,7 +2,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, getDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { CampaignDetail } from '@/lib/data';
 
-const campaignDetailsCollectionRef = collection(db, 'campaign_details');
+const campaignDetailsCollectionRef = collection(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_CAMPAIGN_DETAILS || 'campaign_details');
 
 // CREATE
 export const addCampaignDetail = async (campaignDetail: Omit<CampaignDetail, 'id' | 'startDate' | 'endDate' | 'createdAt' | 'updatedAt'> & { startDate: Date; endDate: Date }) => {
@@ -23,7 +23,7 @@ export const getCampaignDetails = async (): Promise<CampaignDetail[]> => {
 
 // READ (one)
 export const getCampaignDetail = async (id: string): Promise<CampaignDetail | null> => {
-    const docRef = doc(db, 'campaign_details', id);
+    const docRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_CAMPAIGN_DETAILS || 'campaign_details', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         return { ...docSnap.data(), id: docSnap.id } as CampaignDetail;
@@ -34,7 +34,7 @@ export const getCampaignDetail = async (id: string): Promise<CampaignDetail | nu
 
 // UPDATE
 export const updateCampaignDetail = async (id: string, updates: Partial<Omit<CampaignDetail, 'id'>>) => {
-    const campaignDetailDoc = doc(db, 'campaign_details', id);
+    const campaignDetailDoc = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_CAMPAIGN_DETAILS || 'campaign_details', id);
     const updateData: any = { ...updates };
 
     // Convert Date objects to Firestore Timestamps if they exist
@@ -52,6 +52,6 @@ export const updateCampaignDetail = async (id: string, updates: Partial<Omit<Cam
 
 // DELETE
 export const deleteCampaignDetail = async (id: string) => {
-    const campaignDetailDoc = doc(db, 'campaign_details', id);
+    const campaignDetailDoc = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_CAMPAIGN_DETAILS || 'campaign_details', id);
     return await deleteDoc(campaignDetailDoc);
 }

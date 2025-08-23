@@ -3,7 +3,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, doc, getDoc, deleteDoc, serverTimestamp, query, orderBy, updateDoc } from 'firebase/firestore';
 import type { Exam } from '@/lib/data';
 
-const examsCollectionRef = collection(db, 'exams');
+const examsCollectionRef = collection(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_EXAMS || 'exams');
 
 export const getExams = async () => {
     const q = query(examsCollectionRef);
@@ -31,7 +31,7 @@ export const getExams = async () => {
 }
 
 export const getExam = async (id: string) => {
-    const docRef = doc(db, 'exams', id);
+    const docRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_EXAMS || 'exams', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         return { ...docSnap.data(), id: docSnap.id };
@@ -49,7 +49,7 @@ export const addExam = async (exam: Omit<Exam, 'id' | 'createdAt' | 'updatedAt'>
 }
 
 export const updateExam = async (id: string, exam: Partial<Omit<Exam, 'id'>>) => {
-    const examDoc = doc(db, 'exams', id);
+    const examDoc = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_EXAMS || 'exams', id);
     return await updateDoc(examDoc, {
         ...exam,
         updatedAt: serverTimestamp(),
@@ -57,6 +57,6 @@ export const updateExam = async (id: string, exam: Partial<Omit<Exam, 'id'>>) =>
 };
 
 export const deleteExam = async (id: string) => {
-    const examDoc = doc(db, 'exams', id);
+    const examDoc = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_EXAMS || 'exams', id);
     return await deleteDoc(examDoc);
 }
