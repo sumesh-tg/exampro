@@ -241,7 +241,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                     <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
                       <AccordionTrigger className="p-4 hover:no-underline">
                         <div className="flex justify-between items-center w-full gap-2">
-                           <span className="font-semibold text-left flex-1 truncate">{`Q${qIndex + 1}: ${q.questionText}`}</span>
+                           <span className="font-semibold text-left flex-1 line-clamp-2">{`Q${qIndex + 1}: ${q.questionText}`}</span>
                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveQuestion(qIndex); }} className="text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0">
                              <Trash2 className="h-4 w-4" />
                            </Button>
