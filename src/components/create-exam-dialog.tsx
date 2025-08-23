@@ -87,10 +87,12 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   }, [examToEdit, isEditMode, open]);
 
   useEffect(() => {
-    if (questionsContainerRef.current && questions.length > 0) {
-      questionsContainerRef.current.scrollTop = 0;
+    // This effect ensures that when a new question is added and the accordion item is activated,
+    // the container scrolls to the top to show the new question.
+    if (activeAccordionItem === 'item-0' && questions.length > 0 && questionsContainerRef.current) {
+        questionsContainerRef.current.scrollTop = 0;
     }
-  }, [questions]);
+  }, [activeAccordionItem, questions.length]);
 
   const handleNext = () => setStep(s => s + 1);
 
@@ -131,8 +133,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         options: ['', '', '', ''],
         correctAnswer: ''
     };
-    setQuestions([newQuestion, ...questions]);
-    setActiveAccordionItem("item-0"); 
+    // Prepend the new question to the beginning of the array
+    setQuestions(prevQuestions => [newQuestion, ...prevQuestions]);
+    // Set the first item as active (expanded)
+    setActiveAccordionItem("item-0");
   };
 
   const handleSaveExam = async () => {
