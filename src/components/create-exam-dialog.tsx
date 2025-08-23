@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,13 +18,13 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, PlusCircle, Sparkles, Trash2, Upload, Download } from 'lucide-react';
+import { Loader2, PlusCircle, Sparkles, Trash2, Upload, Download, Edit } from 'lucide-react';
 import { generateExamQuestions, type GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import type { Exam } from '@/lib/data';
-import { addExam } from '@/services/examService';
+import { addExam, updateExam } from '@/services/examService';
 import { Checkbox } from './ui/checkbox';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
@@ -47,14 +47,16 @@ interface CreateExamDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onExamCreated: () => void;
+    examToEdit?: Exam | null;
 }
 
-export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateExamDialogProps) {
+export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit }: CreateExamDialogProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const isEditMode = !!examToEdit;
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
@@ -65,6 +67,21 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     resolver: zodResolver(step2Schema),
     defaultValues: { topic: '', numQuestions: 5 },
   });
+  
+  useEffect(() => {
+    if (isEditMode && examToEdit) {
+        step1Form.reset({
+            title: examToEdit.title,
+            description: examToEdit.description,
+            isPremium: examToEdit.isPremium || false
+        });
+        setQuestions(examToEdit.questions);
+        setStep(3); // Start at the review step in edit mode
+    } else {
+        reset();
+    }
+  }, [examToEdit, isEditMode, open]);
+
 
   const handleNext = () => setStep(s => s + 1);
 
@@ -121,11 +138,16 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     };
 
     try {
-        await addExam(newExamData);
+        if(isEditMode && examToEdit) {
+            await updateExam(examToEdit.id, newExamData);
+            toast({ title: 'Success', description: 'Exam updated successfully.' });
+        } else {
+            await addExam(newExamData);
+            toast({ title: 'Success', description: 'Exam created successfully.' });
+        }
         onExamCreated();
         reset();
         onOpenChange(false);
-        toast({ title: 'Success', description: 'Exam created successfully.' });
     } catch (error) {
         console.error("Failed to save exam to Firestore:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the exam.' });
@@ -135,8 +157,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   };
 
   const reset = () => {
-    step1Form.reset();
-    step2Form.reset();
+    step1Form.reset({ title: '', description: '', isPremium: false });
+    step2Form.reset({ topic: '', numQuestions: 5 });
     setQuestions([]);
     setStep(1);
     setLoading(false);
@@ -203,9 +225,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
-      </DialogTrigger>
+      {!isEditMode && (
+        <DialogTrigger asChild>
+          <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[600px]">
         <input 
             type="file" 
@@ -217,11 +241,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
         <DialogHeader>
           <div className="flex justify-between items-start">
             <div>
-              <DialogTitle>Create a New Exam</DialogTitle>
+              <DialogTitle>{isEditMode ? "Edit Exam" : "Create a New Exam"}</DialogTitle>
               <DialogDescription>
                 {step === 1 && "Start by providing the basic details for your exam."}
                 {step === 2 && "Now, let's configure the AI to generate questions for you."}
-                {step === 3 && "Review the generated questions and save your exam."}
+                {step === 3 && "Review the questions and save your exam."}
               </DialogDescription>
             </div>
             {step === 2 && (
@@ -331,7 +355,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
         {step === 3 && (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                <h3 className="text-xl font-bold">Generated Questions</h3>
+                <h3 className="text-xl font-bold">Questions</h3>
                 <Accordion type="single" collapsible className="w-full space-y-4">
                   {questions.map((q, qIndex) => (
                     <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
@@ -389,10 +413,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                   ))}
                 </Accordion>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
+                    <Button variant="outline" onClick={() => setStep(isEditMode ? 1 : 2)}>Back</Button>
                     <Button onClick={handleSaveExam} disabled={loading || questions.length === 0}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Exam
+                        {isEditMode ? "Save Changes" : "Save Exam"}
                     </Button>
                 </DialogFooter>
             </div>
