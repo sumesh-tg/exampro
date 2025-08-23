@@ -2,32 +2,53 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { getCampaignDetail } from '@/services/campaignDetailsService';
-import type { CampaignDetail, Exam } from '@/lib/data';
+import type { CampaignDetail, Exam, ExamHistory } from '@/lib/data';
 import { useAuth } from '@/hooks/use-auth';
 import { getUserCampaigns } from '@/services/userCampaignsService';
-import { Loader2, BookOpen, Layers } from 'lucide-react';
+import { getExamHistory } from '@/services/examHistoryService';
+import { Loader2, Layers, RefreshCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+
+declare const Razorpay: any;
 
 interface JoinedCampaignsProps {
     allExams: Exam[];
 }
 
+const CAMPAIGNS_PAGE_SIZE = 3;
+
 export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
   const { user } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
   const [joinedCampaigns, setJoinedCampaigns] = useState<CampaignDetail[]>([]);
+  const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(joinedCampaigns.length / CAMPAIGNS_PAGE_SIZE);
+  const paginatedCampaigns = joinedCampaigns.slice(
+    (currentPage - 1) * CAMPAIGNS_PAGE_SIZE,
+    currentPage * CAMPAIGNS_PAGE_SIZE
+  );
 
   useEffect(() => {
-    async function fetchJoinedCampaigns() {
+    async function fetchData() {
       if (!user) return;
       setLoading(true);
       try {
-        const userCampaigns = await getUserCampaigns(user.uid);
+        const [userCampaigns, history] = await Promise.all([
+            getUserCampaigns(user.uid),
+            getExamHistory(user.uid)
+        ]);
+
         const campaignIds = userCampaigns.map(uc => (uc as any).campaignId);
         
         const campaignDetails = await Promise.all(
@@ -35,15 +56,60 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
         );
 
         setJoinedCampaigns(campaignDetails.filter(Boolean) as CampaignDetail[]);
+        setExamHistory(history as ExamHistory[]);
+
       } catch (error) {
         console.error("Failed to fetch joined campaigns:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchJoinedCampaigns();
+    fetchData();
   }, [user]);
+
+  const handlePayment = (exam: Exam) => {
+    if (!user) return;
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: "1000", 
+      currency: "INR",
+      name: "QuizWhiz Re-attempt",
+      description: `Payment for re-attempting ${exam.title}`,
+      handler: function (response: any) {
+        router.push(`/exam/${exam.id}`);
+      },
+      prefill: {
+        name: user.displayName || "Anonymous User",
+        email: user.email || "",
+        contact: user.phoneNumber || ""
+      },
+      notes: {
+        exam_id: exam.id,
+        user_id: user.uid
+      },
+      theme: {
+        color: "#72A0C1"
+      }
+    };
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response: any){
+            toast({
+              variant: 'destructive',
+              title: 'Payment Failed',
+              description: response.error.description,
+            });
+    });
+    rzp.open();
+  }
   
+  const getExamById = (id: string) => {
+    return allExams.find(exam => exam.id === id);
+  }
+  
+  const getAttemptsForExam = (examId: string) => {
+      return examHistory.filter(h => h.examId === examId).length;
+  }
+
   if (loading) {
     return (
         <Card>
@@ -61,11 +127,7 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
   }
 
   if (joinedCampaigns.length === 0) {
-    return null; // Don't show the card if there are no joined campaigns
-  }
-  
-  const getExamById = (id: string) => {
-    return allExams.find(exam => exam.id === id);
+    return null;
   }
 
   return (
@@ -81,7 +143,7 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
       </CardHeader>
       <CardContent>
         <Accordion type="single" collapsible className="w-full">
-          {joinedCampaigns.map(campaign => (
+          {paginatedCampaigns.map(campaign => (
             <AccordionItem value={campaign.id} key={campaign.id}>
               <AccordionTrigger>
                 <div className="flex flex-col items-start">
@@ -98,15 +160,34 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
                     {campaign.examIds.map(examId => {
                         const exam = getExamById(examId);
                         if (!exam) return null;
+                        
+                        const attempts = getAttemptsForExam(exam.id);
+                        const freeAttemptsDisabled = (campaign.freeAttemptsDisabledFor || []).includes(user?.uid || '');
+                        const hasExceededFreeAttempts = attempts >= campaign.freeAttempts;
+                        
+                        const shouldPay = freeAttemptsDisabled || hasExceededFreeAttempts || exam.isPremium;
+
                         return (
                              <div key={exam.id} className="flex items-center justify-between rounded-lg border p-4">
                                 <div className="space-y-1">
                                     <p className="font-semibold">{exam.title}</p>
                                     <p className="text-sm text-muted-foreground">{exam.description}</p>
                                 </div>
-                                <Button variant="default" size="sm" asChild>
-                                    <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                                </Button>
+                                {shouldPay && attempts > 0 ? (
+                                    <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                      <RefreshCcw className="mr-2 h-4 w-4" />
+                                      Pay to Re-attempt
+                                    </Button>
+                                ) : shouldPay && attempts === 0 ? (
+                                     <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                      <RefreshCcw className="mr-2 h-4 w-4" />
+                                      Pay to Attempt
+                                    </Button>
+                                ) : (
+                                    <Button variant="default" size="sm" asChild>
+                                        <Link href={`/exam/${exam.id}`}>Start Exam</Link>
+                                    </Button>
+                                )}
                             </div>
                         )
                     })}
@@ -116,7 +197,17 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
           ))}
         </Accordion>
       </CardContent>
+       {totalPages > 1 && (
+            <CardFooter className="flex items-center justify-center p-4 gap-4">
+            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                <ChevronRight className="h-4 w-4" />
+            </Button>
+            </CardFooter>
+        )}
     </Card>
   );
 }
-
