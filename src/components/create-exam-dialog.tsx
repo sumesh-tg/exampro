@@ -55,7 +55,9 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const questionsContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user, isSuperAdmin } = useAuth();
   const isEditMode = !!examToEdit;
@@ -84,6 +86,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     }
   }, [examToEdit, isEditMode, open]);
 
+  useEffect(() => {
+    if (questionsContainerRef.current && questions.length > 0) {
+      questionsContainerRef.current.scrollTop = 0;
+    }
+  }, [questions]);
 
   const handleNext = () => setStep(s => s + 1);
 
@@ -119,11 +126,13 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   };
   
   const handleAddQuestion = () => {
-    setQuestions([...questions, {
-      questionText: '',
-      options: ['', '', '', ''],
-      correctAnswer: ''
-    }]);
+    const newQuestion = {
+        questionText: '',
+        options: ['', '', '', ''],
+        correctAnswer: ''
+    };
+    setQuestions([newQuestion, ...questions]);
+    setActiveAccordionItem("item-0"); 
   };
 
   const handleSaveExam = async () => {
@@ -421,7 +430,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         )}
 
         {step === 3 && (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div ref={questionsContainerRef} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                 <div className="flex justify-between items-center">
                     <h3 className="text-xl font-bold">Questions ({questions.length})</h3>
                     <Button variant="outline" size="sm" onClick={handleAddQuestion}>
@@ -430,7 +439,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                     </Button>
                 </div>
                 {questions.length > 0 ? (
-                    <Accordion type="single" collapsible className="w-full space-y-4">
+                    <Accordion type="single" collapsible className="w-full space-y-4" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
                     {questions.map((q, qIndex) => (
                         <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
                         <AccordionTrigger className="p-4 hover:no-underline">
