@@ -226,24 +226,23 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {(isAdmin || isSuperAdmin) && (
             <>
-               <CreateExamDialog 
+              <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
+              <CreateExamDialog 
                 open={isCreateExamOpen}
                 onOpenChange={setCreateExamOpen}
                 onExamCreated={handleExamCreated}
               />
-              <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
-
-                <CreateCampaignDialog
-                  open={isCreateCampaignOpen}
-                  onOpenChange={setCreateCampaignOpen}
-                  onCampaignCreated={handleCampaignCreated}
-                  allExams={exams}
-                  allAdmins={allAdmins}
-                />
-                 <Button variant="outline" onClick={() => setShareReportOpen(true)}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      View Share Report
-                  </Button>
+              <CreateCampaignDialog
+                open={isCreateCampaignOpen}
+                onOpenChange={setCreateCampaignOpen}
+                onCampaignCreated={handleCampaignCreated}
+                allExams={exams}
+                allAdmins={allAdmins}
+              />
+              <Button variant="outline" onClick={() => setShareReportOpen(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Share Report
+              </Button>
             </>
           )}
 
