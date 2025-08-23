@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, getDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, deleteDoc, serverTimestamp, query, orderBy, updateDoc } from 'firebase/firestore';
 import type { Exam } from '@/lib/data';
 
 const examsCollectionRef = collection(db, 'exams');
@@ -10,10 +10,10 @@ export const getExams = async () => {
     const data = await getDocs(q);
     const exams = data.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Exam[];
 
-    // Custom sort to handle null or undefined createdAt
+    // Custom sort to handle null or undefined updatedAt
     exams.sort((a, b) => {
-        const aDate = (a.createdAt as any)?.toDate();
-        const bDate = (b.createdAt as any)?.toDate();
+        const aDate = (a.updatedAt as any)?.toDate();
+        const bDate = (b.updatedAt as any)?.toDate();
 
         if (aDate && bDate) {
             return bDate.getTime() - aDate.getTime(); // Most recent first
@@ -40,12 +40,21 @@ export const getExam = async (id: string) => {
     }
 }
 
-export const addExam = async (exam: Omit<Exam, 'id' | 'createdAt'>) => {
+export const addExam = async (exam: Omit<Exam, 'id' | 'createdAt' | 'updatedAt'>) => {
     return await addDoc(examsCollectionRef, {
         ...exam,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
     });
 }
+
+export const updateExam = async (id: string, exam: Partial<Omit<Exam, 'id'>>) => {
+    const examDoc = doc(db, 'exams', id);
+    return await updateDoc(examDoc, {
+        ...exam,
+        updatedAt: serverTimestamp(),
+    });
+};
 
 export const deleteExam = async (id: string) => {
     const examDoc = doc(db, 'exams', id);

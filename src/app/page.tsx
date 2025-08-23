@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -47,6 +47,7 @@ import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
 import { listUsers, type AdminUserRecord } from '@/services/userService';
 import { CampaignsList } from '@/components/campaigns-list';
 import { JoinedCampaigns } from '@/components/joined-campaigns';
+import { formatDistanceToNow } from 'date-fns';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -61,6 +62,7 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
+  const [examToEdit, setExamToEdit] = useState<Exam | null>(null);
   const [isCreateCampaignOpen, setCreateCampaignOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
@@ -130,6 +132,7 @@ export default function Home() {
   const handleExamCreated = () => {
     fetchExams();
     setCreateExamOpen(false);
+    setExamToEdit(null);
   }
   
   const handleCampaignCreated = () => {
@@ -148,6 +151,11 @@ export default function Home() {
   const handleOpenIndividualReport = (exam: Exam) => {
     setSelectedExamForReport(exam);
     setIndividualReportOpen(true);
+  };
+  
+  const handleOpenEditDialog = (exam: Exam) => {
+    setExamToEdit(exam);
+    setCreateExamOpen(true);
   };
   
   const hasAttemptedExam = (examId: string) => {
@@ -229,8 +237,12 @@ export default function Home() {
               <Button variant="outline" disabled>Import Exam <Upload className="ml-2 h-4 w-4" /></Button>
               <CreateExamDialog 
                 open={isCreateExamOpen}
-                onOpenChange={setCreateExamOpen}
+                onOpenChange={(isOpen) => {
+                  setCreateExamOpen(isOpen);
+                  if (!isOpen) setExamToEdit(null);
+                }}
                 onExamCreated={handleExamCreated}
+                examToEdit={examToEdit}
               />
               <CreateCampaignDialog
                 open={isCreateCampaignOpen}
@@ -354,6 +366,11 @@ export default function Home() {
                                 <p className="text-sm text-muted-foreground">
                                     {exam.description}
                                 </p>
+                                {(exam.updatedAt as any)?.toDate && (
+                                    <p className="text-xs text-muted-foreground pt-1">
+                                        Last updated: {formatDistanceToNow((exam.updatedAt as any).toDate(), { addSuffix: true })}
+                                    </p>
+                                )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                 {user && hasAttemptedExam(exam.id) ? (
@@ -386,9 +403,15 @@ export default function Home() {
                                             </DropdownMenuItem>
                                         )}
                                         {(isAdmin || isSuperAdmin) && (
-                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
-                                            Delete
-                                        </DropdownMenuItem>
+                                        <>
+                                            <DropdownMenuItem onClick={() => handleOpenEditDialog(exam)}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                <span>Edit</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteExam(exam.id)}>
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </>
                                         )}
                                     </DropdownMenuContent>
                                     </DropdownMenu>
@@ -483,3 +506,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

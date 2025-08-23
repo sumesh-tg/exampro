@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,17 +18,18 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, PlusCircle, Sparkles, Trash2, Upload, Download } from 'lucide-react';
+import { Loader2, PlusCircle, Sparkles, Trash2, Upload, Download, Edit } from 'lucide-react';
 import { generateExamQuestions, type GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import type { Exam } from '@/lib/data';
-import { addExam } from '@/services/examService';
+import { addExam, updateExam } from '@/services/examService';
 import { Checkbox } from './ui/checkbox';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useAuth } from '@/hooks/use-auth';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -38,7 +39,7 @@ const step1Schema = z.object({
 
 const step2Schema = z.object({
   topic: z.string().min(2, { message: 'Topic must be at least 2 characters.' }),
-  numQuestions: z.coerce.number().min(1).max(20),
+  numQuestions: z.coerce.number().min(1).max(100),
 });
 
 type Question = GenerateExamQuestionsOutput['questions'][0];
@@ -47,14 +48,17 @@ interface CreateExamDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onExamCreated: () => void;
+    examToEdit?: Exam | null;
 }
 
-export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateExamDialogProps) {
+export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit }: CreateExamDialogProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user, isSuperAdmin } = useAuth();
+  const isEditMode = !!examToEdit;
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
@@ -65,6 +69,21 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     resolver: zodResolver(step2Schema),
     defaultValues: { topic: '', numQuestions: 5 },
   });
+  
+  useEffect(() => {
+    if (isEditMode && examToEdit) {
+        step1Form.reset({
+            title: examToEdit.title,
+            description: examToEdit.description,
+            isPremium: examToEdit.isPremium || false
+        });
+        setQuestions(examToEdit.questions);
+        setStep(3); // Start at the review step in edit mode
+    } else {
+        reset();
+    }
+  }, [examToEdit, isEditMode, open]);
+
 
   const handleNext = () => setStep(s => s + 1);
 
@@ -99,7 +118,20 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
     setQuestions(questions.filter((_, i) => i !== index));
   };
   
+  const handleAddQuestion = () => {
+    setQuestions([...questions, {
+      questionText: '',
+      options: ['', '', '', ''],
+      correctAnswer: ''
+    }]);
+  };
+
   const handleSaveExam = async () => {
+    const loggedInUser = user || isSuperAdmin;
+    if (!loggedInUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to save an exam.' });
+        return;
+    }
     // Validation check
     for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
@@ -115,17 +147,36 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
     setLoading(true);
     const examDetails = step1Form.getValues();
-    const newExamData: Omit<Exam, 'id'> = {
-      ...examDetails,
-      questions: questions,
-    };
+    
+    const updaterId = isSuperAdmin ? 'System' : user?.uid;
+    if (!updaterId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not determine updater information.' });
+        setLoading(false);
+        return;
+    }
 
     try {
-        await addExam(newExamData);
+        if(isEditMode && examToEdit) {
+            const updatedExamData: Partial<Exam> = {
+                ...examDetails,
+                questions: questions,
+                updatedBy: updaterId,
+            };
+            await updateExam(examToEdit.id, updatedExamData);
+            toast({ title: 'Success', description: 'Exam updated successfully.' });
+        } else {
+             const newExamData: Omit<Exam, 'id'> = {
+                ...examDetails,
+                questions: questions,
+                createdBy: updaterId,
+                updatedBy: updaterId,
+            };
+            await addExam(newExamData);
+            toast({ title: 'Success', description: 'Exam created successfully.' });
+        }
         onExamCreated();
         reset();
         onOpenChange(false);
-        toast({ title: 'Success', description: 'Exam created successfully.' });
     } catch (error) {
         console.error("Failed to save exam to Firestore:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save the exam.' });
@@ -135,8 +186,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
   };
 
   const reset = () => {
-    step1Form.reset();
-    step2Form.reset();
+    step1Form.reset({ title: '', description: '', isPremium: false });
+    step2Form.reset({ topic: '', numQuestions: 5 });
     setQuestions([]);
     setStep(1);
     setLoading(false);
@@ -172,6 +223,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
             const worksheet = workbook.Sheets[sheetName];
             const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
+            if (json.length > 100) {
+              throw new Error("You can only import up to 100 questions at a time.");
+            }
+
             const importedQuestions: Question[] = json.map(row => {
                 const options = [row.option1, row.option2, row.option3, row.option4].filter(Boolean);
                 if (options.length !== 4 || !row.questionText || !row.correctAnswer) {
@@ -203,9 +258,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
-      </DialogTrigger>
+      {!isEditMode && (
+        <DialogTrigger asChild>
+          <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[600px]">
         <input 
             type="file" 
@@ -217,22 +274,22 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
         <DialogHeader>
           <div className="flex justify-between items-start">
             <div>
-              <DialogTitle>Create a New Exam</DialogTitle>
+              <DialogTitle>{isEditMode ? "Edit Exam" : "Create a New Exam"}</DialogTitle>
               <DialogDescription>
                 {step === 1 && "Start by providing the basic details for your exam."}
-                {step === 2 && "Now, let's configure the AI to generate questions for you."}
-                {step === 3 && "Review the generated questions and save your exam."}
+                {step === 2 && "Generate questions with AI, import a file, or add them manually."}
+                {step === 3 && "Review the questions and save your exam."}
               </DialogDescription>
             </div>
             {step === 2 && (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+                <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
                   <Upload className="mr-2 h-4 w-4" />
                   Import
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleDownloadTemplate} disabled={loading}>
                   <Download className="mr-2 h-4 w-4" />
-                  Download Template
+                  Template
                 </Button>
               </div>
             )}
@@ -311,7 +368,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                                 <FormField control={step2Form.control} name="numQuestions" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Number of Questions</FormLabel>
-                                        <FormControl><Input type="number" min="1" max="20" {...field} /></FormControl>
+                                        <FormControl><Input type="number" min="1" max="100" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
@@ -320,9 +377,12 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
                     </Card>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>
+                         <Button type="button" variant="secondary" onClick={() => setStep(3)}>
+                            Add Manually
+                        </Button>
                         <Button type="submit" disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Generate Questions
+                            Generate
                         </Button>
                     </DialogFooter>
                 </form>
@@ -331,68 +391,82 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
 
         {step === 3 && (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                <h3 className="text-xl font-bold">Generated Questions</h3>
-                <Accordion type="single" collapsible className="w-full space-y-4">
-                  {questions.map((q, qIndex) => (
-                    <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
-                      <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex justify-between items-center w-full gap-2">
-                           <span className="font-semibold text-left flex-1 line-clamp-2">{`Q${qIndex + 1}: ${q.questionText}`}</span>
-                           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveQuestion(qIndex); }} className="text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0">
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="p-6 pt-0">
-                         <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Question Text</Label>
-                                <Textarea
-                                value={q.questionText}
-                                onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
-                                className="text-base"
-                                rows={3}
-                                />
+                <div className="flex justify-between items-center">
+                    <h3 className="text-xl font-bold">Questions ({questions.length})</h3>
+                    <Button variant="outline" size="sm" onClick={handleAddQuestion}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Question
+                    </Button>
+                </div>
+                {questions.length > 0 ? (
+                    <Accordion type="single" collapsible className="w-full space-y-4">
+                    {questions.map((q, qIndex) => (
+                        <AccordionItem value={`item-${qIndex}`} key={qIndex} className="border rounded-lg">
+                        <AccordionTrigger className="p-4 hover:no-underline">
+                            <div className="flex justify-between items-center w-full gap-2">
+                            <span className="font-semibold text-left flex-1 line-clamp-2">{`Q${qIndex + 1}: ${q.questionText || 'New Question'}`}</span>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveQuestion(qIndex); }} className="text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
                             </div>
-                            <div className="space-y-2">
-                              <Label>Options</Label>
-                              {q.options.map((option, oIndex) => (
-                                <div key={oIndex} className="flex items-center gap-2">
-                                  <Input
-                                    value={option}
-                                    onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
-                                  />
+                        </AccordionTrigger>
+                        <AccordionContent className="p-6 pt-0">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Question Text</Label>
+                                    <Textarea
+                                    value={q.questionText}
+                                    onChange={(e) => handleQuestionChange(qIndex, 'questionText', e.target.value)}
+                                    className="text-base"
+                                    rows={3}
+                                    placeholder="Enter the question text here"
+                                    />
                                 </div>
-                              ))}
+                                <div className="space-y-2">
+                                <Label>Options</Label>
+                                {q.options.map((option, oIndex) => (
+                                    <div key={oIndex} className="flex items-center gap-2">
+                                    <Input
+                                        value={option}
+                                        onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                                        placeholder={`Option ${oIndex + 1}`}
+                                    />
+                                    </div>
+                                ))}
+                                </div>
+                                <div className="space-y-2">
+                                <Label>Correct Answer</Label>
+                                    <Select
+                                        value={q.correctAnswer}
+                                        onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select the correct answer" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {q.options.filter(opt => opt.trim() !== '').map((option, oIndex) => (
+                                                <SelectItem key={oIndex} value={option}>
+                                                    {option}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                             <div className="space-y-2">
-                              <Label>Correct Answer</Label>
-                                <Select
-                                    value={q.correctAnswer}
-                                    onValueChange={(value) => handleQuestionChange(qIndex, 'correctAnswer', value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select the correct answer" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {q.options.map((option, oIndex) => (
-                                            <SelectItem key={oIndex} value={option}>
-                                                {option}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+                        </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                    </Accordion>
+                ) : (
+                    <div className="text-center text-muted-foreground py-10">
+                        No questions yet. Add your first question to get started.
+                    </div>
+                )}
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
+                    <Button variant="outline" onClick={() => setStep(isEditMode ? 1 : 2)}>Back</Button>
                     <Button onClick={handleSaveExam} disabled={loading || questions.length === 0}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Exam
+                        {isEditMode ? "Save Changes" : "Save Exam"}
                     </Button>
                 </DialogFooter>
             </div>
