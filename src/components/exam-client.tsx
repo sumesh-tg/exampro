@@ -319,9 +319,9 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                     className={cn(
                       'font-bold',
                       {
-                        'bg-primary text-primary-foreground hover:bg-primary/90': currentQuestionIndex === index,
+                        'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex === index,
                         'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-green-400 hover:bg-green-500 text-green-900': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-primary text-primary-foreground hover:bg-primary/90': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
                         'bg-red-400 hover:bg-red-500 text-red-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
                         'bg-gray-300 hover:bg-gray-400 text-gray-800': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
                       }
@@ -332,8 +332,8 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                 ))}
             </div>
              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Current</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Answered</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Current</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Answered</div>
                 <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-red-400"></span> Unanswered</div>
                 <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-orange-400"></span> Marked for Review</div>
                 <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-gray-300"></span> Not Visited</div>
