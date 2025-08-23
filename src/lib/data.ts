@@ -28,6 +28,10 @@ export type ExamHistory = {
   sharedBy?: string;
   attemptType?: 'Free' | 'Paid';
   attemptNumber?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  updatedBy: string;
 };
 
 export type Campaign = {
@@ -54,6 +58,7 @@ export type CampaignDetail = {
     updatedAt: Date;
     updatedBy: string;
 };
+
 
 
 
