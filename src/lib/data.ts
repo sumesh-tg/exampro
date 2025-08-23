@@ -11,6 +11,7 @@ export type Exam = {
   description: string;
   questions: Question[];
   isPremium?: boolean;
+  createdAt?: Date;
 };
 
 export type ExamHistory = {
@@ -50,5 +51,6 @@ export type CampaignDetail = {
     updatedAt: Date;
     updatedBy: string;
 };
+
 
 
