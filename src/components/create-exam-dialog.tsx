@@ -132,14 +132,41 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to save an exam.' });
         return;
     }
-    // Validation check
+    // Validation checks
     for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
-        if (!q.options.includes(q.correctAnswer)) {
+        if (!q.questionText || q.questionText.trim() === '') {
+            toast({
+                variant: 'destructive',
+                title: `Validation Error for Q${i + 1}`,
+                description: 'Question text cannot be empty.',
+            });
+            return;
+        }
+        for (let j = 0; j < q.options.length; j++) {
+            const option = q.options[j];
+            if (!option || option.trim() === '') {
+                toast({
+                    variant: 'destructive',
+                    title: `Validation Error for Q${i + 1}`,
+                    description: `Option ${j + 1} cannot be empty.`,
+                });
+                return;
+            }
+        }
+        if (!q.correctAnswer || q.correctAnswer.trim() === '') {
+            toast({
+                variant: 'destructive',
+                title: `Validation Error for Q${i + 1}`,
+                description: 'Please select a correct answer.',
+            });
+            return;
+        }
+        if (!q.options.map(o => o.trim()).includes(q.correctAnswer.trim())) {
             toast({
                 variant: 'destructive',
                 title: `Invalid Answer for Q${i + 1}`,
-                description: `The correct answer "${q.correctAnswer}" is not one of the provided options.`,
+                description: `The correct answer must be one of the provided options.`,
             });
             return;
         }
@@ -228,14 +255,17 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
             }
 
             const importedQuestions: Question[] = json.map(row => {
-                const options = [row.option1, row.option2, row.option3, row.option4].filter(Boolean);
+                const options = [row.option1, row.option2, row.option3, row.option4].filter(val => val !== undefined && val !== null).map(String);
                 if (options.length !== 4 || !row.questionText || !row.correctAnswer) {
-                    throw new Error("Invalid file format. Each row must have a question, 4 options, and a correct answer.");
+                    throw new Error("Invalid file format. Each row must have a questionText, option1, option2, option3, option4, and a correctAnswer.");
+                }
+                if (!options.includes(String(row.correctAnswer))) {
+                     throw new Error(`For question "${row.questionText}", the correct answer "${row.correctAnswer}" is not in the options.`);
                 }
                 return {
-                    questionText: row.questionText,
+                    questionText: String(row.questionText),
                     options: options,
-                    correctAnswer: row.correctAnswer,
+                    correctAnswer: String(row.correctAnswer),
                 };
             });
             setQuestions(importedQuestions);
@@ -260,7 +290,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {!isEditMode && (
         <DialogTrigger asChild>
-          <Button>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
+          <Button onClick={() => onOpenChange(true)}>Create Exam <PlusCircle className="ml-2 h-4 w-4" /></Button>
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-[600px]">
@@ -337,7 +367,8 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                         )}
                     />
                     <DialogFooter>
-                        <Button type="submit">Next</Button>
+                       {isEditMode && <Button type="button" variant="secondary" onClick={() => setStep(3)}>Skip to Questions</Button>}
+                       <Button type="submit">Next</Button>
                     </DialogFooter>
                 </form>
             </Form>
@@ -377,7 +408,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                     </Card>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>
-                         <Button type="button" variant="secondary" onClick={() => setStep(3)}>
+                         <Button type="button" variant="secondary" onClick={() => { setQuestions([]); setStep(3); }}>
                             Add Manually
                         </Button>
                         <Button type="submit" disabled={loading}>
