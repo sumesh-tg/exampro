@@ -8,11 +8,23 @@ export const getExamHistory = async (userId: string) => {
     const data = await getDocs(q);
     const history = data.docs.map(doc => ({ ...doc.data(), id: doc.id } as ExamHistory));
 
-    history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Sort by updatedAt descending, then createdAt descending
+    history.sort((a, b) => {
+        const aUpdatedAt = (a.updatedAt as any)?.toDate() || new Date(0);
+        const bUpdatedAt = (b.updatedAt as any)?.toDate() || new Date(0);
+        if (bUpdatedAt.getTime() !== aUpdatedAt.getTime()) {
+            return bUpdatedAt.getTime() - aUpdatedAt.getTime();
+        }
+        
+        const aCreatedAt = (a.createdAt as any)?.toDate() || new Date(0);
+        const bCreatedAt = (b.createdAt as any)?.toDate() || new Date(0);
+        return bCreatedAt.getTime() - aCreatedAt.getTime();
+    });
     
-    // Calculate attempt number for each exam
+    // Reverse for chronological attempt calculation
+    const reversedHistory = [...history].reverse();
     const attemptCounts: Record<string, number> = {};
-    return history.map(h => {
+    const historyWithAttempts = reversedHistory.map(h => {
         const examId = h.examId;
         if (!attemptCounts[examId]) {
             attemptCounts[examId] = 0;
@@ -24,7 +36,9 @@ export const getExamHistory = async (userId: string) => {
             attemptNumber: attemptCounts[examId],
             attemptType: attemptCounts[examId] === 1 ? 'Free' : 'Paid'
         };
-    });
+    }).reverse(); // Reverse back to original sort order
+
+    return historyWithAttempts;
 }
 
 const examHistoryCollectionRef = collection(db, 'exam_history');
