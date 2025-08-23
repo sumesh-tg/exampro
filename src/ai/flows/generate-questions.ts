@@ -14,7 +14,7 @@ import { z } from 'genkit';
 
 const GenerateExamQuestionsInputSchema = z.object({
   topic: z.string().describe('The topic for which to generate exam questions.'),
-  numQuestions: z.number().min(1).max(20).describe('The number of questions to generate.'),
+  numQuestions: z.number().min(1).max(100).describe('The number of questions to generate.'),
 });
 export type GenerateExamQuestionsInput = z.infer<typeof GenerateExamQuestionsInputSchema>;
 
