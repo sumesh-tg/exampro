@@ -18,7 +18,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Sparkles, Trash2, Upload, Download } from 'lucide-react';
 import { generateExamQuestions, type GenerateExamQuestionsOutput } from '@/ai/flows/generate-questions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
@@ -135,12 +135,26 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated }: CreateEx
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Create a New Exam</DialogTitle>
-          <DialogDescription>
-            {step === 1 && "Start by providing the basic details for your exam."}
-            {step === 2 && "Now, let's configure the AI to generate questions for you."}
-            {step === 3 && "Review the generated questions and save your exam."}
-          </DialogDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle>Create a New Exam</DialogTitle>
+              <DialogDescription>
+                {step === 1 && "Start by providing the basic details for your exam."}
+                {step === 2 && "Now, let's configure the AI to generate questions for you."}
+                {step === 3 && "Review the generated questions and save your exam."}
+              </DialogDescription>
+            </div>
+            <div className="flex gap-2">
+               <Button variant="outline" size="sm" disabled>
+                 <Upload className="mr-2 h-4 w-4" />
+                 Import
+               </Button>
+                <Button variant="outline" size="sm" disabled>
+                 <Download className="mr-2 h-4 w-4" />
+                 Download Template
+               </Button>
+            </div>
+          </div>
         </DialogHeader>
         
         {step === 1 && (
