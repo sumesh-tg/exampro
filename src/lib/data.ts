@@ -12,6 +12,7 @@ export type Exam = {
   description: string;
   questions: Question[];
   isPremium?: boolean;
+  winPercentage?: number;
   createdAt?: Date;
   updatedAt?: Date;
   createdBy?: string;

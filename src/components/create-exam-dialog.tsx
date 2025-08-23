@@ -30,11 +30,13 @@ import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useAuth } from '@/hooks/use-auth';
+import { Slider } from './ui/slider';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   isPremium: z.boolean().default(false),
+  winPercentage: z.number().min(1).max(100).default(50),
 });
 
 const step2Schema = z.object({
@@ -65,8 +67,10 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   
   const step1Form = useForm<z.infer<typeof step1Schema>>({
     resolver: zodResolver(step1Schema),
-    defaultValues: { title: '', description: '', isPremium: false },
+    defaultValues: { title: '', description: '', isPremium: false, winPercentage: 50 },
   });
+  
+  const winPercentage = step1Form.watch('winPercentage');
 
   const step2Form = useForm<z.infer<typeof step2Schema>>({
     resolver: zodResolver(step2Schema),
@@ -78,14 +82,15 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         step1Form.reset({
             title: examToEdit.title,
             description: examToEdit.description,
-            isPremium: examToEdit.isPremium || false
+            isPremium: examToEdit.isPremium || false,
+            winPercentage: examToEdit.winPercentage || 50,
         });
         setQuestions(examToEdit.questions);
         setStep(3); // Start at the review step in edit mode
     } else {
         reset();
     }
-  }, [examToEdit, isEditMode, open]);
+  }, [examToEdit, isEditMode, open, step1Form]);
 
   useEffect(() => {
     if (activeAccordionItem && questionsContainerRef.current) {
@@ -248,7 +253,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   };
 
   const reset = () => {
-    step1Form.reset({ title: '', description: '', isPremium: false });
+    step1Form.reset({ title: '', description: '', isPremium: false, winPercentage: 50 });
     step2Form.reset({ topic: '', numQuestions: 5 });
     setQuestions([]);
     setStep(1);
@@ -379,6 +384,25 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
                             <FormMessage />
                         </FormItem>
                     )} />
+                    <FormField
+                      control={step1Form.control}
+                      name="winPercentage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Win Percentage: {field.value}%</FormLabel>
+                          <FormControl>
+                             <Slider
+                                min={1}
+                                max={100}
+                                step={1}
+                                value={[field.value]}
+                                onValueChange={(value) => field.onChange(value[0])}
+                              />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                      <FormField
                         control={step1Form.control}
                         name="isPremium"

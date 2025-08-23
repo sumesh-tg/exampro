@@ -190,6 +190,10 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   }
 
   if (isSubmitted) {
+    const winPercentage = shuffledExam.winPercentage || 50;
+    const userPercentage = (score / shuffledExam.questions.length) * 100;
+    const hasPassed = userPercentage >= winPercentage;
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg">
@@ -198,9 +202,16 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             <CardDescription>Here's your result for "{shuffledExam.title}".</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-full bg-primary/10 p-8 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4 border-primary">
+            <div className={cn("rounded-full p-8 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4",
+              hasPassed ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500"
+            )}>
               <p className="text-muted-foreground">You scored</p>
-              <p className="text-5xl font-bold text-primary">{score} / {shuffledExam.questions.length}</p>
+              <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600" : "text-red-600")}>
+                {score} / {shuffledExam.questions.length}
+              </p>
+               <Badge variant={hasPassed ? 'default' : 'destructive'} className="mt-2 text-lg">
+                {hasPassed ? 'Pass' : 'Fail'}
+              </Badge>
             </div>
             <div className="flex flex-wrap justify-around text-lg gap-4">
                 <div className="flex items-center gap-2">
