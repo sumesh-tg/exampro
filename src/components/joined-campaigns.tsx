@@ -2,14 +2,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { getCampaignDetail } from '@/services/campaignDetailsService';
 import type { CampaignDetail, Exam, ExamHistory } from '@/lib/data';
 import { useAuth } from '@/hooks/use-auth';
 import { getUserCampaigns } from '@/services/userCampaignsService';
 import { getExamHistory } from '@/services/examHistoryService';
-import { Loader2, Layers, RefreshCcw } from 'lucide-react';
+import { Loader2, Layers, RefreshCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { format } from 'date-fns';
@@ -22,6 +22,8 @@ interface JoinedCampaignsProps {
     allExams: Exam[];
 }
 
+const CAMPAIGNS_PAGE_SIZE = 3;
+
 export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -29,6 +31,13 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
   const [joinedCampaigns, setJoinedCampaigns] = useState<CampaignDetail[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(joinedCampaigns.length / CAMPAIGNS_PAGE_SIZE);
+  const paginatedCampaigns = joinedCampaigns.slice(
+    (currentPage - 1) * CAMPAIGNS_PAGE_SIZE,
+    currentPage * CAMPAIGNS_PAGE_SIZE
+  );
 
   useEffect(() => {
     async function fetchData() {
@@ -134,7 +143,7 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
       </CardHeader>
       <CardContent>
         <Accordion type="single" collapsible className="w-full">
-          {joinedCampaigns.map(campaign => (
+          {paginatedCampaigns.map(campaign => (
             <AccordionItem value={campaign.id} key={campaign.id}>
               <AccordionTrigger>
                 <div className="flex flex-col items-start">
@@ -154,8 +163,9 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
                         
                         const attempts = getAttemptsForExam(exam.id);
                         const freeAttemptsDisabled = (campaign.freeAttemptsDisabledFor || []).includes(user?.uid || '');
-                        const hasFreeAttemptsLeft = attempts < campaign.freeAttempts;
-                        const shouldPay = freeAttemptsDisabled || !hasFreeAttemptsLeft;
+                        const hasExceededFreeAttempts = attempts >= campaign.freeAttempts;
+                        
+                        const shouldPay = freeAttemptsDisabled || hasExceededFreeAttempts || exam.isPremium;
 
                         return (
                              <div key={exam.id} className="flex items-center justify-between rounded-lg border p-4">
@@ -163,8 +173,13 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
                                     <p className="font-semibold">{exam.title}</p>
                                     <p className="text-sm text-muted-foreground">{exam.description}</p>
                                 </div>
-                                {shouldPay ? (
+                                {shouldPay && attempts > 0 ? (
                                     <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                      <RefreshCcw className="mr-2 h-4 w-4" />
+                                      Pay to Re-attempt
+                                    </Button>
+                                ) : shouldPay && attempts === 0 ? (
+                                     <Button variant="secondary" onClick={() => handlePayment(exam)}>
                                       <RefreshCcw className="mr-2 h-4 w-4" />
                                       Pay to Attempt
                                     </Button>
@@ -182,6 +197,17 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
           ))}
         </Accordion>
       </CardContent>
+       {totalPages > 1 && (
+            <CardFooter className="flex items-center justify-center p-4 gap-4">
+            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                <ChevronRight className="h-4 w-4" />
+            </Button>
+            </CardFooter>
+        )}
     </Card>
   );
 }

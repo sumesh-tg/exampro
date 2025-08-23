@@ -2,13 +2,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { getCampaignDetails } from '@/services/campaignDetailsService';
 import type { CampaignDetail, Exam } from '@/lib/data';
 import { getExams } from '@/services/examService';
 import { listUsers, type AdminUserRecord } from '@/services/userService';
-import { Loader2, Share2, Users, Edit } from 'lucide-react';
+import { Loader2, Share2, Users, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -17,6 +17,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { getUsersForCampaign } from '@/services/userCampaignsService';
 import { CampaignUserReportDialog } from './campaign-user-report-dialog';
 import { EditCampaignDialog } from './edit-campaign-dialog';
+
+const CAMPAIGNS_PAGE_SIZE = 5;
 
 export function CampaignsList() {
   const [campaigns, setCampaigns] = useState<CampaignDetail[]>([]);
@@ -27,8 +29,15 @@ export function CampaignsList() {
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignDetail | null>(null);
   const [isReportOpen, setReportOpen] = useState(false);
   const [isEditOpen, setEditOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { user, isSuperAdmin, isAdmin } = useAuth();
+  
+  const totalPages = Math.ceil(campaigns.length / CAMPAIGNS_PAGE_SIZE);
+  const paginatedCampaigns = campaigns.slice(
+    (currentPage - 1) * CAMPAIGNS_PAGE_SIZE,
+    currentPage * CAMPAIGNS_PAGE_SIZE
+  );
 
   const fetchData = async () => {
     if (!user && !isSuperAdmin) return;
@@ -47,6 +56,13 @@ export function CampaignsList() {
           (c) => c.createdBy === user.uid || c.assignee === user.uid
         );
       }
+
+      // Sort campaigns by updatedAt date in descending order
+      filteredCampaigns.sort((a, b) => {
+        const dateA = (a.updatedAt as any)?.toDate() || 0;
+        const dateB = (b.updatedAt as any)?.toDate() || 0;
+        return dateB - dateA;
+      });
 
       setCampaigns(filteredCampaigns);
       setAllExams(examData as Exam[]);
@@ -168,7 +184,7 @@ export function CampaignsList() {
                       </TableRow>
                   </TableHeader>
                   <TableBody>
-                      {campaigns.map((campaign) => (
+                      {paginatedCampaigns.map((campaign) => (
                           <TableRow key={campaign.id}>
                               <TableCell>
                                   <div className="font-medium">{campaign.name}</div>
@@ -191,14 +207,21 @@ export function CampaignsList() {
                                   {campaignUserCounts[campaign.id] ?? 0}
                                 </Button>
                               </TableCell>
-                              <TableCell className="text-right space-x-2">
+                              <TableCell className="text-right">
+                                <div className="flex justify-end items-center space-x-2">
                                   <Button variant="outline" size="sm" onClick={() => handleOpenEdit(campaign)}>
                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                   </Button>
-                                  <Button variant="outline" size="sm" onClick={() => handleShareCampaign(campaign.id)}>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleShareCampaign(campaign.id)}
+                                    disabled={new Date() > (campaign.endDate as any).toDate()}
+                                  >
                                       <Share2 className="mr-2 h-4 w-4" />
                                       Share
                                   </Button>
+                                </div>
                               </TableCell>
                           </TableRow>
                       ))}
@@ -208,6 +231,17 @@ export function CampaignsList() {
             <div className="text-center text-muted-foreground py-10">No campaigns found for you.</div>
           )}
         </CardContent>
+        {totalPages > 1 && (
+            <CardFooter className="flex items-center justify-center p-4 gap-4">
+            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+            <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                <ChevronRight className="h-4 w-4" />
+            </Button>
+            </CardFooter>
+        )}
       </Card>
     </>
   );

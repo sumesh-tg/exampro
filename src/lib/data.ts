@@ -46,4 +46,9 @@ export type CampaignDetail = {
     assignee?: string;
     freeAttempts: number;
     freeAttemptsDisabledFor?: string[];
+    createdAt: Date;
+    updatedAt: Date;
+    updatedBy: string;
 };
+
+

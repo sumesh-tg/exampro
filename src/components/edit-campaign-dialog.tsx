@@ -38,7 +38,7 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
-  freeAttempts: z.coerce.number().min(0).default(1),
+  freeAttempts: z.coerce.number().min(0).max(100, { message: 'Cannot exceed 100 free attempts.' }).default(1),
 });
 
 interface EditCampaignDialogProps {
@@ -52,7 +52,7 @@ interface EditCampaignDialogProps {
 
 export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpdated, allExams, allAdmins }: EditCampaignDialogProps) {
   const [loading, setLoading] = useState(false);
-  const { isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof campaignSchema>>({
@@ -89,11 +89,14 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
   
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
+    
+    const updaterId = user?.uid ?? 'System';
 
     try {
         await updateCampaignDetail(campaign.id, {
             ...values,
-            freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || []
+            freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || [],
+            updatedBy: updaterId,
         });
         toast({ title: 'Campaign Updated!', description: 'The campaign has been successfully updated.' });
         onCampaignUpdated();
@@ -176,7 +179,7 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Number of Free Attempts</FormLabel>
-                  <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                  <FormControl><Input type="number" min="0" max="100" {...field} /></FormControl>
                    <FormMessage />
                 </FormItem>
               )}

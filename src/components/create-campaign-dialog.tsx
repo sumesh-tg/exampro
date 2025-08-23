@@ -39,7 +39,7 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
-  freeAttempts: z.coerce.number().min(0).default(1),
+  freeAttempts: z.coerce.number().min(0).max(100, { message: 'Cannot exceed 100 free attempts.' }).default(1),
 });
 
 interface CreateCampaignDialogProps {
@@ -68,7 +68,13 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      form.reset();
+      form.reset({
+        name: '',
+        description: '',
+        examIds: [],
+        freeAttempts: 1,
+        startDate: new Date(),
+      });
     }
     onOpenChange(isOpen);
   };
@@ -90,9 +96,11 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
     }
 
     try {
+        const creatorId = user?.uid || 'super-admin';
         await addCampaignDetail({
             ...values,
-            createdBy: user?.uid || 'super-admin',
+            createdBy: creatorId,
+            updatedBy: creatorId,
             assignee: isSuperAdmin ? values.assignee : user?.uid,
             freeAttemptsDisabledFor: [],
         });
@@ -180,7 +188,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Number of Free Attempts</FormLabel>
-                  <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                  <FormControl><Input type="number" min="0" max="100" {...field} /></FormControl>
                    <FormMessage />
                 </FormItem>
               )}

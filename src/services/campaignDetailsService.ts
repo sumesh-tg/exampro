@@ -5,12 +5,13 @@ import type { CampaignDetail } from '@/lib/data';
 const campaignDetailsCollectionRef = collection(db, 'campaign_details');
 
 // CREATE
-export const addCampaignDetail = async (campaignDetail: Omit<CampaignDetail, 'id' | 'startDate' | 'endDate'> & { startDate: Date; endDate: Date }) => {
+export const addCampaignDetail = async (campaignDetail: Omit<CampaignDetail, 'id' | 'startDate' | 'endDate' | 'createdAt' | 'updatedAt'> & { startDate: Date; endDate: Date }) => {
     return await addDoc(campaignDetailsCollectionRef, {
         ...campaignDetail,
         startDate: Timestamp.fromDate(campaignDetail.startDate),
         endDate: Timestamp.fromDate(campaignDetail.endDate),
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
     });
 }
 
@@ -43,6 +44,8 @@ export const updateCampaignDetail = async (id: string, updates: Partial<Omit<Cam
     if (updates.endDate && updates.endDate instanceof Date) {
         updateData.endDate = Timestamp.fromDate(updates.endDate);
     }
+    
+    updateData.updatedAt = serverTimestamp();
 
     return await updateDoc(campaignDetailDoc, updateData);
 }
