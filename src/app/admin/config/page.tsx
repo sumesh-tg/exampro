@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -140,6 +140,31 @@ export default function AdminConfigPage() {
                   id="campaign-creation"
                   checked={config?.isCampaignCreationEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isCampaignCreationEnabled', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+           <Card>
+            <CardHeader>
+                <div className="flex items-center gap-2">
+                    <Sparkles className="h-6 w-6 text-accent" />
+                    <CardTitle>AI Features</CardTitle>
+                </div>
+              <CardDescription>Manage AI-powered features in the application.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="topic-suggester" className="text-base">Enable Topic Suggester</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show the AI topic suggestion card on the dashboard.
+                  </p>
+                </div>
+                <Switch
+                  id="topic-suggester"
+                  checked={config?.isTopicSuggesterEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isTopicSuggesterEnabled', checked)}
                 />
               </div>
             </CardContent>

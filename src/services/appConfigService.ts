@@ -7,6 +7,7 @@ export type AppConfig = {
   isPhoneLoginEnabled: boolean;
   isExamCreationEnabled: boolean;
   isCampaignCreationEnabled: boolean;
+  isTopicSuggesterEnabled: boolean;
 };
 
 const CONFIG_COLLECTION = 'app_config';
@@ -31,6 +32,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         isPhoneLoginEnabled: data.isPhoneLoginEnabled ?? true,
         isExamCreationEnabled: data.isExamCreationEnabled ?? true,
         isCampaignCreationEnabled: data.isCampaignCreationEnabled ?? true,
+        isTopicSuggesterEnabled: data.isTopicSuggesterEnabled ?? true,
       };
     } else {
       // If the document doesn't exist, create it with default values
@@ -39,6 +41,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         isPhoneLoginEnabled: true,
         isExamCreationEnabled: true,
         isCampaignCreationEnabled: true,
+        isTopicSuggesterEnabled: true,
       };
       await setDoc(configDocRef, defaultConfig);
       return defaultConfig;
@@ -51,6 +54,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       isPhoneLoginEnabled: true,
       isExamCreationEnabled: true,
       isCampaignCreationEnabled: true,
+      isTopicSuggesterEnabled: true,
     };
   }
 };

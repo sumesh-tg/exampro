@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -570,7 +570,7 @@ export default function Home() {
                     </div>
 
                     <div className="row-span-2 flex flex-col gap-8">
-                        <TopicSuggester />
+                        {appConfig.isTopicSuggesterEnabled && <TopicSuggester />}
                         { user && (
                             <Card className="flex flex-col">
                             <CardHeader>
