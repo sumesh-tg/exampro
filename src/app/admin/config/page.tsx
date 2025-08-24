@@ -167,6 +167,19 @@ export default function AdminConfigPage() {
                   onCheckedChange={(checked) => handleConfigChange('isTopicSuggesterEnabled', checked)}
                 />
               </div>
+               <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="ai-question-generation" className="text-base">Enable AI Question Generation</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow admins to generate exam questions using AI.
+                  </p>
+                </div>
+                <Switch
+                  id="ai-question-generation"
+                  checked={config?.isAiQuestionGenerationEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isAiQuestionGenerationEnabled', checked)}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

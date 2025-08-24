@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { Slider } from './ui/slider';
+import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 
 const step1Schema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -58,6 +59,7 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const questionsContainerRef = useRef<HTMLDivElement>(null);
@@ -77,9 +79,19 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     resolver: zodResolver(step2Schema),
     defaultValues: { topic: '', numQuestions: 5 },
   });
+
+  useEffect(() => {
+    async function fetchConfig() {
+      const config = await getAppConfig();
+      setAppConfig(config);
+    }
+    if (open) {
+      fetchConfig();
+    }
+  }, [open]);
   
   useEffect(() => {
-    if (isEditMode && examToEdit) {
+    if (open && isEditMode && examToEdit) {
         step1Form.reset({
             title: examToEdit.title,
             description: examToEdit.description,
@@ -88,11 +100,11 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
             timeLimit: examToEdit.timeLimit,
         });
         setQuestions(examToEdit.questions);
-        setStep(1); // Start at the details step in edit mode
-    } else {
+        setStep(1); 
+    } else if (open) {
         reset();
     }
-  }, [examToEdit, isEditMode, open, step1Form]);
+  }, [examToEdit, isEditMode, open]);
 
   useEffect(() => {
     if (activeAccordionItem && questionsContainerRef.current) {
@@ -457,41 +469,50 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
         {step === 2 && (
              <Form {...step2Form}>
                 <form onSubmit={step2Form.handleSubmit(handleGenerateQuestions)} className="space-y-4">
-                    <Card className="bg-muted/50">
-                        <CardHeader>
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="h-6 w-6 text-accent" />
-                                <CardTitle>AI Question Generation</CardTitle>
-                            </div>
-                            <CardDescription>Provide a topic and the number of questions you want.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="md:col-span-2">
-                                    <FormField control={step2Form.control} name="topic" render={({ field }) => (
+                    {appConfig?.isAiQuestionGenerationEnabled ? (
+                        <Card className="bg-muted/50">
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="h-6 w-6 text-accent" />
+                                    <CardTitle>AI Question Generation</CardTitle>
+                                </div>
+                                <CardDescription>Provide a topic and the number of questions you want.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="md:col-span-2">
+                                        <FormField control={step2Form.control} name="topic" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Topic</FormLabel>
+                                                <FormControl><Input placeholder="e.g., Black Holes" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                    <FormField control={step2Form.control} name="numQuestions" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Topic</FormLabel>
-                                            <FormControl><Input placeholder="e.g., Black Holes" {...field} /></FormControl>
+                                            <FormLabel>Number of Questions</FormLabel>
+                                            <FormControl><Input type="number" min="1" max="100" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
                                 </div>
-                                <FormField control={step2Form.control} name="numQuestions" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Number of Questions</FormLabel>
-                                        <FormControl><Input type="number" min="1" max="100" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                         <Card className="bg-muted/50">
+                            <CardHeader>
+                                <CardTitle>AI Generation Disabled</CardTitle>
+                                <CardDescription>AI question generation is currently disabled by the super admin. Please add questions manually or by importing a file.</CardDescription>
+                            </CardHeader>
+                         </Card>
+                    )}
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>
                          <Button type="button" variant="secondary" onClick={() => { setQuestions([]); setStep(3); }}>
                             Add Manually
                         </Button>
-                        <Button type="submit" disabled={loading}>
+                        <Button type="submit" disabled={loading || !appConfig?.isAiQuestionGenerationEnabled}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Generate
                         </Button>
@@ -597,7 +618,3 @@ export function CreateExamDialog({ open, onOpenChange, onExamCreated, examToEdit
     </Dialog>
   );
 }
-
-    
-
-    
