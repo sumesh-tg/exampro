@@ -68,6 +68,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     return () => unsubscribe();
   }, []);
+  
+  useEffect(() => {
+      // This effect runs when isSuperAdmin changes
+      if (typeof window !== 'undefined') {
+          sessionStorage.setItem('isSuperAdmin', String(isSuperAdmin));
+      }
+  }, [isSuperAdmin]);
+
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, setSuperAdmin }}>
