@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
+import { getLoginConfig, type LoginConfig } from '@/services/appConfigService';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -41,6 +42,7 @@ function SignInFormComponent() {
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [isClient, setIsClient] = useState(false);
+  const [loginConfig, setLoginConfig] = useState<LoginConfig | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -51,6 +53,12 @@ function SignInFormComponent() {
     if (redirectUrl) {
       sessionStorage.setItem('redirectUrl', redirectUrl);
     }
+    
+    async function fetchLoginConfig() {
+      const config = await getLoginConfig();
+      setLoginConfig(config);
+    }
+    fetchLoginConfig();
   }, [searchParams]);
 
   const handleSuccessfulSignIn = () => {
@@ -138,6 +146,51 @@ function SignInFormComponent() {
     }
   }
 
+  const renderPhoneLogin = () => (
+    <>
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+        </div>
+      </div>
+      <Form {...phoneForm}>
+        <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
+          <FormField
+            control={phoneForm.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <PhoneInput 
+                    {...field}
+                    international
+                    withCountryCallingCode
+                    country="IN"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Send OTP
+          </Button>
+        </form>
+      </Form>
+    </>
+  );
+
+  const renderGoogleLogin = () => (
+     <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
+        <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google
+      </Button>
+  );
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4">
@@ -153,48 +206,22 @@ function SignInFormComponent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isClient && step === 'phone' ? (
-            <div className="space-y-4">
-              <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
-                <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google
-              </Button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                </div>
-              </div>
-              <Form {...phoneForm}>
-                <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
-                  <FormField
-                    control={phoneForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <PhoneInput 
-                            {...field}
-                            international
-                            withCountryCallingCode
-                            country="IN"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Send OTP
-                  </Button>
-                </form>
-              </Form>
+          {!isClient || !loginConfig ? (
+            <div className="flex justify-center items-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-          ) : isClient && step === 'otp' ? (
+          ) : step === 'phone' ? (
+            <div className="space-y-4">
+              {loginConfig.isGoogleLoginEnabled && renderGoogleLogin()}
+              {loginConfig.isGoogleLoginEnabled && loginConfig.isPhoneLoginEnabled && <div className="h-px" />}
+              {loginConfig.isPhoneLoginEnabled && renderPhoneLogin()}
+              {!loginConfig.isGoogleLoginEnabled && !loginConfig.isPhoneLoginEnabled && (
+                <div className="text-center text-muted-foreground">
+                  Sign in is currently disabled. Please contact an administrator.
+                </div>
+              )}
+            </div>
+          ) : step === 'otp' ? (
             <Form {...otpForm}>
               <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
                 <FormField

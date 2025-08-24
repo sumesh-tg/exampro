@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star } from 'lucide-react';
+import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -168,10 +168,12 @@ export default function Home() {
   const handleSignOut = async () => {
     if (isSuperAdmin) {
       setSuperAdmin(false);
+      sessionStorage.removeItem('isSuperAdmin');
+      router.push('/auth/admin/signin');
     } else {
       await signOut(auth);
+      router.push('/auth/signin');
     }
-    router.push('/auth/signin');
   };
 
   const handleDeleteExam = async (id: string) => {
@@ -379,12 +381,18 @@ export default function Home() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
+                <DropdownMenuLabel>Super Admin</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/admin/users">
                     <Users className="mr-2 h-4 w-4" />
                     <span>User Management</span>
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/admin/config">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>App Configuration</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
