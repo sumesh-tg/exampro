@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { RatingDialog } from '@/components/rating-dialog';
 import { cn } from '@/lib/utils';
+import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -75,6 +76,7 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
   const [allExamHistory, setAllExamHistory] = useState<ExamHistory[]>([]);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [examToEdit, setExamToEdit] = useState<Exam | null>(null);
   const [isCreateCampaignOpen, setCreateCampaignOpen] = useState(false);
@@ -155,14 +157,20 @@ export default function Home() {
   }
 
   useEffect(() => {
-    fetchExams();
-    fetchAllExamHistory();
-    if (user) {
-      fetchExamHistory();
+    async function fetchInitialData() {
+        const config = await getAppConfig();
+        setAppConfig(config);
+        
+        fetchExams();
+        fetchAllExamHistory();
+        if (user) {
+          fetchExamHistory();
+        }
+        if (isSuperAdmin) {
+            fetchAdmins();
+        }
     }
-    if (isSuperAdmin) {
-        fetchAdmins();
-    }
+    fetchInitialData();
   }, [user, isSuperAdmin]);
 
   const handleSignOut = async () => {
@@ -261,9 +269,13 @@ export default function Home() {
   }
   
 
-  if (loading) {
+  if (loading || !appConfig) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
+  
+  const canCreateExam = (isAdmin || isSuperAdmin) && appConfig.isExamCreationEnabled;
+  const canCreateCampaign = (isAdmin || isSuperAdmin) && appConfig.isCampaignCreationEnabled;
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -305,22 +317,26 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {(isAdmin || isSuperAdmin) && (
             <>
-              <CreateExamDialog 
-                open={isCreateExamOpen}
-                onOpenChange={(isOpen) => {
-                  setCreateExamOpen(isOpen);
-                  if (!isOpen) setExamToEdit(null);
-                }}
-                onExamCreated={handleExamCreated}
-                examToEdit={examToEdit}
-              />
-              <CreateCampaignDialog
-                open={isCreateCampaignOpen}
-                onOpenChange={setCreateCampaignOpen}
-                onCampaignCreated={handleCampaignCreated}
-                allExams={exams}
-                allAdmins={allAdmins}
-              />
+              {canCreateExam && (
+                <CreateExamDialog 
+                  open={isCreateExamOpen}
+                  onOpenChange={(isOpen) => {
+                    setCreateExamOpen(isOpen);
+                    if (!isOpen) setExamToEdit(null);
+                  }}
+                  onExamCreated={handleExamCreated}
+                  examToEdit={examToEdit}
+                />
+              )}
+              {canCreateCampaign && (
+                  <CreateCampaignDialog
+                    open={isCreateCampaignOpen}
+                    onOpenChange={setCreateCampaignOpen}
+                    onCampaignCreated={handleCampaignCreated}
+                    allExams={exams}
+                    allAdmins={allAdmins}
+                  />
+              )}
               <Button variant="outline" onClick={() => setShareReportOpen(true)}>
                     <FileText className="mr-2 h-4 w-4" />
                     View Share Report

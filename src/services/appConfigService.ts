@@ -2,51 +2,64 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export type LoginConfig = {
+export type AppConfig = {
   isGoogleLoginEnabled: boolean;
   isPhoneLoginEnabled: boolean;
+  isExamCreationEnabled: boolean;
+  isCampaignCreationEnabled: boolean;
 };
 
 const CONFIG_COLLECTION = 'app_config';
 const LOGIN_SETTINGS_DOC = 'login_settings';
 
 // Firestore document reference
-const loginConfigDocRef = doc(db, CONFIG_COLLECTION, LOGIN_SETTINGS_DOC);
+const configDocRef = doc(db, CONFIG_COLLECTION, LOGIN_SETTINGS_DOC);
 
 /**
- * Fetches the login configuration from Firestore.
- * If the config doc doesn't exist, it creates it with default values (both enabled).
- * @returns {Promise<LoginConfig>} The current login configuration.
+ * Fetches the application configuration from Firestore.
+ * If the config doc doesn't exist, it creates it with default values.
+ * @returns {Promise<AppConfig>} The current application configuration.
  */
-export const getLoginConfig = async (): Promise<LoginConfig> => {
+export const getAppConfig = async (): Promise<AppConfig> => {
   try {
-    const docSnap = await getDoc(loginConfigDocRef);
+    const docSnap = await getDoc(configDocRef);
     if (docSnap.exists()) {
-      return docSnap.data() as LoginConfig;
+      // Ensure all fields are present, providing defaults for missing ones
+      const data = docSnap.data();
+      return {
+        isGoogleLoginEnabled: data.isGoogleLoginEnabled ?? true,
+        isPhoneLoginEnabled: data.isPhoneLoginEnabled ?? true,
+        isExamCreationEnabled: data.isExamCreationEnabled ?? true,
+        isCampaignCreationEnabled: data.isCampaignCreationEnabled ?? true,
+      };
     } else {
       // If the document doesn't exist, create it with default values
-      const defaultConfig: LoginConfig = {
+      const defaultConfig: AppConfig = {
         isGoogleLoginEnabled: true,
         isPhoneLoginEnabled: true,
+        isExamCreationEnabled: true,
+        isCampaignCreationEnabled: true,
       };
-      await setDoc(loginConfigDocRef, defaultConfig);
+      await setDoc(configDocRef, defaultConfig);
       return defaultConfig;
     }
   } catch (error) {
-    console.error("Error fetching login config, returning default:", error);
+    console.error("Error fetching app config, returning default:", error);
     // Return default values in case of an error
     return {
       isGoogleLoginEnabled: true,
       isPhoneLoginEnabled: true,
+      isExamCreationEnabled: true,
+      isCampaignCreationEnabled: true,
     };
   }
 };
 
 /**
- * Updates the login configuration in Firestore.
- * @param {Partial<LoginConfig>} configUpdate An object with the settings to update.
+ * Updates the application configuration in Firestore.
+ * @param {Partial<AppConfig>} configUpdate An object with the settings to update.
  * @returns {Promise<void>}
  */
-export const updateLoginConfig = async (configUpdate: Partial<LoginConfig>): Promise<void> => {
-  await setDoc(loginConfigDocRef, configUpdate, { merge: true });
+export const updateAppConfig = async (configUpdate: Partial<AppConfig>): Promise<void> => {
+  await setDoc(configDocRef, configUpdate, { merge: true });
 };

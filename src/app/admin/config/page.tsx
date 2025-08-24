@@ -10,13 +10,13 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { getLoginConfig, updateLoginConfig, type LoginConfig } from '@/services/appConfigService';
+import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminConfigPage() {
   const { isSuperAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [config, setConfig] = useState<LoginConfig | null>(null);
+  const [config, setConfig] = useState<AppConfig | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const { toast } = useToast();
 
@@ -30,7 +30,7 @@ export default function AdminConfigPage() {
     if (isSuperAdmin) {
       const fetchConfig = async () => {
         setLoadingConfig(true);
-        const fetchedConfig = await getLoginConfig();
+        const fetchedConfig = await getAppConfig();
         setConfig(fetchedConfig);
         setLoadingConfig(false);
       };
@@ -38,19 +38,19 @@ export default function AdminConfigPage() {
     }
   }, [isSuperAdmin]);
 
-  const handleConfigChange = async (key: keyof LoginConfig, value: boolean) => {
+  const handleConfigChange = async (key: keyof AppConfig, value: boolean) => {
     if (!config) return;
 
     const newConfig = { ...config, [key]: value };
     setConfig(newConfig); // Optimistic update
 
     try {
-      await updateLoginConfig(newConfig);
-      toast({ title: 'Setting Updated', description: 'Login configuration has been successfully updated.' });
+      await updateAppConfig(newConfig);
+      toast({ title: 'Setting Updated', description: 'App configuration has been successfully updated.' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save the setting.' });
       // Revert on failure
-      const oldConfig = await getLoginConfig();
+      const oldConfig = await getAppConfig();
       setConfig(oldConfig);
     }
   };
@@ -74,40 +74,77 @@ export default function AdminConfigPage() {
         <h1 className="text-xl font-semibold">App Configuration</h1>
       </header>
       <main className="flex-1 p-4 md:p-8">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle>Authentication Settings</CardTitle>
-            <CardDescription>Control the login methods available to users.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="google-login" className="text-base">Google Login</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow users to sign in and sign up using their Google account.
-                </p>
+        <div className="max-w-2xl mx-auto grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Authentication Settings</CardTitle>
+              <CardDescription>Control the login methods available to users.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="google-login" className="text-base">Google Login</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow users to sign in and sign up using their Google account.
+                  </p>
+                </div>
+                <Switch
+                  id="google-login"
+                  checked={config?.isGoogleLoginEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isGoogleLoginEnabled', checked)}
+                />
               </div>
-              <Switch
-                id="google-login"
-                checked={config?.isGoogleLoginEnabled}
-                onCheckedChange={(checked) => handleConfigChange('isGoogleLoginEnabled', checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="phone-login" className="text-base">Phone Number Login</Label>
-                 <p className="text-sm text-muted-foreground">
-                  Allow users to sign in and sign up using their phone number (OTP).
-                </p>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="phone-login" className="text-base">Phone Number Login</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow users to sign in and sign up using their phone number (OTP).
+                  </p>
+                </div>
+                <Switch
+                  id="phone-login"
+                  checked={config?.isPhoneLoginEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isPhoneLoginEnabled', checked)}
+                />
               </div>
-              <Switch
-                id="phone-login"
-                checked={config?.isPhoneLoginEnabled}
-                onCheckedChange={(checked) => handleConfigChange('isPhoneLoginEnabled', checked)}
-              />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Content Creation</CardTitle>
+              <CardDescription>Control whether admins can create new exams and campaigns.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="exam-creation" className="text-base">Allow Exam Creation</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow admin users to create new exams.
+                  </p>
+                </div>
+                <Switch
+                  id="exam-creation"
+                  checked={config?.isExamCreationEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isExamCreationEnabled', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="campaign-creation" className="text-base">Allow Campaign Creation</Label>
+                   <p className="text-sm text-muted-foreground">
+                    Allow admin users to create new campaigns.
+                  </p>
+                </div>
+                <Switch
+                  id="campaign-creation"
+                  checked={config?.isCampaignCreationEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isCampaignCreationEnabled', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );

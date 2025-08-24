@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
-import { getLoginConfig, type LoginConfig } from '@/services/appConfigService';
+import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -42,7 +42,7 @@ function SignInFormComponent() {
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [isClient, setIsClient] = useState(false);
-  const [loginConfig, setLoginConfig] = useState<LoginConfig | null>(null);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -55,8 +55,8 @@ function SignInFormComponent() {
     }
     
     async function fetchLoginConfig() {
-      const config = await getLoginConfig();
-      setLoginConfig(config);
+      const config = await getAppConfig();
+      setAppConfig(config);
     }
     fetchLoginConfig();
   }, [searchParams]);
@@ -206,16 +206,16 @@ function SignInFormComponent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!isClient || !loginConfig ? (
+          {!isClient || !appConfig ? (
             <div className="flex justify-center items-center h-40">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : step === 'phone' ? (
             <div className="space-y-4">
-              {loginConfig.isGoogleLoginEnabled && renderGoogleLogin()}
-              {loginConfig.isGoogleLoginEnabled && loginConfig.isPhoneLoginEnabled && <div className="h-px" />}
-              {loginConfig.isPhoneLoginEnabled && renderPhoneLogin()}
-              {!loginConfig.isGoogleLoginEnabled && !loginConfig.isPhoneLoginEnabled && (
+              {appConfig.isGoogleLoginEnabled && renderGoogleLogin()}
+              {appConfig.isGoogleLoginEnabled && appConfig.isPhoneLoginEnabled && <div className="h-px" />}
+              {appConfig.isPhoneLoginEnabled && renderPhoneLogin()}
+              {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && (
                 <div className="text-center text-muted-foreground">
                   Sign in is currently disabled. Please contact an administrator.
                 </div>
