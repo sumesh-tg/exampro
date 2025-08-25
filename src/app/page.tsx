@@ -366,18 +366,18 @@ export default function Home() {
                   <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {}}>Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
                 {(isAdmin || isSuperAdmin) && (
-                  <>
+                  <DropdownMenuSeparator />
+                )}
+                {isSuperAdmin && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin/users">
                       <Users className="mr-2 h-4 w-4" />
                       <span>User Management</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  </>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

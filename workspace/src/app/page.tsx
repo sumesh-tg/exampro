@@ -71,7 +71,7 @@ declare const Razorpay: any;
 
 export default function Home() {
   useRequireAuth();
-  const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } from useAuth();
+  const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
@@ -366,18 +366,18 @@ export default function Home() {
                   <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {}}>Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
                 {isSuperAdmin && (
                   <>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/admin/users">
                       <Users className="mr-2 h-4 w-4" />
                       <span>User Management</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
