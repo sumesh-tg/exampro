@@ -2,9 +2,10 @@
 'use client';
 
 import { auth, db, functions } from '@/lib/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { getAppConfig } from './appConfigService';
 
 
 export type UserProfile = {
@@ -12,6 +13,7 @@ export type UserProfile = {
   displayName?: string;
   email?: string;
   photoURL?: string;
+  attemptBalance?: number;
 };
 
 // This would be the expected shape of the user data returned from your Cloud Function
@@ -33,9 +35,17 @@ export type AdminUserRecord = {
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>) => {
     const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
-    // Using setDoc with merge: true will create the doc if it doesn't exist,
-    // and update it if it does.
-    await setDoc(userDocRef, data, { merge: true });
+    const docSnap = await getDoc(userDocRef);
+
+    if (!docSnap.exists()) {
+        const config = await getAppConfig();
+        await setDoc(userDocRef, { 
+            ...data, 
+            attemptBalance: config.initialFreeAttempts 
+        }, { merge: true });
+    } else {
+        await setDoc(userDocRef, data, { merge: true });
+    }
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
@@ -55,6 +65,20 @@ const getAuthenticatedUser = (): Promise<User | null> => {
       resolve(user);
     }, reject);
   });
+};
+
+export const decrementAttemptBalance = async (userId: string) => {
+    const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
+    await updateDoc(userDocRef, {
+        attemptBalance: increment(-1)
+    });
+};
+
+export const incrementAttemptBalance = async (userId: string, count: number) => {
+    const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
+    await updateDoc(userDocRef, {
+        attemptBalance: increment(count)
+    });
 };
 
 

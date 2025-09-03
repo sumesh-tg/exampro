@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles } from 'lucide-react';
+import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -45,7 +45,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AllSharedExamsReportDialog } from '@/components/all-shared-exams-report-dialog';
 import { SharedExamReportDialog } from '@/components/shared-exam-report-dialog';
 import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
-import { listUsers, type AdminUserRecord } from '@/services/userService';
+import { listUsers, type AdminUserRecord, getUserProfile, incrementAttemptBalance } from '@/services/userService';
 import { CampaignsList } from '@/components/campaigns-list';
 import { JoinedCampaigns } from '@/components/joined-campaigns';
 import { formatDistanceToNow } from 'date-fns';
@@ -95,6 +95,7 @@ export default function Home() {
   const [selectedHistoryForRating, setSelectedHistoryForRating] = useState<ExamHistory | null>(null);
   const [isRatingDialogOpen, setRatingDialogOpen] = useState(false);
   const [allAdmins, setAllAdmins] = useState<AdminUserRecord[]>([]);
+  const [userProfile, setUserProfile] = useState<{ attemptBalance?: number } | null>(null);
   const { toast } = useToast();
 
   const examsWithRatings = useMemo(() => {
@@ -144,6 +145,13 @@ export default function Home() {
       setExamHistory(history as ExamHistory[]);
     }
   }
+  
+  async function fetchUserProfile() {
+      if (user) {
+          const profile = await getUserProfile(user.uid);
+          setUserProfile(profile);
+      }
+  }
 
   async function fetchAllExamHistory() {
     const allHistory = await getAllExamHistory();
@@ -172,6 +180,7 @@ export default function Home() {
         fetchAllExamHistory();
         if (user) {
           fetchExamHistory();
+          fetchUserProfile();
         }
         if (isSuperAdmin) {
             fetchAdmins();
@@ -226,12 +235,10 @@ export default function Home() {
     setCreateExamOpen(true);
   };
   
-  const hasAttemptedExam = (examId: string) => {
-    return examHistory.some(h => h.examId === examId);
-  }
-  
-  const handlePayment = async (exam: Exam) => {
-    const amount = 10; // Amount in INR
+  const handleRechargePayment = async () => {
+    if (!appConfig || !user) return;
+    
+    const amount = appConfig.rechargeAmount;
     const currency = 'INR';
 
     try {
@@ -246,8 +253,8 @@ export default function Home() {
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             amount: order_amount,
             currency: currency,
-            name: "ExamsPro.in Re-attempt",
-            description: `Payment for re-attempting ${exam.title}`,
+            name: "ExamsPro.in Attempt Recharge",
+            description: `Recharge your account with ${appConfig.attemptsPerRecharge} attempts.`,
             order_id: order_id,
             handler: async function (response: any) {
                 try {
@@ -258,8 +265,9 @@ export default function Home() {
                     });
 
                     if (verifyData.success) {
-                        toast({ title: 'Payment Successful', description: 'Redirecting to your exam...' });
-                        router.push(`/exam/${exam.id}`);
+                        await incrementAttemptBalance(user.uid, appConfig.attemptsPerRecharge);
+                        await fetchUserProfile(); // Refresh user profile to get new balance
+                        toast({ title: 'Payment Successful', description: `${appConfig.attemptsPerRecharge} attempts have been added to your account.` });
                     } else {
                         toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Please contact support.' });
                     }
@@ -273,8 +281,8 @@ export default function Home() {
                 contact: user?.phoneNumber || ""
             },
             notes: {
-                exam_id: exam.id,
-                user_id: user?.uid
+                user_id: user?.uid,
+                recharge_for: `${appConfig.attemptsPerRecharge} attempts`
             },
             theme: {
                 color: "#72A0C1"
@@ -307,14 +315,13 @@ export default function Home() {
     setRatingDialogOpen(false);
   }
 
-
   if (loading || !appConfig) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
   
   const canCreateExam = (isAdmin || isSuperAdmin) && appConfig.isExamCreationEnabled;
   const canCreateCampaign = (isAdmin || isSuperAdmin) && appConfig.isCampaignCreationEnabled;
-
+  const hasAttempts = (userProfile?.attemptBalance ?? 0) > 0;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -407,18 +414,16 @@ export default function Home() {
                 <DropdownMenuItem asChild>
                   <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {}}>Settings</DropdownMenuItem>
-                {(isAdmin || isSuperAdmin) && (
-                  <DropdownMenuSeparator />
-                )}
-                {isSuperAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/users">
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>User Management</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem>
+                    <div className="flex justify-between w-full">
+                       <span>Attempts Left:</span>
+                       <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
+                    </div>
+                </DropdownMenuItem>
+                 <DropdownMenuItem onClick={handleRechargePayment}>
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    <span>Recharge Attempts</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -486,6 +491,17 @@ export default function Home() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 flex-1">
+                            {user && !hasAttempts && (
+                                <div className="text-center p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-700">
+                                    <Wallet className="mx-auto h-12 w-12 text-yellow-500" />
+                                    <h3 className="mt-2 text-lg font-semibold">Out of Attempts</h3>
+                                    <p className="mt-1 text-sm text-muted-foreground">You have no attempts left. Please recharge your account to start a new exam.</p>
+                                    <Button onClick={handleRechargePayment} className="mt-4">
+                                        <RefreshCcw className="mr-2 h-4 w-4" />
+                                        Recharge Now
+                                    </Button>
+                                </div>
+                            )}
                             {filteredExams.length > 0 ? (
                             paginatedExams.map((exam) => (
                             <div
@@ -523,16 +539,9 @@ export default function Home() {
                                 </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                {user && hasAttemptedExam(exam.id) ? (
-                                    <Button variant="secondary" onClick={() => handlePayment(exam)}>
-                                      <RefreshCcw className="mr-2 h-4 w-4" />
-                                      Pay to Re-attempt
+                                    <Button variant="default" size="sm" asChild disabled={!hasAttempts}>
+                                        <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                                     </Button>
-                                ) : (
-                                    <Button variant="default" size="sm" asChild>
-                                    <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                                    </Button>
-                                )}
                                 <AlertDialog>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>

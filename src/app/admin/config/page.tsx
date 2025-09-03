@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -228,6 +228,63 @@ export default function AdminConfigPage() {
                             type="number"
                             value={config.topicSuggesterDailyLimitAdmin}
                             onChange={(e) => handleInputChange('topicSuggesterDailyLimitAdmin', e.target.value)}
+                            className="w-full md:w-24"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Banknote className="h-6 w-6 text-accent" />
+                        <CardTitle>Global Attempt & Payment Settings</CardTitle>
+                    </div>
+                  <CardDescription>Configure the global attempt system for all users.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="initial-attempts" className="text-base">Initial Free Attempts</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Number of free attempts for new users.
+                          </p>
+                        </div>
+                         <Input
+                            id="initial-attempts"
+                            type="number"
+                            value={config.initialFreeAttempts}
+                            onChange={(e) => handleInputChange('initialFreeAttempts', e.target.value)}
+                            className="w-full md:w-24"
+                        />
+                    </div>
+                     <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="recharge-amount" className="text-base">Recharge Amount (INR)</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Cost for a single recharge transaction.
+                          </p>
+                        </div>
+                        <Input
+                            id="recharge-amount"
+                            type="number"
+                            value={config.rechargeAmount}
+                            onChange={(e) => handleInputChange('rechargeAmount', e.target.value)}
+                            className="w-full md:w-24"
+                        />
+                    </div>
+                     <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="attempts-per-recharge" className="text-base">Attempts per Recharge</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Number of attempts a user gets after one recharge.
+                          </p>
+                        </div>
+                        <Input
+                            id="attempts-per-recharge"
+                            type="number"
+                            value={config.attemptsPerRecharge}
+                            onChange={(e) => handleInputChange('attemptsPerRecharge', e.target.value)}
                             className="w-full md:w-24"
                         />
                     </div>

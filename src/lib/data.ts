@@ -65,3 +65,9 @@ export type CampaignDetail = {
     updatedAt: Date;
     updatedBy: string;
 };
+
+export type UserAttempts = {
+    userId: string;
+    attemptsRemaining: number;
+    updatedAt: Date;
+}
