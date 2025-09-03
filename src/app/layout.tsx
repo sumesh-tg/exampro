@@ -8,6 +8,9 @@ import { AuthProvider } from '@/hooks/use-auth';
 export const metadata: Metadata = {
   title: 'ExamsPro.in: Perform Like a Pro',
   description: 'An online exam platform.',
+  icons: {
+    icon: '/images/favicon.ico',
+  },
 };
 
 export default function RootLayout({
