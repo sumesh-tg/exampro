@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -5,13 +6,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { suggestExamTopics } from "@/ai/flows/suggest-topics";
+import { generateExamQuestions } from "@/ai/flows/generate-questions";
+import type { Exam } from "@/lib/data";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2, Sparkles } from "lucide-react";
-import { Badge } from "./ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   interests: z.string().min(2, {
@@ -21,7 +25,10 @@ const formSchema = z.object({
 
 export function TopicSuggester() {
   const [loading, setLoading] = useState(false);
+  const [loadingTopic, setLoadingTopic] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,8 +45,32 @@ export function TopicSuggester() {
       setTopics(result.topics);
     } catch (error) {
       console.error("Failed to suggest topics:", error);
+      toast({ variant: 'destructive', title: "Error", description: "Could not suggest topics." });
     } finally {
       setLoading(false);
+    }
+  }
+
+  const handleTopicClick = async (topic: string) => {
+    setLoadingTopic(topic);
+    try {
+      const result = await generateExamQuestions({ topic: topic, numQuestions: 10 });
+      const newExam: Exam = {
+        id: 'custom',
+        title: `${topic} Exam`,
+        description: `An AI-generated exam about ${topic}.`,
+        questions: result.questions,
+        timeLimit: 10,
+        winPercentage: 50,
+      };
+      
+      sessionStorage.setItem('tempExam', JSON.stringify(newExam));
+      router.push('/exam/custom');
+
+    } catch (error) {
+      console.error('Failed to generate exam:', error);
+      toast({ variant: 'destructive', title: "Error", description: `Could not generate an exam for ${topic}.` });
+      setLoadingTopic(null);
     }
   }
 
@@ -68,7 +99,7 @@ export function TopicSuggester() {
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" disabled={loading || !!loadingTopic} className="w-full">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Suggest Topics
             </Button>
@@ -79,7 +110,16 @@ export function TopicSuggester() {
             <h4 className="font-semibold">Suggested Topics:</h4>
             <div className="mt-2 flex flex-wrap gap-2">
               {topics.map((topic, index) => (
-                <Badge key={index} variant="secondary">{topic}</Badge>
+                <Button 
+                  key={index} 
+                  variant="secondary" 
+                  onClick={() => handleTopicClick(topic)}
+                  disabled={!!loadingTopic}
+                  className="h-auto"
+                >
+                  {loadingTopic === topic && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {topic}
+                </Button>
               ))}
             </div>
           </div>
