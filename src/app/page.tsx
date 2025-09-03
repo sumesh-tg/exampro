@@ -63,6 +63,7 @@ import {
 import { RatingDialog } from '@/components/rating-dialog';
 import { cn } from '@/lib/utils';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
+import axios from 'axios';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -224,38 +225,70 @@ export default function Home() {
     return examHistory.some(h => h.examId === examId);
   }
   
-  const handlePayment = (exam: Exam) => {
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Enter the Key ID generated from the Dashboard
-      amount: "1000", // Amount is in currency subunits. Default currency is INR. Hence, 1000 paise = INR 10.
-      currency: "INR",
-      name: "ExamsPro.in Re-attempt",
-      description: `Payment for re-attempting ${exam.title}`,
-      handler: function (response: any) {
-        router.push(`/exam/${exam.id}`);
-      },
-      prefill: {
-        name: user?.displayName || "Anonymous User",
-        email: user?.email || "",
-        contact: user?.phoneNumber || ""
-      },
-      notes: {
-        exam_id: exam.id,
-        user_id: user?.uid
-      },
-      theme: {
-        color: "#72A0C1"
-      }
-    };
-    const rzp = new Razorpay(options);
-    rzp.on('payment.failed', function (response: any){
+  const handlePayment = async (exam: Exam) => {
+    const amount = 10; // Amount in INR
+    const currency = 'INR';
+
+    try {
+        const { data } = await axios.post('/api/razorpay/create-order', {
+            amount: amount * 100, // Amount in paise
+            currency,
+        });
+
+        const { id: order_id, amount: order_amount } = data;
+        
+        const options = {
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            amount: order_amount,
+            currency: currency,
+            name: "ExamsPro.in Re-attempt",
+            description: `Payment for re-attempting ${exam.title}`,
+            order_id: order_id,
+            handler: async function (response: any) {
+                try {
+                    const { data: verifyData } = await axios.post('/api/razorpay/verify-payment', {
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                    });
+
+                    if (verifyData.success) {
+                        toast({ title: 'Payment Successful', description: 'Redirecting to your exam...' });
+                        router.push(`/exam/${exam.id}`);
+                    } else {
+                        toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Please contact support.' });
+                    }
+                } catch (error) {
+                     toast({ variant: 'destructive', title: 'Payment Verification Error', description: 'Could not verify the payment.' });
+                }
+            },
+            prefill: {
+                name: user?.displayName || "Anonymous User",
+                email: user?.email || "",
+                contact: user?.phoneNumber || ""
+            },
+            notes: {
+                exam_id: exam.id,
+                user_id: user?.uid
+            },
+            theme: {
+                color: "#72A0C1"
+            }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response: any) {
             toast({
-              variant: 'destructive',
-              title: 'Payment Failed',
-              description: response.error.description,
+                variant: 'destructive',
+                title: 'Payment Failed',
+                description: response.error.description,
             });
-    });
-    rzp.open();
+        });
+        rzp.open();
+
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Order Creation Failed', description: 'Could not create a payment order.' });
+    }
   }
 
   const handleOpenRatingDialog = (historyItem: ExamHistory) => {
