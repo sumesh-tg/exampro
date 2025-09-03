@@ -3,6 +3,7 @@ export type Question = {
   questionText: string;
   options: string[];
   correctAnswer: string;
+  tag?: string;
 };
 
 export type Exam = {
@@ -11,6 +12,8 @@ export type Exam = {
   description: string;
   questions: Question[];
   isPremium?: boolean;
+  winPercentage?: number;
+  timeLimit?: number; // in minutes
   createdAt?: Date;
   updatedAt?: Date;
   createdBy?: string;

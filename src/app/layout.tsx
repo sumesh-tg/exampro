@@ -6,7 +6,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 
 
 export const metadata: Metadata = {
-  title: 'ExamsPro.in',
+  title: 'ExamsPro.in: Perform Like a Pro',
   description: 'An online exam platform.',
 };
 

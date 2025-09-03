@@ -24,6 +24,7 @@ const GenerateExamQuestionsOutputSchema = z.object({
       questionText: z.string().describe('The text of the question.'),
       options: z.array(z.string()).length(4).describe('An array of 4 possible answers.'),
       correctAnswer: z.string().describe('The correct answer from the options.'),
+      tag: z.string().describe('A single-word category tag for the question (e.g., "History", "Algebra", "Biology").'),
     })
   ),
 });
@@ -39,7 +40,13 @@ const prompt = ai.definePrompt({
   output: { schema: GenerateExamQuestionsOutputSchema },
   prompt: `You are an expert curriculum developer. Generate {{numQuestions}} multiple-choice questions about the topic: {{topic}}.
   
-  For each question, provide exactly 4 options and clearly indicate the correct answer. Ensure the questions are clear, concise, and accurately test knowledge on the specified topic. Do not include questions that cannot be answered with one of the provided options.`,
+  For each question, provide the following:
+  1. The question text.
+  2. Exactly 4 possible answer options.
+  3. The correct answer from the options.
+  4. A single-word category tag for the question (e.g., "History", "Algebra", "Biology").
+
+  Ensure the questions are clear, concise, and accurately test knowledge on the specified topic. Do not include questions that cannot be answered with one of the provided options.`,
 });
 
 const generateExamQuestionsFlow = ai.defineFlow(

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Exam, ExamHistory } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { addExamHistory } from '@/services/examHistoryService';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Badge } from './ui/badge';
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -32,6 +34,13 @@ function formatTime(seconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+type TagAnalysis = {
+  [tag: string]: {
+    correct: number;
+    total: number;
+  }
+}
+
 export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimit?: number, sharedBy?: string | null }) {
   useRequireAuth();
   const { user } = useAuth();
@@ -40,6 +49,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [tagAnalysis, setTagAnalysis] = useState<TagAnalysis>({});
   const [time, setTime] = useState(timeLimit ?? 0);
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
@@ -54,6 +64,55 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     setShuffledExam({ ...exam, questions: randomizedQuestions });
   }, [exam]);
 
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitted || !shuffledExam) return;
+    
+    let finalScore = 0;
+    const analysis: TagAnalysis = {};
+
+    shuffledExam.questions.forEach((q, index) => {
+      const isCorrect = selectedAnswers[index] === q.correctAnswer;
+      if (isCorrect) {
+        finalScore++;
+      }
+      if (q.tag && q.tag.trim() !== '') {
+        const tag = q.tag;
+        if (!analysis[tag]) {
+          analysis[tag] = { correct: 0, total: 0 };
+        }
+        analysis[tag].total++;
+        if (isCorrect) {
+          analysis[tag].correct++;
+        }
+      }
+    });
+
+    setScore(finalScore);
+    setTagAnalysis(analysis);
+    setIsSubmitted(true);
+
+    if (user) {
+      const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
+        userId: user.uid,
+        examId: shuffledExam.id,
+        examTitle: shuffledExam.title,
+        score: finalScore,
+        totalQuestions: shuffledExam.questions.length,
+        date: new Date().toISOString(),
+        createdBy: user.uid,
+        updatedBy: user.uid,
+      };
+      if (sharedBy) {
+        try {
+            historyEntry.sharedBy = atob(sharedBy);
+        } catch (e) {
+            console.error("Failed to decode sharedBy param:", e);
+        }
+      }
+      await addExamHistory(historyEntry);
+    }
+  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy]);
+  
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (timeLimit) {
@@ -77,7 +136,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isSubmitted, timeLimit]);
+  }, [isSubmitted, timeLimit, handleSubmit]);
   
   useEffect(() => {
     setVisited((prev) => new Set(prev).add(currentQuestionIndex));
@@ -114,40 +173,6 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     });
   };
 
-  const handleSubmit = async () => {
-    if (isSubmitted || !shuffledExam) return;
-    let finalScore = 0;
-    shuffledExam.questions.forEach((q, index) => {
-      if (selectedAnswers[index] === q.correctAnswer) {
-        finalScore++;
-      }
-    });
-    setScore(finalScore);
-    setIsSubmitted(true);
-
-    if (user) {
-      const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
-        userId: user.uid,
-        examId: shuffledExam.id,
-        examTitle: shuffledExam.title,
-        score: finalScore,
-        totalQuestions: shuffledExam.questions.length,
-        date: new Date().toISOString(),
-        createdBy: user.uid,
-        updatedBy: user.uid,
-      };
-      if (sharedBy) {
-        try {
-            // In a real app, you might want to fetch the user's name from their UID
-            historyEntry.sharedBy = atob(sharedBy);
-        } catch (e) {
-            console.error("Failed to decode sharedBy param:", e);
-        }
-      }
-      await addExamHistory(historyEntry);
-    }
-  };
-
   const handleDownloadPdf = async () => {
     const input = resultCardRef.current;
     if (input) {
@@ -166,6 +191,10 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   }
 
   if (isSubmitted) {
+    const winPercentage = shuffledExam.winPercentage || 50;
+    const userPercentage = (score / shuffledExam.questions.length) * 100;
+    const hasPassed = userPercentage >= winPercentage;
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg">
@@ -174,9 +203,17 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             <CardDescription>Here's your result for "{shuffledExam.title}".</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-full bg-primary/10 p-8 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4 border-primary">
+            <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4",
+              hasPassed ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500"
+            )}>
               <p className="text-muted-foreground">You scored</p>
-              <p className="text-5xl font-bold text-primary">{score} / {shuffledExam.questions.length}</p>
+              <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600" : "text-red-600")}>
+                {score} / {shuffledExam.questions.length}
+              </p>
+               <p className="text-lg text-muted-foreground font-semibold">({userPercentage.toFixed(1)}%)</p>
+               <Badge variant={hasPassed ? 'default' : 'destructive'} className="mt-2 text-base">
+                {hasPassed ? 'Pass' : 'Fail'}
+              </Badge>
             </div>
             <div className="flex flex-wrap justify-around text-lg gap-4">
                 <div className="flex items-center gap-2">
@@ -192,7 +229,34 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                     <span>{formatTime(timeLimit ? timeLimit - time : time)}</span>
                 </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-4">
+
+            {Object.keys(tagAnalysis).length > 0 && (
+              <div className="text-left pt-4">
+                <h3 className="text-xl font-semibold mb-2 text-center">Performance Breakdown</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(tagAnalysis).map(([tag, data]) => (
+                      <TableRow key={tag}>
+                        <TableCell className="font-medium">{tag}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={data.correct === data.total ? "default" : "secondary"}>
+                            {data.correct} / {data.total}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Button asChild className="w-full md:w-auto" size="lg">
                 <Link href="/">Back to Home</Link>
               </Button>
@@ -270,9 +334,9 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                     className={cn(
                       'font-bold',
                       {
-                        'bg-primary text-primary-foreground hover:bg-primary/90': currentQuestionIndex === index,
+                        'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex === index,
                         'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-green-400 hover:bg-green-500 text-green-900': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        'bg-primary text-primary-foreground hover:bg-primary/90': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
                         'bg-red-400 hover:bg-red-500 text-red-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
                         'bg-gray-300 hover:bg-gray-400 text-gray-800': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
                       }
@@ -283,8 +347,8 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                 ))}
             </div>
              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Current</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Answered</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Current</div>
+                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Answered</div>
                 <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-red-400"></span> Unanswered</div>
                 <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-orange-400"></span> Marked for Review</div>
                 <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-gray-300"></span> Not Visited</div>
@@ -295,5 +359,3 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     </div>
   );
 }
-
-    
