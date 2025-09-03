@@ -13,12 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, Info, DollarSign } from "lucide-react";
+import { Loader2, Sparkles, Info, RefreshCcw, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { getAppConfig, type AppConfig } from "@/services/appConfigService";
-import { getTopicSuggestionUsage, incrementTopicSuggestionUsage } from "@/services/topicSuggestionService";
 import { useAuth } from "@/hooks/use-auth";
+import { getUserProfile, decrementAttemptBalance, UserProfile, incrementAttemptBalance } from "@/services/userService";
+import { getAppConfig, AppConfig } from "@/services/appConfigService";
+import axios from "axios";
+
+declare const Razorpay: any;
 
 const formSchema = z.object({
   interests: z.string().min(2, {
@@ -30,23 +33,25 @@ export function TopicSuggester() {
   const [loading, setLoading] = useState(false);
   const [loadingTopic, setLoadingTopic] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
-  const [usageCount, setUsageCount] = useState(0);
-  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const router = useRouter();
   const { toast } = useToast();
-  const { user, isAdmin, isSuperAdmin } = useAuth();
+  const { user } = useAuth();
+  
+  const fetchUserProfile = async () => {
+    if (user) {
+        const profile = await getUserProfile(user.uid);
+        setUserProfile(profile);
+    }
+  };
 
   useEffect(() => {
     async function loadInitialData() {
         if (!user) return;
-        
-        const [fetchedConfig, fetchedUsage] = await Promise.all([
-            getAppConfig(),
-            getTopicSuggestionUsage(user.uid)
-        ]);
-
-        setConfig(fetchedConfig);
-        setUsageCount(fetchedUsage);
+        const config = await getAppConfig();
+        setAppConfig(config);
+        fetchUserProfile();
     }
     loadInitialData();
   }, [user]);
@@ -58,22 +63,15 @@ export function TopicSuggester() {
     },
   });
 
-  const checkUsageLimit = () => {
-    if (!user || !config || isSuperAdmin) return false; // No limit for super admin
-
-    const limit = isAdmin ? config.topicSuggesterDailyLimitAdmin : config.topicSuggesterDailyLimitUser;
-    return usageCount >= limit;
-  }
-  
-  const isLimitReached = checkUsageLimit();
+  const hasAttempts = (userProfile?.attemptBalance ?? 0) > 0;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || isLimitReached) {
-        if (isLimitReached) {
+    if (!user || !hasAttempts) {
+        if (!hasAttempts) {
             toast({
                 variant: 'destructive',
-                title: 'Daily Limit Reached',
-                description: 'Please try again tomorrow or pay to continue.',
+                title: 'No Attempts Left',
+                description: 'Please recharge to get topic suggestions.',
             });
         }
         return;
@@ -82,8 +80,8 @@ export function TopicSuggester() {
     setLoading(true);
     setTopics([]);
     try {
-      await incrementTopicSuggestionUsage(user.uid);
-      setUsageCount(prev => prev + 1);
+      await decrementAttemptBalance(user.uid);
+      await fetchUserProfile(); // Refresh profile to show updated balance
       const result = await suggestExamTopics({ interests: values.interests });
       setTopics(result.topics);
     } catch (error) {
@@ -117,13 +115,75 @@ export function TopicSuggester() {
     }
   }
   
-  const handlePayToContinue = () => {
-      // Dummy payment function
-      toast({
-          title: "Payment Gateway",
-          description: "This is where the payment flow would be initiated.",
-      });
+  const handleRechargePayment = async () => {
+    if (!appConfig || !user) return;
+    
+    const amount = appConfig.rechargeAmount;
+    const currency = 'INR';
+
+    try {
+        const { data } = await axios.post('/api/razorpay/create-order', {
+            amount: amount * 100, // Amount in paise
+            currency,
+        });
+
+        const { id: order_id, amount: order_amount } = data;
+        
+        const options = {
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            amount: order_amount,
+            currency: currency,
+            name: "ExamsPro.in Attempt Recharge",
+            description: `Recharge your account with ${appConfig.attemptsPerRecharge} attempts.`,
+            order_id: order_id,
+            handler: async function (response: any) {
+                try {
+                    const { data: verifyData } = await axios.post('/api/razorpay/verify-payment', {
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                    });
+
+                    if (verifyData.success) {
+                        await incrementAttemptBalance(user.uid, appConfig.attemptsPerRecharge);
+                        await fetchUserProfile(); // Refresh user profile to get new balance
+                        toast({ title: 'Payment Successful', description: `${appConfig.attemptsPerRecharge} attempts have been added to your account.` });
+                    } else {
+                        toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Please contact support.' });
+                    }
+                } catch (error) {
+                     toast({ variant: 'destructive', title: 'Payment Verification Error', description: 'Could not verify the payment.' });
+                }
+            },
+            prefill: {
+                name: user?.displayName || "Anonymous User",
+                email: user?.email || "",
+                contact: user?.phoneNumber || ""
+            },
+            notes: {
+                user_id: user?.uid,
+                recharge_for: `${appConfig.attemptsPerRecharge} attempts`
+            },
+            theme: {
+                color: "#72A0C1"
+            }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Payment Failed',
+                description: response.error.description,
+            });
+        });
+        rzp.open();
+
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Order Creation Failed', description: 'Could not create a payment order.' });
+    }
   }
+
 
   return (
     <Card>
@@ -132,16 +192,17 @@ export function TopicSuggester() {
           <Sparkles className="h-6 w-6 text-accent" />
           <CardTitle>Stuck for ideas?</CardTitle>
         </div>
-        <CardDescription>Let AI suggest some exam topics based on your interests.</CardDescription>
+        <CardDescription>Let AI suggest some exam topics based on your interests. This will use 1 attempt.</CardDescription>
       </CardHeader>
       <CardContent>
-        {isLimitReached ? (
-             <div className="text-center space-y-4 p-4 rounded-lg bg-muted">
-                <p className="font-semibold text-destructive">You have reached your daily limit for topic suggestions.</p>
-                <p className="text-muted-foreground">Please try again tomorrow, or pay to get more suggestions now.</p>
-                <Button onClick={handlePayToContinue}>
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Pay to Continue
+        {!hasAttempts ? (
+             <div className="text-center space-y-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-700">
+                <Wallet className="mx-auto h-12 w-12 text-yellow-500" />
+                <h3 className="mt-2 text-lg font-semibold">Out of Attempts</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Please recharge your account to get topic suggestions.</p>
+                <Button onClick={handleRechargePayment} className="mt-4">
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    Recharge Now
                 </Button>
             </div>
         ) : (

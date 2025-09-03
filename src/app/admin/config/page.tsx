@@ -192,48 +192,6 @@ export default function AdminConfigPage() {
             </CardContent>
           </Card>
 
-           <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Wand2 className="h-6 w-6 text-accent" />
-                        <CardTitle>AI Feature Limits</CardTitle>
-                    </div>
-                  <CardDescription>Set daily usage limits for AI features. Super Admins are not affected.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="user-limit" className="text-base">Daily User Limit</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Max "Suggest Topics" clicks per day for a normal user.
-                          </p>
-                        </div>
-                         <Input
-                            id="user-limit"
-                            type="number"
-                            value={config.topicSuggesterDailyLimitUser}
-                            onChange={(e) => handleInputChange('topicSuggesterDailyLimitUser', e.target.value)}
-                            className="w-full md:w-24"
-                        />
-                    </div>
-                     <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="admin-limit" className="text-base">Daily Admin Limit</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Max "Suggest Topics" clicks per day for an admin user.
-                          </p>
-                        </div>
-                        <Input
-                            id="admin-limit"
-                            type="number"
-                            value={config.topicSuggesterDailyLimitAdmin}
-                            onChange={(e) => handleInputChange('topicSuggesterDailyLimitAdmin', e.target.value)}
-                            className="w-full md:w-24"
-                        />
-                    </div>
-                </CardContent>
-            </Card>
-
             <Card>
                 <CardHeader>
                     <div className="flex items-center gap-2">
