@@ -192,18 +192,26 @@ export const resetAttemptBalance = async (userId: string): Promise<{ success: bo
         const config = await getAppConfig();
         const initialBalance = config.initialFreeAttempts;
         const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
+        const adminUser = await getAuthenticatedUser();
         
-        await updateDoc(userDocRef, {
-            attemptBalance: initialBalance
-        });
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userDocRef);
+            if (!userDoc.exists()) {
+                throw new Error("User document does not exist!");
+            }
+            
+            const oldBalance = userDoc.data().attemptBalance ?? 0;
+            const changeAmount = initialBalance - oldBalance;
+            
+            transaction.update(userDocRef, { attemptBalance: initialBalance });
 
-        const user = await getAuthenticatedUser();
-        await logAttemptChange({
-            userId,
-            changeAmount: initialBalance, // This might not be accurate if the user had a negative balance. It's a reset *to* a value.
-            newBalance: initialBalance,
-            reason: 'ADMIN_RESET',
-            context: { adminId: user?.uid }
+            await logAttemptChange({
+                userId,
+                changeAmount: changeAmount,
+                newBalance: initialBalance,
+                reason: 'ADMIN_RESET',
+                context: { adminId: adminUser?.uid }
+            });
         });
 
         return { success: true };
