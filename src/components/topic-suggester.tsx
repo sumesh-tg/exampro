@@ -80,8 +80,6 @@ export function TopicSuggester() {
     setLoading(true);
     setTopics([]);
     try {
-      await decrementAttemptBalance(user.uid);
-      await fetchUserProfile(); // Refresh profile to show updated balance
       const result = await suggestExamTopics({ interests: values.interests });
       setTopics(result.topics);
     } catch (error) {
@@ -93,6 +91,14 @@ export function TopicSuggester() {
   }
 
   const handleTopicClick = async (topic: string) => {
+    if (!hasAttempts) {
+        toast({
+            variant: 'destructive',
+            title: 'No Attempts Left',
+            description: 'Please recharge to generate this exam.',
+        });
+        return;
+    }
     setLoadingTopic(topic);
     try {
       const result = await generateExamQuestions({ topic: topic, numQuestions: 10 });
@@ -192,7 +198,7 @@ export function TopicSuggester() {
           <Sparkles className="h-6 w-6 text-accent" />
           <CardTitle>Stuck for ideas?</CardTitle>
         </div>
-        <CardDescription>Let AI suggest some exam topics based on your interests. This will use 1 attempt.</CardDescription>
+        <CardDescription>Let AI suggest some exam topics based on your interests.</CardDescription>
       </CardHeader>
       <CardContent>
         {!hasAttempts ? (
@@ -238,7 +244,7 @@ export function TopicSuggester() {
                                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Clicking on your desired topic below to start exam</p>
+                                    <p>Clicking on your desired topic below to start exam. This will use 1 attempt.</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
