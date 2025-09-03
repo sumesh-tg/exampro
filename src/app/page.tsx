@@ -660,7 +660,7 @@ export default function Home() {
                                           {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
+                                            <Badge variant={item.status === 'Pass' ? 'default' : item.status === 'Fail' ? 'destructive' : 'secondary'}>{`${item.score}/${item.totalQuestions}`}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             {!isCustomExam(item.examId) && (
