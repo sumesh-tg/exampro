@@ -20,6 +20,7 @@ export type Exam = {
   updatedBy?: string;
   averageRating?: number;
   ratingCount?: number;
+  isGeneratedBySuperAdmin?: boolean;
 };
 
 export type ExamHistory = {
@@ -85,3 +86,5 @@ export type AttemptHistoryLog = {
   };
   createdAt: Date;
 };
+
+    
