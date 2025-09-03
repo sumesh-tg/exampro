@@ -7,11 +7,12 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 export default function AdminConfigPage() {
   const { isSuperAdmin, loading: authLoading } = useAuth();
@@ -38,7 +39,7 @@ export default function AdminConfigPage() {
     }
   }, [isSuperAdmin]);
 
-  const handleConfigChange = async (key: keyof AppConfig, value: boolean) => {
+  const handleConfigChange = async (key: keyof AppConfig, value: boolean | number) => {
     if (!config) return;
 
     const newConfig = { ...config, [key]: value };
@@ -54,8 +55,16 @@ export default function AdminConfigPage() {
       setConfig(oldConfig);
     }
   };
+  
+  const handleInputChange = (key: keyof AppConfig, value: string) => {
+      const numValue = parseInt(value, 10);
+      if (!isNaN(numValue)) {
+          handleConfigChange(key, numValue);
+      }
+  };
 
-  if (authLoading || loadingConfig || !isSuperAdmin) {
+
+  if (authLoading || loadingConfig || !isSuperAdmin || !config) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -90,7 +99,7 @@ export default function AdminConfigPage() {
                 </div>
                 <Switch
                   id="google-login"
-                  checked={config?.isGoogleLoginEnabled}
+                  checked={config.isGoogleLoginEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isGoogleLoginEnabled', checked)}
                 />
               </div>
@@ -103,7 +112,7 @@ export default function AdminConfigPage() {
                 </div>
                 <Switch
                   id="phone-login"
-                  checked={config?.isPhoneLoginEnabled}
+                  checked={config.isPhoneLoginEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isPhoneLoginEnabled', checked)}
                 />
               </div>
@@ -125,7 +134,7 @@ export default function AdminConfigPage() {
                 </div>
                 <Switch
                   id="exam-creation"
-                  checked={config?.isExamCreationEnabled}
+                  checked={config.isExamCreationEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isExamCreationEnabled', checked)}
                 />
               </div>
@@ -138,7 +147,7 @@ export default function AdminConfigPage() {
                 </div>
                 <Switch
                   id="campaign-creation"
-                  checked={config?.isCampaignCreationEnabled}
+                  checked={config.isCampaignCreationEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isCampaignCreationEnabled', checked)}
                 />
               </div>
@@ -163,7 +172,7 @@ export default function AdminConfigPage() {
                 </div>
                 <Switch
                   id="topic-suggester"
-                  checked={config?.isTopicSuggesterEnabled}
+                  checked={config.isTopicSuggesterEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isTopicSuggesterEnabled', checked)}
                 />
               </div>
@@ -176,12 +185,55 @@ export default function AdminConfigPage() {
                 </div>
                 <Switch
                   id="ai-question-generation"
-                  checked={config?.isAiQuestionGenerationEnabled}
+                  checked={config.isAiQuestionGenerationEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isAiQuestionGenerationEnabled', checked)}
                 />
               </div>
             </CardContent>
           </Card>
+
+           <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Wand2 className="h-6 w-6 text-accent" />
+                        <CardTitle>AI Feature Limits</CardTitle>
+                    </div>
+                  <CardDescription>Set daily usage limits for AI features. Super Admins are not affected.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="user-limit" className="text-base">Daily User Limit</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Max "Suggest Topics" clicks per day for a normal user.
+                          </p>
+                        </div>
+                         <Input
+                            id="user-limit"
+                            type="number"
+                            value={config.topicSuggesterDailyLimitUser}
+                            onChange={(e) => handleInputChange('topicSuggesterDailyLimitUser', e.target.value)}
+                            className="w-full md:w-24"
+                        />
+                    </div>
+                     <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="admin-limit" className="text-base">Daily Admin Limit</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Max "Suggest Topics" clicks per day for an admin user.
+                          </p>
+                        </div>
+                        <Input
+                            id="admin-limit"
+                            type="number"
+                            value={config.topicSuggesterDailyLimitAdmin}
+                            onChange={(e) => handleInputChange('topicSuggesterDailyLimitAdmin', e.target.value)}
+                            className="w-full md:w-24"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
         </div>
       </main>
     </div>
