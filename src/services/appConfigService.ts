@@ -9,8 +9,9 @@ export type AppConfig = {
   isCampaignCreationEnabled: boolean;
   isTopicSuggesterEnabled: boolean;
   isAiQuestionGenerationEnabled: boolean;
-  topicSuggesterDailyLimitUser: number;
-  topicSuggesterDailyLimitAdmin: number;
+  initialFreeAttempts: number;
+  rechargeAmount: number;
+  attemptsPerRecharge: number;
 };
 
 const CONFIG_COLLECTION = 'app_config';
@@ -37,8 +38,9 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         isCampaignCreationEnabled: data.isCampaignCreationEnabled ?? true,
         isTopicSuggesterEnabled: data.isTopicSuggesterEnabled ?? true,
         isAiQuestionGenerationEnabled: data.isAiQuestionGenerationEnabled ?? true,
-        topicSuggesterDailyLimitUser: data.topicSuggesterDailyLimitUser ?? 3,
-        topicSuggesterDailyLimitAdmin: data.topicSuggesterDailyLimitAdmin ?? 10,
+        initialFreeAttempts: data.initialFreeAttempts ?? 5,
+        rechargeAmount: data.rechargeAmount ?? 10,
+        attemptsPerRecharge: data.attemptsPerRecharge ?? 5,
       };
     } else {
       // If the document doesn't exist, create it with default values
@@ -49,8 +51,9 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         isCampaignCreationEnabled: true,
         isTopicSuggesterEnabled: true,
         isAiQuestionGenerationEnabled: true,
-        topicSuggesterDailyLimitUser: 3,
-        topicSuggesterDailyLimitAdmin: 10,
+        initialFreeAttempts: 5,
+        rechargeAmount: 10,
+        attemptsPerRecharge: 5,
       };
       await setDoc(configDocRef, defaultConfig);
       return defaultConfig;
@@ -65,8 +68,9 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       isCampaignCreationEnabled: true,
       isTopicSuggesterEnabled: true,
       isAiQuestionGenerationEnabled: true,
-      topicSuggesterDailyLimitUser: 3,
-      topicSuggesterDailyLimitAdmin: 10,
+      initialFreeAttempts: 5,
+      rechargeAmount: 10,
+      attemptsPerRecharge: 5,
     };
   }
 };

@@ -1,4 +1,5 @@
 
+
 export type Question = {
   questionText: string;
   options: string[];
@@ -20,6 +21,7 @@ export type Exam = {
   updatedBy?: string;
   averageRating?: number;
   ratingCount?: number;
+  isGeneratedBySuperAdmin?: boolean;
 };
 
 export type ExamHistory = {
@@ -35,6 +37,8 @@ export type ExamHistory = {
   attemptNumber?: number;
   rating?: number;
   feedback?: string;
+  status?: 'Pass' | 'Fail';
+  winPercentage?: number;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -65,3 +69,35 @@ export type CampaignDetail = {
     updatedAt: Date;
     updatedBy: string;
 };
+
+export type UserAttempts = {
+    userId: string;
+    attemptsRemaining: number;
+    updatedAt: Date;
+}
+
+export type AttemptHistoryLog = {
+  id: string;
+  userId: string;
+  changeAmount: number;
+  newBalance: number;
+  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION';
+  context?: {
+    examId?: string;
+    examTitle?: string;
+    adminId?: string;
+  };
+  createdAt: Date;
+};
+
+export type AdminRequest = {
+  id: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+    

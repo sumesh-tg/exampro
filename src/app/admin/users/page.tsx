@@ -9,15 +9,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, Loader2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Loader2, RefreshCcw } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { updateUserClaims, listUsers, type AdminUserRecord } from '@/services/userService';
+import { updateUserClaims, listUsers, type AdminUserRecord, resetAttemptBalance } from '@/services/userService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -109,6 +110,15 @@ export default function UserManagementPage() {
       await handleUpdateClaims(user.uid, { admin: !isAdmin });
   }
 
+  const handleResetAttempts = async (uid: string) => {
+    const result = await resetAttemptBalance(uid);
+    if (result.success) {
+        toast({ variant: 'success', title: 'Attempts Reset', description: `User's attempts have been reset to the default.` });
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+  }
+
   if (authLoading || !canManageUsers) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
@@ -196,6 +206,36 @@ export default function UserManagementPage() {
                                             <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
                                                 {user.customClaims?.disabled ? 'Enable User' : 'Disable User'}
                                             </DropdownMenuItem>
+                                            
+                                            {isSuperAdmin && (
+                                                <>
+                                                    <DropdownMenuSeparator />
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                <RefreshCcw className="mr-2 h-4 w-4" />
+                                                                Reset Attempts
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This will reset the user's attempt balance to the default initial value. This action cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleResetAttempts(user.uid)}>
+                                                                    Confirm Reset
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                    <DropdownMenuSeparator />
+                                                </>
+                                            )}
+
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <DropdownMenuItem

@@ -48,14 +48,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setUser(user);
-        updateUserProfile(user.uid, {
+        await updateUserProfile(user.uid, {
             uid: user.uid,
             email: user.email ?? '',
             displayName: user.displayName ?? '',
             photoURL: user.photoURL ?? ''
         });
-        
+
+        setUser(user);
         const token = await user.getIdTokenResult();
         setIsAdmin(!!token.claims.admin);
 
