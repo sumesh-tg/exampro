@@ -2,7 +2,8 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -310,7 +311,7 @@ export default function Home() {
             href="/"
             className="flex items-center gap-2 text-lg font-semibold"
           >
-            <GraduationCap className="h-6 w-6" />
+            <Image src="/logo_small.png" alt="QuizWhiz logo" width={32} height={32} data-ai-hint="logo" />
             <span className="text-xl font-bold">QuizWhiz</span>
           </Link>
         </nav>
