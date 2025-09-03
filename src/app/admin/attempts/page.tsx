@@ -127,7 +127,12 @@ export default function AttemptHistoryPage() {
                                         </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <div className="font-medium">{userInfo.displayName}</div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium">{userInfo.displayName || 'Unknown User'}</span>
+                                          <Badge variant={userInfo.customClaims?.admin ? 'secondary' : 'outline'}>
+                                            {userInfo.customClaims?.admin ? 'Admin' : 'User'}
+                                          </Badge>
+                                        </div>
                                         <div className="text-xs text-muted-foreground">{userInfo.email}</div>
                                     </div>
                                 </div>
