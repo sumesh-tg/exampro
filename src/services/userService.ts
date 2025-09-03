@@ -152,3 +152,20 @@ export const updateUserClaims = async (uid: string, claims: FullClaims): Promise
         return { success: false, message: 'An unknown error occurred.' };
     }
 };
+
+export const resetAttemptBalance = async (userId: string): Promise<{ success: boolean, message?: string }> => {
+    try {
+        const config = await getAppConfig();
+        const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
+        await updateDoc(userDocRef, {
+            attemptBalance: config.initialFreeAttempts
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error resetting attempt balance:", error);
+        if (error instanceof Error) {
+            return { success: false, message: error.message };
+        }
+        return { success: false, message: 'An unknown error occurred.' };
+    }
+};
