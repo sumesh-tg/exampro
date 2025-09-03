@@ -94,7 +94,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     if (user) {
       const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
-        examId: shuffledExam.id,
+        examId: shuffledExam.id === 'custom' ? `custom-${Date.now()}` : shuffledExam.id,
         examTitle: shuffledExam.title,
         score: finalScore,
         totalQuestions: shuffledExam.questions.length,
