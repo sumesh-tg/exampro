@@ -64,6 +64,7 @@ import { RatingDialog } from '@/components/rating-dialog';
 import { cn } from '@/lib/utils';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 import axios from 'axios';
+import { SuperAdminHistoryReport } from '@/components/super-admin-history-report';
 
 
 const EXAMS_PAGE_SIZE = 3;
@@ -685,8 +686,14 @@ export default function Home() {
                         )}
                     </div>
                 </div>
-                {(isAdmin || isSuperAdmin) && (
+                {(isAdmin || isSuperAdmin) && !isSuperAdmin && (
                     <CampaignsList />
+                )}
+                {isSuperAdmin && (
+                    <div className="grid grid-cols-1 gap-8">
+                        <CampaignsList />
+                        <SuperAdminHistoryReport />
+                    </div>
                 )}
             </div>
         ) : (
