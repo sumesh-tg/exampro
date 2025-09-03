@@ -269,6 +269,10 @@ export default function Home() {
     setRatingDialogOpen(false);
   }
   
+  const isCustomExam = (examId: string) => {
+    return examId.startsWith('custom-');
+  }
+
 
   if (loading || !appConfig) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -600,22 +604,27 @@ export default function Home() {
                                     paginatedExamHistory.map((item) => (
                                         <TableRow key={item.id}>
                                         <TableCell className="font-medium">
-                                        <div>{item.examTitle}</div>
-                                        {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
+                                          <div className="flex items-center gap-2">
+                                              <span>{item.examTitle}</span>
+                                              {isCustomExam(item.examId) && <Badge variant="outline">Custom</Badge>}
+                                          </div>
+                                          {item.sharedBy && <div className="text-xs text-muted-foreground">Shared by a friend</div>}
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="default">{`${item.score}/${item.totalQuestions}`}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {item.rating ? (
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <span className="text-sm font-bold">{item.rating}</span>
-                                                    <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                                                </div>
-                                            ) : (
-                                                <Button variant="outline" size="sm" onClick={() => handleOpenRatingDialog(item)}>
-                                                    Rate
-                                                </Button>
+                                            {!isCustomExam(item.examId) && (
+                                              item.rating ? (
+                                                  <div className="flex items-center justify-end gap-1">
+                                                      <span className="text-sm font-bold">{item.rating}</span>
+                                                      <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                                                  </div>
+                                              ) : (
+                                                  <Button variant="outline" size="sm" onClick={() => handleOpenRatingDialog(item)}>
+                                                      Rate
+                                                  </Button>
+                                              )
                                             )}
                                         </TableCell>
                                         </TableRow>
