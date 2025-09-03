@@ -266,49 +266,56 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                     <AccordionItem value="item-1">
                         <AccordionTrigger>Review Answers</AccordionTrigger>
                         <AccordionContent>
-                           <div className="space-y-6 text-left mt-4">
+                           <Accordion type="multiple" className="w-full space-y-2 mt-4">
                             {shuffledExam.questions.map((q, index) => {
                                 const userAnswer = selectedAnswers[index];
                                 const isCorrect = userAnswer === q.correctAnswer;
                                 return (
-                                    <div key={index} className="space-y-3 p-4 border rounded-lg">
-                                        <p className="font-semibold">Q{index + 1}: {q.questionText}</p>
-                                        <div className="space-y-2">
-                                            {q.options.map((option, oIndex) => {
-                                                const isUserAnswer = userAnswer === option;
-                                                const isTheCorrectAnswer = q.correctAnswer === option;
-                                                
-                                                return (
-                                                    <div
-                                                        key={oIndex}
-                                                        className={cn(
-                                                            "flex items-center gap-3 rounded-md p-2 text-sm",
-                                                            isTheCorrectAnswer && "bg-green-100 dark:bg-green-900/30",
-                                                            isUserAnswer && !isCorrect && "bg-red-100 dark:bg-red-900/30"
-                                                        )}
-                                                    >
-                                                        {isUserAnswer ? (
-                                                            isCorrect ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />
-                                                        ) : isTheCorrectAnswer ? (
-                                                            <CheckCircle className="h-5 w-5 text-green-600" />
-                                                        ) : (
-                                                            <div className="w-5 h-5"></div>
-                                                        )}
-                                                        <span>{option}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                         {!isCorrect && userAnswer && (
-                                            <p className="text-sm text-muted-foreground">Your answer was <span className="font-semibold text-red-600">{userAnswer}</span>. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
-                                        )}
-                                        {!userAnswer && (
-                                             <p className="text-sm text-muted-foreground">You did not answer this question. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
-                                        )}
-                                    </div>
+                                    <AccordionItem value={`question-${index}`} key={index} className="border rounded-lg">
+                                        <AccordionTrigger className="p-4 hover:no-underline text-left [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
+                                             <div className="flex items-center gap-4 w-full">
+                                                {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 shrink-0" /> : <XCircle className="h-5 w-5 text-red-600 shrink-0" />}
+                                                <span className="font-semibold flex-1">Q{index + 1}: {q.questionText}</span>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="p-4 pt-0">
+                                            <div className="space-y-2">
+                                                {q.options.map((option, oIndex) => {
+                                                    const isUserAnswer = userAnswer === option;
+                                                    const isTheCorrectAnswer = q.correctAnswer === option;
+                                                    
+                                                    return (
+                                                        <div
+                                                            key={oIndex}
+                                                            className={cn(
+                                                                "flex items-center gap-3 rounded-md p-2 text-sm",
+                                                                isTheCorrectAnswer && "bg-green-100 dark:bg-green-900/30",
+                                                                isUserAnswer && !isCorrect && "bg-red-100 dark:bg-red-900/30"
+                                                            )}
+                                                        >
+                                                            {isUserAnswer ? (
+                                                                isCorrect ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />
+                                                            ) : isTheCorrectAnswer ? (
+                                                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                                            ) : (
+                                                                <div className="w-5 h-5 rounded-full border border-muted-foreground"></div>
+                                                            )}
+                                                            <span>{option}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            {!isCorrect && userAnswer && (
+                                                <p className="mt-2 text-sm text-muted-foreground">Your answer was <span className="font-semibold text-red-600">{userAnswer}</span>. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                            )}
+                                            {!userAnswer && (
+                                                <p className="mt-2 text-sm text-muted-foreground">You did not answer this question. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                            )}
+                                        </AccordionContent>
+                                    </AccordionItem>
                                 );
                             })}
-                           </div>
+                           </Accordion>
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
@@ -417,5 +424,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     </div>
   );
 }
+
+    
 
     
