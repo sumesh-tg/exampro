@@ -15,7 +15,7 @@ export default function ExamPage({ params }: { params: { id: string } }) {
   const [examData, setExamData] = useState<Exam | null | undefined>(undefined);
   const searchParams = useSearchParams();
   const sharedByParam = searchParams.get('shared_by');
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isSuperAdmin } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isReady, setIsReady] = useState(false);
@@ -23,7 +23,7 @@ export default function ExamPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function prepareExam() {
       if (authLoading) return;
-      if (!user) {
+      if (!user && !isSuperAdmin) {
         // This case should be handled by useRequireAuth in ExamClient, but as a fallback:
         router.push('/auth/signin');
         return;
@@ -50,19 +50,23 @@ export default function ExamPage({ params }: { params: { id: string } }) {
             return;
         }
 
-        const profile = await getUserProfile(user.uid);
-        if ((profile?.attemptBalance ?? 0) <= 0) {
-            toast({
-                variant: 'destructive',
-                title: 'No Attempts Left',
-                description: 'Please recharge your account to start a new exam.',
-            });
-            router.push('/');
-            return;
-        }
+        // Only decrement if not a super admin, or if it's a super admin taking a non-custom exam
+        const shouldDecrement = !isSuperAdmin;
 
-        // Decrement balance before loading exam
-        await decrementAttemptBalance(user.uid, 'EXAM_ATTEMPT', { examId: exam.id, examTitle: exam.title });
+        if (shouldDecrement && user) {
+          const profile = await getUserProfile(user.uid);
+          if ((profile?.attemptBalance ?? 0) <= 0) {
+              toast({
+                  variant: 'destructive',
+                  title: 'No Attempts Left',
+                  description: 'Please recharge your account to start a new exam.',
+              });
+              router.push('/');
+              return;
+          }
+           // Decrement balance before loading exam
+          await decrementAttemptBalance(user.uid, 'EXAM_ATTEMPT', { examId: exam.id, examTitle: exam.title });
+        }
         
         setExamData(exam);
         setIsReady(true);
@@ -76,7 +80,7 @@ export default function ExamPage({ params }: { params: { id: string } }) {
     }
 
     prepareExam();
-  }, [params.id, authLoading, user, router, toast]);
+  }, [params.id, authLoading, user, isSuperAdmin, router, toast]);
 
 
   if (!isReady || examData === undefined) {

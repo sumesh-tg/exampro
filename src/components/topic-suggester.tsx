@@ -37,7 +37,7 @@ export function TopicSuggester() {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   
   const fetchUserProfile = async () => {
     if (user) {
@@ -48,13 +48,15 @@ export function TopicSuggester() {
 
   useEffect(() => {
     async function loadInitialData() {
-        if (!user) return;
+        if (!user && !isSuperAdmin) return;
         const config = await getAppConfig();
         setAppConfig(config);
-        fetchUserProfile();
+        if (user) {
+            fetchUserProfile();
+        }
     }
     loadInitialData();
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,6 +66,8 @@ export function TopicSuggester() {
   });
 
   const hasAttempts = (userProfile?.attemptBalance ?? 0) > 0;
+  const canUseSuggester = hasAttempts || isSuperAdmin;
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -80,8 +84,8 @@ export function TopicSuggester() {
   }
 
   const handleTopicClick = async (topic: string) => {
-    if (!user) return;
-    if (!hasAttempts) {
+    if (!user && !isSuperAdmin) return;
+    if (!canUseSuggester) {
         toast({
             variant: 'destructive',
             title: 'No Attempts Left',
@@ -192,7 +196,7 @@ export function TopicSuggester() {
         <CardDescription>Let AI suggest some exam topics based on your interests.</CardDescription>
       </CardHeader>
       <CardContent>
-        {!hasAttempts ? (
+        {!canUseSuggester ? (
              <div className="text-center space-y-4 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-700">
                 <Wallet className="mx-auto h-12 w-12 text-yellow-500" />
                 <h3 className="mt-2 text-lg font-semibold">Out of Attempts</h3>
