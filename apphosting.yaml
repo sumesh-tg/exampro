@@ -7,4 +7,4 @@ runConfig:
   maxInstances: 1
   # Time in seconds that a server will wait for a request to respond before returning a 504.
   # The default is 60s.
-  timeoutSeconds: 300
+  timeoutSeconds: 600

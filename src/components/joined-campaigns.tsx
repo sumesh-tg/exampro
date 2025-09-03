@@ -73,7 +73,7 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       amount: "1000", 
       currency: "INR",
-      name: "QuizWhiz Re-attempt",
+      name: "ExamsPro.in Re-attempt",
       description: `Payment for re-attempting ${exam.title}`,
       handler: function (response: any) {
         router.push(`/exam/${exam.id}`);

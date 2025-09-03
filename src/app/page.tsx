@@ -2,7 +2,8 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, History, Upload, GraduationCap, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -228,7 +229,7 @@ export default function Home() {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Enter the Key ID generated from the Dashboard
       amount: "1000", // Amount is in currency subunits. Default currency is INR. Hence, 1000 paise = INR 10.
       currency: "INR",
-      name: "QuizWhiz Re-attempt",
+      name: "ExamsPro.in Re-attempt",
       description: `Payment for re-attempting ${exam.title}`,
       handler: function (response: any) {
         router.push(`/exam/${exam.id}`);
@@ -310,8 +311,11 @@ export default function Home() {
             href="/"
             className="flex items-center gap-2 text-lg font-semibold"
           >
-            <GraduationCap className="h-6 w-6" />
-            <span className="text-xl font-bold">QuizWhiz</span>
+            <Image src="/images/logo_black.png" alt="ExamsPro.in logo" width={92} height={92} data-ai-hint="logo" />
+            <div>
+                <span className="text-xl font-bold">ExamsPro.in</span>
+                <p className="text-xs text-muted-foreground">Perform Like a Pro</p>
+            </div>
           </Link>
         </nav>
         <div className="flex items-center gap-4">
@@ -366,18 +370,18 @@ export default function Home() {
                   <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {}}>Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
                 {(isAdmin || isSuperAdmin) && (
-                  <>
+                  <DropdownMenuSeparator />
+                )}
+                {isSuperAdmin && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin/users">
                       <Users className="mr-2 h-4 w-4" />
                       <span>User Management</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  </>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -645,7 +649,7 @@ export default function Home() {
             </div>
         ) : (
            <div className="flex min-h-screen items-center justify-center">
-             <h2 className="text-2xl font-bold">Welcome to QuizWhiz</h2>
+             <h2 className="text-2xl font-bold">Welcome to ExamsPro.in</h2>
            </div>
         )}
       </main>
