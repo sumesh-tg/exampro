@@ -66,17 +66,6 @@ export function TopicSuggester() {
   const hasAttempts = (userProfile?.attemptBalance ?? 0) > 0;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !hasAttempts) {
-        if (!hasAttempts) {
-            toast({
-                variant: 'destructive',
-                title: 'No Attempts Left',
-                description: 'Please recharge to get topic suggestions.',
-            });
-        }
-        return;
-    }
-
     setLoading(true);
     setTopics([]);
     try {
@@ -91,6 +80,7 @@ export function TopicSuggester() {
   }
 
   const handleTopicClick = async (topic: string) => {
+    if (!user) return;
     if (!hasAttempts) {
         toast({
             variant: 'destructive',
@@ -111,6 +101,7 @@ export function TopicSuggester() {
         winPercentage: 50,
       };
       
+      // The attempt is now only decremented when the user starts the exam from the next page.
       sessionStorage.setItem('tempExam', JSON.stringify(newExam));
       router.push('/exam/custom');
 

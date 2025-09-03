@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet } from 'lucide-react';
+import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet, HistoryIcon } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -146,7 +146,7 @@ export default function Home() {
     }
   }
   
-  async function fetchUserProfile() {
+  const fetchUserProfile = async () => {
       if (user) {
           const profile = await getUserProfile(user.uid);
           setUserProfile(profile);
@@ -458,6 +458,12 @@ export default function Home() {
                     <span>App Configuration</span>
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/attempts">
+                    <HistoryIcon className="mr-2 h-4 w-4" />
+                    <span>Attempt History</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -686,7 +692,7 @@ export default function Home() {
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
                                 <span className="text-sm font-medium">Page {historyCurrentPage} of {historyTotalPages}</span>
-                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={historyCurrentPage === totalPages}>
+                                <Button variant="outline" size="icon" onClick={() => setHistoryCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>
                                 </CardFooter>

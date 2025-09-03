@@ -71,3 +71,17 @@ export type UserAttempts = {
     attemptsRemaining: number;
     updatedAt: Date;
 }
+
+export type AttemptHistoryLog = {
+  id: string;
+  userId: string;
+  changeAmount: number;
+  newBalance: number;
+  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION';
+  context?: {
+    examId?: string;
+    examTitle?: string;
+    adminId?: string;
+  };
+  createdAt: Date;
+};

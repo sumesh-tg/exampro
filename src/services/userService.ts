@@ -2,10 +2,11 @@
 'use client';
 
 import { auth, db, functions } from '@/lib/firebase';
-import { doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, increment, runTransaction } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getAppConfig } from './appConfigService';
+import { logAttemptChange } from './attemptHistoryService';
 
 
 export type UserProfile = {
@@ -35,18 +36,31 @@ export type AdminUserRecord = {
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>) => {
     const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
-    const docSnap = await getDoc(userDocRef);
+    
+    await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(userDocRef);
 
-    if (!docSnap.exists()) {
-        const config = await getAppConfig();
-        await setDoc(userDocRef, { 
-            ...data, 
-            attemptBalance: config.initialFreeAttempts 
-        }, { merge: true });
-    } else {
-        await setDoc(userDocRef, data, { merge: true });
-    }
+        if (!docSnap.exists()) {
+            const config = await getAppConfig();
+            const initialBalance = config.initialFreeAttempts;
+            const profileData = { 
+                ...data, 
+                attemptBalance: initialBalance 
+            };
+            transaction.set(userDocRef, profileData, { merge: true });
+            
+            await logAttemptChange({
+                userId,
+                changeAmount: initialBalance,
+                newBalance: initialBalance,
+                reason: 'INITIAL_ALLOCATION'
+            });
+        } else {
+            transaction.set(userDocRef, data, { merge: true });
+        }
+    });
 };
+
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
     const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
@@ -67,18 +81,38 @@ const getAuthenticatedUser = (): Promise<User | null> => {
   });
 };
 
-export const decrementAttemptBalance = async (userId: string) => {
+export const decrementAttemptBalance = async (userId: string, reason: 'EXAM_ATTEMPT' | 'TOPIC_SUGGESTION', context?: object) => {
     const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
-    await updateDoc(userDocRef, {
-        attemptBalance: increment(-1)
+    
+    const newBalance = await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userDocRef);
+        if (!userDoc.exists()) {
+            throw "User document does not exist!";
+        }
+        const currentBalance = userDoc.data().attemptBalance ?? 0;
+        const updatedBalance = currentBalance - 1;
+        transaction.update(userDocRef, { attemptBalance: increment(-1) });
+        return updatedBalance;
     });
+
+    await logAttemptChange({ userId, changeAmount: -1, newBalance, reason, context });
 };
 
 export const incrementAttemptBalance = async (userId: string, count: number) => {
     const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
-    await updateDoc(userDocRef, {
-        attemptBalance: increment(count)
+    
+    const newBalance = await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userDocRef);
+        if (!userDoc.exists()) {
+            throw "User document does not exist!";
+        }
+        const currentBalance = userDoc.data().attemptBalance ?? 0;
+        const updatedBalance = currentBalance + count;
+        transaction.update(userDocRef, { attemptBalance: increment(count) });
+        return updatedBalance;
     });
+
+    await logAttemptChange({ userId, changeAmount: count, newBalance, reason: 'USER_RECHARGE' });
 };
 
 
@@ -156,10 +190,22 @@ export const updateUserClaims = async (uid: string, claims: FullClaims): Promise
 export const resetAttemptBalance = async (userId: string): Promise<{ success: boolean, message?: string }> => {
     try {
         const config = await getAppConfig();
+        const initialBalance = config.initialFreeAttempts;
         const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
+        
         await updateDoc(userDocRef, {
-            attemptBalance: config.initialFreeAttempts
+            attemptBalance: initialBalance
         });
+
+        const user = await getAuthenticatedUser();
+        await logAttemptChange({
+            userId,
+            changeAmount: initialBalance, // This might not be accurate if the user had a negative balance. It's a reset *to* a value.
+            newBalance: initialBalance,
+            reason: 'ADMIN_RESET',
+            context: { adminId: user?.uid }
+        });
+
         return { success: true };
     } catch (error) {
         console.error("Error resetting attempt balance:", error);

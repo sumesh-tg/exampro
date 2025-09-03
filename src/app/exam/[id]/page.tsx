@@ -30,6 +30,26 @@ export default function ExamPage({ params }: { params: { id: string } }) {
       }
 
       try {
+        let exam: Exam | null | undefined;
+        let isCustom = false;
+        
+        // Check for temp exam in session storage first
+        if (params.id === 'custom') {
+            const tempExamString = sessionStorage.getItem('tempExam');
+            if(tempExamString) {
+                exam = JSON.parse(tempExamString) as Exam;
+                isCustom = true;
+            }
+        } else {
+            exam = await getExam(params.id) as Exam | null;
+        }
+
+        if (!exam) {
+            setExamData(null); // Exam not found
+            setIsReady(true);
+            return;
+        }
+
         const profile = await getUserProfile(user.uid);
         if ((profile?.attemptBalance ?? 0) <= 0) {
             toast({
@@ -42,28 +62,14 @@ export default function ExamPage({ params }: { params: { id: string } }) {
         }
 
         // Decrement balance before loading exam
-        await decrementAttemptBalance(user.uid);
-
-        // Check for temp exam in session storage first
-        if (params.id === 'custom') {
-            const tempExamString = sessionStorage.getItem('tempExam');
-            if(tempExamString) {
-                const tempExam = JSON.parse(tempExamString);
-                setExamData(tempExam as Exam);
-                setIsReady(true);
-                return;
-            }
-        }
-
-        const exam = await getExam(params.id);
-        if (exam) {
-          setExamData(exam as Exam);
-        } else {
-          setExamData(null); // Exam not found
-        }
+        await decrementAttemptBalance(user.uid, 'EXAM_ATTEMPT', { examId: exam.id, examTitle: exam.title });
+        
+        setExamData(exam);
         setIsReady(true);
+
       } catch (error) {
         console.error("Failed to fetch exam or update balance", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not prepare the exam.' });
         setExamData(null);
         setIsReady(true);
       }
