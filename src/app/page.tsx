@@ -72,6 +72,10 @@ const EXAM_HISTORY_PAGE_SIZE = 3;
 
 declare const Razorpay: any;
 
+const isCustomExam = (examId: string) => {
+  return examId.startsWith('custom-');
+}
+
 export default function Home() {
   useRequireAuth();
   const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
@@ -301,10 +305,6 @@ export default function Home() {
     fetchExamHistory();
     fetchAllExamHistory(); // Refetch all history to update average ratings
     setRatingDialogOpen(false);
-  }
-  
-  const isCustomExam = (examId: string) => {
-    return examId.startsWith('custom-');
   }
 
 

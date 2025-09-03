@@ -24,6 +24,10 @@ interface GroupedHistory {
     history: ExamHistory[];
 }
 
+const isCustomExam = (examId: string) => {
+    return examId.startsWith('custom-');
+}
+
 export function SuperAdminHistoryReport() {
   const [groupedHistory, setGroupedHistory] = useState<GroupedHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,7 +162,12 @@ export function SuperAdminHistoryReport() {
                     <TableBody>
                         {paginatedHistory.map(item => (
                             <TableRow key={item.id}>
-                                <TableCell className="font-medium">{item.examTitle}</TableCell>
+                                <TableCell className="font-medium">
+                                    <div className="flex items-center gap-2">
+                                        <span>{item.examTitle}</span>
+                                        {isCustomExam(item.examId) && <Badge variant="outline">Custom</Badge>}
+                                    </div>
+                                </TableCell>
                                 <TableCell>
                                     <Badge>{`${item.score}/${item.totalQuestions}`}</Badge>
                                 </TableCell>
