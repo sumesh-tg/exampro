@@ -311,7 +311,7 @@ export default function Home() {
             href="/"
             className="flex items-center gap-2 text-lg font-semibold"
           >
-            <Image src="/images/logo_small.png" alt="ExamsPro.in logo" width={32} height={32} data-ai-hint="logo" />
+            <Image src="/images/logo_black.png" alt="ExamsPro.in logo" width={32} height={32} data-ai-hint="logo" />
             <div>
                 <span className="text-xl font-bold">ExamsPro.in</span>
                 <p className="text-xs text-muted-foreground">Perform Like a Pro</p>
