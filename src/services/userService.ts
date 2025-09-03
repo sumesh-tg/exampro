@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { auth, db, functions } from '@/lib/firebase';
@@ -210,7 +211,7 @@ export const resetAttemptBalance = async (userId: string): Promise<{ success: bo
                 changeAmount: changeAmount,
                 newBalance: initialBalance,
                 reason: 'ADMIN_RESET',
-                context: { adminId: adminUser?.uid }
+                context: { adminId: adminUser?.uid || 'System/SuperAdmin' }
             });
         });
 
