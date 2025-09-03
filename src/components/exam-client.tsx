@@ -93,6 +93,10 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     setIsSubmitted(true);
 
     if (user) {
+      const winPercentage = shuffledExam.winPercentage || 50;
+      const userPercentage = (finalScore / shuffledExam.questions.length) * 100;
+      const hasPassed = userPercentage >= winPercentage;
+
       const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
         examId: shuffledExam.id.startsWith('custom-') ? `custom-${Date.now()}` : shuffledExam.id,
@@ -102,7 +106,10 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         date: new Date().toISOString(),
         createdBy: user.uid,
         updatedBy: user.uid,
+        status: hasPassed ? 'Pass' : 'Fail',
+        winPercentage: winPercentage,
       };
+
       if (sharedBy) {
         try {
             historyEntry.sharedBy = atob(sharedBy);
