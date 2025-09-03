@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 const formSchema = z.object({
   interests: z.string().min(2, {
@@ -107,7 +108,19 @@ export function TopicSuggester() {
         </Form>
         {topics.length > 0 && (
           <div className="mt-6">
-            <h4 className="font-semibold">Suggested Topics:</h4>
+             <div className="flex items-center gap-2">
+                <h4 className="font-semibold">Suggested Exams:</h4>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Clicking on your desired topic below to start exam</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {topics.map((topic, index) => (
                 <Button 
