@@ -4,13 +4,13 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRequireAuth } from '@/hooks/use-auth';
+import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, User, Camera } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Camera, Building } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { auth, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { updateUserProfile } from '@/services/userService';
-
+import { createAdminRequest, getAdminRequestForUser, type AdminRequest } from '@/services/adminRequestService';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
@@ -81,7 +81,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
 }
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useRequireAuth();
+  const { user, isAdmin, loading: authLoading } = useRequireAuth();
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -90,6 +90,7 @@ export default function ProfilePage() {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [isCropModalOpen, setCropModalOpen] = useState(false);
+  const [adminRequest, setAdminRequest] = useState<AdminRequest | null | 'loading'>('loading');
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,8 +106,13 @@ export default function ProfilePage() {
       form.reset({
         displayName: user.displayName ?? '',
       });
+      if (!isAdmin) {
+        getAdminRequestForUser(user.uid).then(setAdminRequest);
+      } else {
+        setAdminRequest(null); // Admins don't need to see this
+      }
     }
-  }, [user, form]);
+  }, [user, form, isAdmin]);
 
   async function onUpdateDisplayName(values: z.infer<typeof profileSchema>) {
     if (!user) return;
@@ -171,7 +177,24 @@ export default function ProfilePage() {
         setLoading(false);
     }
   }
-
+  
+  const handleRequestAdmin = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      await createAdminRequest({
+        userId: user.uid,
+        displayName: user.displayName || 'Unnamed User',
+        email: user.email || 'No email',
+      });
+      toast({ title: 'Request Sent', description: 'Your request to become an admin has been sent for review.' });
+      setAdminRequest({ status: 'pending' } as AdminRequest); // Optimistic update
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Request Failed', description: error.message });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   if (authLoading || !user) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -215,59 +238,87 @@ export default function ProfilePage() {
           </Button>
           <h1 className="text-xl font-semibold">Edit Profile</h1>
         </header>
-        <main className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <CardTitle>Your Profile</CardTitle>
-              <CardDescription>Update your display name and profile picture.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-               <div className="flex items-center gap-6">
-                    <div className="relative group">
-                        <Avatar className="h-24 w-24">
-                            <AvatarImage src={user.photoURL || ''} alt="user avatar" />
-                            <AvatarFallback>
-                                <User size={40} />
-                            </AvatarFallback>
-                        </Avatar>
-                        <Button 
-                            variant="outline"
-                            size="icon"
-                            className="absolute bottom-0 right-0 rounded-full group-hover:bg-primary group-hover:text-primary-foreground"
-                            onClick={() => fileInputRef.current?.click()}>
-                            <Camera className="h-5 w-5"/>
-                        </Button>
-                        <input type="file" ref={fileInputRef} onChange={onSelectFile} accept="image/*" className="hidden" />
+        <main className="flex-1 items-start justify-center p-4 md:pt-10">
+          <div className="mx-auto max-w-2xl grid gap-6">
+            <Card>
+                <CardHeader>
+                <CardTitle>Your Profile</CardTitle>
+                <CardDescription>Update your display name and profile picture.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                <div className="flex items-center gap-6">
+                        <div className="relative group">
+                            <Avatar className="h-24 w-24">
+                                <AvatarImage src={user.photoURL || ''} alt="user avatar" />
+                                <AvatarFallback>
+                                    <User size={40} />
+                                </AvatarFallback>
+                            </Avatar>
+                            <Button 
+                                variant="outline"
+                                size="icon"
+                                className="absolute bottom-0 right-0 rounded-full group-hover:bg-primary group-hover:text-primary-foreground"
+                                onClick={() => fileInputRef.current?.click()}>
+                                <Camera className="h-5 w-5"/>
+                            </Button>
+                            <input type="file" ref={fileInputRef} onChange={onSelectFile} accept="image/*" className="hidden" />
+                        </div>
+                        <div className="grid gap-2">
+                            <h2 className="text-2xl font-bold">{user.displayName || 'Anonymous User'}</h2>
+                            <p className="text-muted-foreground">{user.email || 'No email associated'}</p>
+                        </div>
                     </div>
-                    <div className="grid gap-2">
-                        <h2 className="text-2xl font-bold">{user.displayName || 'Anonymous User'}</h2>
-                        <p className="text-muted-foreground">{user.email || 'No email associated'}</p>
-                    </div>
-                </div>
 
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onUpdateDisplayName)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Display Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Name
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onUpdateDisplayName)} className="space-y-6">
+                    <FormField
+                        control={form.control}
+                        name="displayName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Display Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Your Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <Button type="submit" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Name
+                    </Button>
+                    </form>
+                </Form>
+                </CardContent>
+            </Card>
+
+            {!isAdmin && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Organization Account</CardTitle>
+                        <CardDescription>Request to upgrade your account to an organization account to create and manage exams.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {adminRequest === 'loading' ? (
+                            <div className="flex items-center justify-center h-10">
+                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : adminRequest?.status === 'pending' ? (
+                            <p className="text-sm text-yellow-600 bg-yellow-100 p-3 rounded-md">Your request is pending approval.</p>
+                        ) : adminRequest?.status === 'approved' ? (
+                            <p className="text-sm text-green-600 bg-green-100 p-3 rounded-md">Your request has been approved. You are now an admin.</p>
+                        ) : (
+                            <Button onClick={handleRequestAdmin} disabled={loading}>
+                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                <Building className="mr-2 h-4 w-4" />
+                                Request Organization Account
+                            </Button>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+          </div>
         </main>
       </div>
     </>

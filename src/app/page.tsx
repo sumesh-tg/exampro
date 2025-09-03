@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet, HistoryIcon } from 'lucide-react';
+import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet, HistoryIcon, Send } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -458,6 +458,12 @@ export default function Home() {
                     <span>App Configuration</span>
                   </Link>
                 </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/admin/requests">
+                    <Send className="mr-2 h-4 w-4" />
+                    <span>Admin Requests</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/admin/attempts">
                     <HistoryIcon className="mr-2 h-4 w-4" />
@@ -497,7 +503,7 @@ export default function Home() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 flex-1">
-                            {user && !hasAttempts && (
+                            {user && !hasAttempts && !isSuperAdmin && (
                                 <div className="text-center p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-700">
                                     <Wallet className="mx-auto h-12 w-12 text-yellow-500" />
                                     <h3 className="mt-2 text-lg font-semibold">Out of Attempts</h3>
@@ -545,7 +551,7 @@ export default function Home() {
                                 </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="default" size="sm" asChild disabled={!hasAttempts}>
+                                    <Button variant="default" size="sm" asChild disabled={!hasAttempts && !isSuperAdmin}>
                                         <Link href={`/exam/${exam.id}`}>Start Exam</Link>
                                     </Button>
                                 <AlertDialog>

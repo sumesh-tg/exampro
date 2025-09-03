@@ -1,4 +1,5 @@
 
+
 export type Question = {
   questionText: string;
   options: string[];
@@ -87,6 +88,16 @@ export type AttemptHistoryLog = {
     adminId?: string;
   };
   createdAt: Date;
+};
+
+export type AdminRequest = {
+  id: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Date;
+  updatedAt: Date;
 };
 
     
