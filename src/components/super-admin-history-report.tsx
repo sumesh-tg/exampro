@@ -17,6 +17,7 @@ import { Badge } from './ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 
 const USERS_PAGE_SIZE = 5;
+const HISTORY_PAGE_SIZE = 5;
 
 interface GroupedHistory {
     user: AdminUserRecord;
@@ -27,6 +28,7 @@ export function SuperAdminHistoryReport() {
   const [groupedHistory, setGroupedHistory] = useState<GroupedHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [historyCurrentPages, setHistoryCurrentPages] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -80,6 +82,13 @@ export function SuperAdminHistoryReport() {
 
     fetchData();
   }, [toast]);
+  
+  const handleHistoryPageChange = (userId: string, newPage: number) => {
+    setHistoryCurrentPages(prev => ({
+        ...prev,
+        [userId]: newPage
+    }));
+  };
 
   const totalPages = Math.ceil(groupedHistory.length / USERS_PAGE_SIZE);
   const paginatedUsers = groupedHistory.slice(
@@ -105,7 +114,15 @@ export function SuperAdminHistoryReport() {
           </div>
         ) : paginatedUsers.length > 0 ? (
           <Accordion type="single" collapsible className="w-full">
-            {paginatedUsers.map(({ user, history }) => (
+            {paginatedUsers.map(({ user, history }) => {
+              const historyCurrentPage = historyCurrentPages[user.uid] || 1;
+              const historyTotalPages = Math.ceil(history.length / HISTORY_PAGE_SIZE);
+              const paginatedHistory = history.slice(
+                (historyCurrentPage - 1) * HISTORY_PAGE_SIZE,
+                historyCurrentPage * HISTORY_PAGE_SIZE
+              );
+              
+              return (
               <AccordionItem value={user.uid} key={user.uid}>
                 <AccordionTrigger>
                   <div className="flex items-center gap-4 w-full">
@@ -139,7 +156,7 @@ export function SuperAdminHistoryReport() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {history.map(item => (
+                        {paginatedHistory.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.examTitle}</TableCell>
                                 <TableCell>
@@ -170,9 +187,34 @@ export function SuperAdminHistoryReport() {
                         ))}
                     </TableBody>
                   </Table>
+                  {historyTotalPages > 1 && (
+                     <div className="flex items-center justify-end gap-2 pt-4">
+                        <span className="text-sm text-muted-foreground">
+                            Page {historyCurrentPage} of {historyTotalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleHistoryPageChange(user.uid, historyCurrentPage - 1)}
+                            disabled={historyCurrentPage === 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleHistoryPageChange(user.uid, historyCurrentPage + 1)}
+                            disabled={historyCurrentPage === historyTotalPages}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
-            ))}
+            )})}
           </Accordion>
         ) : (
           <div className="text-center text-muted-foreground py-10">
