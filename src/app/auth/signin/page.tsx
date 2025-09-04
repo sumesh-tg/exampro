@@ -64,7 +64,7 @@ function SignInFormComponent() {
   const handleSuccessfulSignIn = () => {
     const redirectUrl = sessionStorage.getItem('redirectUrl');
     sessionStorage.removeItem('redirectUrl');
-    router.push(redirectUrl || '/');
+    router.push(redirectUrl || '/auth/setup');
   };
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
@@ -263,3 +263,5 @@ export default function SignInPage() {
     </Suspense>
   )
 }
+
+    

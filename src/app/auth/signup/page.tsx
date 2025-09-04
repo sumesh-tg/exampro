@@ -62,6 +62,10 @@ export default function SignUpPage() {
     }
     fetchLoginConfig();
   }, []);
+  
+  const handleSuccessfulSignUp = () => {
+    router.push('/auth/setup');
+  };
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -113,7 +117,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       await window.confirmationResult.confirm(values.otp);
-      router.push('/');
+      handleSuccessfulSignUp();
     } catch (error: any) {
        toast({
         variant: 'destructive',
@@ -130,7 +134,7 @@ export default function SignUpPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push('/');
+      handleSuccessfulSignUp();
     } catch (error: any) {
       toast({
         variant: 'destructive',
