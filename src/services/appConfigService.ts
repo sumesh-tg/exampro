@@ -14,6 +14,8 @@ export type AppConfig = {
   attemptsPerRecharge: number;
   isOrgRequestPaymentEnabled: boolean;
   orgRequestFee: number;
+  isCommissionEnabled: boolean;
+  commissionRatePercentage: number;
 };
 
 const CONFIG_COLLECTION = 'app_config';
@@ -45,6 +47,8 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         attemptsPerRecharge: data.attemptsPerRecharge ?? 5,
         isOrgRequestPaymentEnabled: data.isOrgRequestPaymentEnabled ?? false,
         orgRequestFee: data.orgRequestFee ?? 100,
+        isCommissionEnabled: data.isCommissionEnabled ?? false,
+        commissionRatePercentage: data.commissionRatePercentage ?? 5,
       };
     } else {
       // If the document doesn't exist, create it with default values
@@ -60,6 +64,8 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         attemptsPerRecharge: 5,
         isOrgRequestPaymentEnabled: false,
         orgRequestFee: 100,
+        isCommissionEnabled: false,
+        commissionRatePercentage: 5,
       };
       await setDoc(configDocRef, defaultConfig);
       return defaultConfig;
@@ -79,6 +85,8 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       attemptsPerRecharge: 5,
       isOrgRequestPaymentEnabled: false,
       orgRequestFee: 100,
+      isCommissionEnabled: false,
+      commissionRatePercentage: 5,
     };
   }
 };

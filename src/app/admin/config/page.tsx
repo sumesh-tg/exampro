@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building, Percent } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -285,6 +285,47 @@ export default function AdminConfigPage() {
                             onChange={(e) => handleInputChange('orgRequestFee', e.target.value)}
                             className="w-full md:w-24"
                             disabled={!config.isOrgRequestPaymentEnabled}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Percent className="h-6 w-6 text-accent" />
+                        <CardTitle>Commissions</CardTitle>
+                    </div>
+                  <CardDescription>Configure the commission system for campaign owners.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enable-commission" className="text-base">Enable Commissions</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Pay admins a commission for paid attempts in their campaigns.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enable-commission"
+                            checked={config.isCommissionEnabled}
+                            onCheckedChange={(checked) => handleConfigChange('isCommissionEnabled', checked)}
+                        />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="commission-rate" className="text-base">Commission Rate (%)</Label>
+                          <p className="text-sm text-muted-foreground">
+                            The percentage of a paid attempt that goes to the admin.
+                          </p>
+                        </div>
+                        <Input
+                            id="commission-rate"
+                            type="number"
+                            value={config.commissionRatePercentage}
+                            onChange={(e) => handleInputChange('commissionRatePercentage', e.target.value)}
+                            className="w-full md:w-24"
+                            disabled={!config.isCommissionEnabled}
                         />
                     </div>
                 </CardContent>

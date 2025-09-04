@@ -101,4 +101,18 @@ export type AdminRequest = {
   updatedAt: Date;
 };
 
+export type Transaction = {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  transactionType: 'PAID_EXAM_ATTEMPT';
+  campaignId: string;
+  examId: string;
+  adminOwnerId: string;
+  commissionRate: number; // The commission rate at the time of transaction
+  razorpayPaymentId: string;
+  createdAt: Date;
+};
+
     

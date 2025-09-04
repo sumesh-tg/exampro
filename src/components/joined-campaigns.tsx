@@ -15,6 +15,8 @@ import { Button } from './ui/button';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { getAppConfig, type AppConfig } from '@/services/appConfigService';
+import { logTransaction } from '@/services/transactionService';
 
 declare const Razorpay: any;
 
@@ -30,6 +32,7 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
   const { toast } = useToast();
   const [joinedCampaigns, setJoinedCampaigns] = useState<CampaignDetail[]>([]);
   const [examHistory, setExamHistory] = useState<ExamHistory[]>([]);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -44,10 +47,12 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
       if (!user) return;
       setLoading(true);
       try {
-        const [userCampaigns, history] = await Promise.all([
+        const [userCampaigns, history, config] = await Promise.all([
             getUserCampaigns(user.uid),
-            getExamHistory(user.uid)
+            getExamHistory(user.uid),
+            getAppConfig()
         ]);
+        setAppConfig(config);
 
         const campaignIds = userCampaigns.map(uc => (uc as any).campaignId);
         
@@ -67,15 +72,31 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
     fetchData();
   }, [user]);
 
-  const handlePayment = (exam: Exam) => {
-    if (!user) return;
+  const handlePayment = (exam: Exam, campaign: CampaignDetail) => {
+    if (!user || !appConfig) return;
+
+    const amountInPaise = 1000; // Example: 10 INR
+
     const options = {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: "1000", 
+      amount: amountInPaise, 
       currency: "INR",
       name: "ExamsPro.in Re-attempt",
       description: `Payment for re-attempting ${exam.title}`,
-      handler: function (response: any) {
+      handler: async function (response: any) {
+        if (appConfig.isCommissionEnabled) {
+          await logTransaction({
+            userId: user.uid,
+            amount: amountInPaise / 100,
+            currency: "INR",
+            transactionType: 'PAID_EXAM_ATTEMPT',
+            campaignId: campaign.id,
+            examId: exam.id,
+            adminOwnerId: campaign.createdBy,
+            commissionRate: appConfig.commissionRatePercentage,
+            razorpayPaymentId: response.razorpay_payment_id,
+          });
+        }
         router.push(`/exam/${exam.id}`);
       },
       prefill: {
@@ -85,7 +106,9 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
       },
       notes: {
         exam_id: exam.id,
-        user_id: user.uid
+        user_id: user.uid,
+        campaign_id: campaign.id,
+        admin_owner_id: campaign.createdBy,
       },
       theme: {
         color: "#72A0C1"
@@ -174,12 +197,12 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
                                     <p className="text-sm text-muted-foreground">{exam.description}</p>
                                 </div>
                                 {shouldPay && attempts > 0 ? (
-                                    <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                    <Button variant="secondary" onClick={() => handlePayment(exam, campaign)}>
                                       <RefreshCcw className="mr-2 h-4 w-4" />
                                       Pay to Re-attempt
                                     </Button>
                                 ) : shouldPay && attempts === 0 ? (
-                                     <Button variant="secondary" onClick={() => handlePayment(exam)}>
+                                     <Button variant="secondary" onClick={() => handlePayment(exam, campaign)}>
                                       <RefreshCcw className="mr-2 h-4 w-4" />
                                       Pay to Attempt
                                     </Button>
