@@ -116,9 +116,7 @@ export default function ProfilePage() {
         setAppConfig(config);
         if (user && !isAdmin) {
           const request = await getAdminRequestForUser(user.uid);
-          if (request?.status === 'pending') {
-            setAdminRequest(request);
-          }
+          setAdminRequest(request);
         }
         setRequestStatusLoading(false);
     }
@@ -414,5 +412,3 @@ export default function ProfilePage() {
     </>
   );
 }
-
-    
