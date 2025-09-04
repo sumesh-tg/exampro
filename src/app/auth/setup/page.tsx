@@ -7,14 +7,17 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 export default function AuthSetupPage() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
-      router.replace('/');
+    // Wait until the loading is complete and we have a user object
+    if (!loading && user) {
+      const redirectUrl = sessionStorage.getItem('redirectUrl');
+      sessionStorage.removeItem('redirectUrl');
+      router.replace(redirectUrl || '/');
     }
-  }, [loading, router]);
+  }, [loading, user, router]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4">
@@ -26,5 +29,3 @@ export default function AuthSetupPage() {
     </div>
   );
 }
-
-    
