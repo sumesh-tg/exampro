@@ -17,6 +17,7 @@ import { useAuth, useRequireAuth } from '@/hooks/use-auth';
 import { addExamHistory } from '@/services/examHistoryService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -43,7 +44,7 @@ type TagAnalysis = {
 
 export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimit?: number, sharedBy?: string | null }) {
   useRequireAuth();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const [shuffledExam, setShuffledExam] = useState<Exam | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
@@ -92,16 +93,23 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     setIsSubmitted(true);
 
     if (user) {
+      const winPercentage = shuffledExam.winPercentage || 50;
+      const userPercentage = (finalScore / shuffledExam.questions.length) * 100;
+      const hasPassed = userPercentage >= winPercentage;
+
       const historyEntry: Omit<ExamHistory, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
-        examId: shuffledExam.id === 'custom' ? `custom-${Date.now()}` : shuffledExam.id,
+        examId: shuffledExam.id.startsWith('custom-') ? `custom-${Date.now()}` : shuffledExam.id,
         examTitle: shuffledExam.title,
         score: finalScore,
         totalQuestions: shuffledExam.questions.length,
         date: new Date().toISOString(),
         createdBy: user.uid,
         updatedBy: user.uid,
+        status: hasPassed ? 'Pass' : 'Fail',
+        winPercentage: winPercentage,
       };
+
       if (sharedBy) {
         try {
             historyEntry.sharedBy = atob(sharedBy);
@@ -109,9 +117,13 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             console.error("Failed to decode sharedBy param:", e);
         }
       }
-      await addExamHistory(historyEntry);
+      if (exam.isGeneratedBySuperAdmin && isSuperAdmin) {
+        // Do not add history for super admin generated exams
+      } else {
+        await addExamHistory(historyEntry);
+      }
     }
-  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy]);
+  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -255,6 +267,66 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                 </Table>
               </div>
             )}
+            
+            <div className="pt-4">
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger>Review Answers</AccordionTrigger>
+                        <AccordionContent>
+                           <Accordion type="multiple" className="w-full space-y-2 mt-4">
+                            {shuffledExam.questions.map((q, index) => {
+                                const userAnswer = selectedAnswers[index];
+                                const isCorrect = userAnswer === q.correctAnswer;
+                                return (
+                                    <AccordionItem value={`question-${index}`} key={index} className="border rounded-lg">
+                                        <AccordionTrigger className="p-4 hover:no-underline text-left [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
+                                             <div className="flex items-center gap-4 w-full">
+                                                {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 shrink-0" /> : <XCircle className="h-5 w-5 text-red-600 shrink-0" />}
+                                                <span className="font-semibold flex-1">Q{index + 1}: {q.questionText}</span>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="p-4 pt-0">
+                                            <div className="space-y-2">
+                                                {q.options.map((option, oIndex) => {
+                                                    const isUserAnswer = userAnswer === option;
+                                                    const isTheCorrectAnswer = q.correctAnswer === option;
+                                                    
+                                                    return (
+                                                        <div
+                                                            key={oIndex}
+                                                            className={cn(
+                                                                "flex items-center gap-3 rounded-md p-2 text-sm",
+                                                                isTheCorrectAnswer && "bg-green-100 dark:bg-green-900/30",
+                                                                isUserAnswer && !isCorrect && "bg-red-100 dark:bg-red-900/30"
+                                                            )}
+                                                        >
+                                                            {isUserAnswer ? (
+                                                                isCorrect ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />
+                                                            ) : isTheCorrectAnswer ? (
+                                                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                                            ) : (
+                                                                <div className="w-5 h-5 rounded-full border border-muted-foreground"></div>
+                                                            )}
+                                                            <span>{option}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            {!isCorrect && userAnswer && (
+                                                <p className="mt-2 text-sm text-muted-foreground">Your answer was <span className="font-semibold text-red-600">{userAnswer}</span>. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                            )}
+                                            {!userAnswer && (
+                                                <p className="mt-2 text-sm text-muted-foreground">You did not answer this question. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                            )}
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                );
+                            })}
+                           </Accordion>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </div>
 
             <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Button asChild className="w-full md:w-auto" size="lg">
@@ -359,3 +431,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     </div>
   );
 }
+
+    
+
+    

@@ -169,7 +169,7 @@ export function SuperAdminHistoryReport() {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge>{`${item.score}/${item.totalQuestions}`}</Badge>
+                                    <Badge variant={item.status === 'Pass' ? 'default' : item.status === 'Fail' ? 'destructive' : 'secondary'}>{`${item.score}/${item.totalQuestions}`}</Badge>
                                 </TableCell>
                                 <TableCell>{formatDistanceToNow(new Date(item.date), { addSuffix: true })}</TableCell>
                                 <TableCell>
