@@ -23,10 +23,14 @@ import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css';
 import { updateUserProfile } from '@/services/userService';
 import { createAdminRequest, getAdminRequestForUser, type AdminRequest } from '@/services/adminRequestService';
+import { getAppConfig, type AppConfig } from '@/services/appConfigService';
+import axios from 'axios';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
 });
+
+declare const Razorpay: any;
 
 function getCroppedImg(image: HTMLImageElement, crop: Crop, fileName: string): Promise<File> {
     const canvas = document.createElement('canvas');
@@ -83,6 +87,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
 export default function ProfilePage() {
   const { user, isAdmin, loading: authLoading } = useRequireAuth();
   const [loading, setLoading] = useState(false);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -100,6 +105,14 @@ export default function ProfilePage() {
       displayName: user?.displayName ?? '',
     },
   });
+
+  useEffect(() => {
+    async function fetchInitialData() {
+        const config = await getAppConfig();
+        setAppConfig(config);
+    }
+    fetchInitialData();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -177,23 +190,78 @@ export default function ProfilePage() {
         setLoading(false);
     }
   }
-  
-  const handleRequestAdmin = async () => {
+
+  const makeAdminRequest = async (paymentId?: string) => {
     if (!user) return;
-    setLoading(true);
     try {
       await createAdminRequest({
         userId: user.uid,
         displayName: user.displayName || 'Unnamed User',
         email: user.email || 'No email',
+        paymentId,
       });
       toast({ title: 'Request Sent', description: 'Your request to become an admin has been sent for review.' });
       setAdminRequest({ status: 'pending' } as AdminRequest); // Optimistic update
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Request Failed', description: error.message });
-    } finally {
-      setLoading(false);
     }
+  };
+  
+  const handleRequestAdmin = async () => {
+    if (!user || !appConfig) return;
+    setLoading(true);
+
+    if (appConfig.isOrgRequestPaymentEnabled) {
+      try {
+        const { data } = await axios.post('/api/razorpay/create-order', {
+            amount: appConfig.orgRequestFee * 100, // Amount in paise
+            currency: 'INR',
+        });
+
+        const options = {
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            amount: data.amount,
+            currency: 'INR',
+            name: "ExamsPro.in Organization Request",
+            description: "One-time fee for organization account request.",
+            order_id: data.id,
+            handler: async function (response: any) {
+                try {
+                    const { data: verifyData } = await axios.post('/api/razorpay/verify-payment', {
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                    });
+
+                    if (verifyData.success) {
+                        await makeAdminRequest(response.razorpay_payment_id);
+                    } else {
+                        toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Please contact support.' });
+                    }
+                } catch (error) {
+                     toast({ variant: 'destructive', title: 'Payment Verification Error', description: 'Could not verify the payment.' });
+                }
+            },
+            prefill: {
+                name: user?.displayName || "Anonymous User",
+                email: user?.email || "",
+                contact: user?.phoneNumber || ""
+            },
+            theme: { color: "#72A0C1" }
+        };
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', (response: any) => {
+             toast({ variant: 'destructive', title: 'Payment Failed', description: response.error.description });
+        });
+        rzp.open();
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Order Creation Failed', description: 'Could not create a payment order.' });
+      }
+    } else {
+        await makeAdminRequest();
+    }
+
+    setLoading(false);
   }
 
   if (authLoading || !user) {
@@ -313,6 +381,9 @@ export default function ProfilePage() {
                                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 <Building className="mr-2 h-4 w-4" />
                                 Request Organization Account
+                                {appConfig?.isOrgRequestPaymentEnabled && (
+                                    <span className="ml-2 font-bold">(₹{appConfig.orgRequestFee})</span>
+                                )}
                             </Button>
                         )}
                     </CardContent>

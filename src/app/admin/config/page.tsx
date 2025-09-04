@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -244,6 +244,47 @@ export default function AdminConfigPage() {
                             value={config.attemptsPerRecharge}
                             onChange={(e) => handleInputChange('attemptsPerRecharge', e.target.value)}
                             className="w-full md:w-24"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Building className="h-6 w-6 text-accent" />
+                        <CardTitle>Organization Account Settings</CardTitle>
+                    </div>
+                  <CardDescription>Configure the process for users requesting an organization (admin) account.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enable-payment" className="text-base">Enable One-Time Fee</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Charge a one-time fee for users requesting an admin role.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enable-payment"
+                            checked={config.isOrgRequestPaymentEnabled}
+                            onCheckedChange={(checked) => handleConfigChange('isOrgRequestPaymentEnabled', checked)}
+                        />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="request-fee" className="text-base">Request Fee (INR)</Label>
+                          <p className="text-sm text-muted-foreground">
+                            The amount to charge for an organization account request.
+                          </p>
+                        </div>
+                        <Input
+                            id="request-fee"
+                            type="number"
+                            value={config.orgRequestFee}
+                            onChange={(e) => handleInputChange('orgRequestFee', e.target.value)}
+                            className="w-full md:w-24"
+                            disabled={!config.isOrgRequestPaymentEnabled}
                         />
                     </div>
                 </CardContent>

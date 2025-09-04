@@ -96,6 +96,7 @@ export type AdminRequest = {
   displayName: string;
   email: string;
   status: 'pending' | 'approved' | 'rejected';
+  paymentId?: string;
   createdAt: Date;
   updatedAt: Date;
 };

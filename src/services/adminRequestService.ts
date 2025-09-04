@@ -19,6 +19,7 @@ type CreateAdminRequestPayload = {
   userId: string;
   displayName: string;
   email: string;
+  paymentId?: string;
 };
 
 export const createAdminRequest = async (payload: CreateAdminRequestPayload): Promise<void> => {
