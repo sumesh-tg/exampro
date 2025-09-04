@@ -95,7 +95,7 @@ export default function ProfilePage() {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [isCropModalOpen, setCropModalOpen] = useState(false);
-  const [adminRequest, setAdminRequest] = useState<AdminRequest | null | 'loading'>('loading');
+  const [isRequestingAdmin, setIsRequestingAdmin] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,13 +119,8 @@ export default function ProfilePage() {
       form.reset({
         displayName: user.displayName ?? '',
       });
-      if (!isAdmin) {
-        getAdminRequestForUser(user.uid).then(setAdminRequest);
-      } else {
-        setAdminRequest(null); // Admins don't need to see this
-      }
     }
-  }, [user, form, isAdmin]);
+  }, [user, form]);
 
   async function onUpdateDisplayName(values: z.infer<typeof profileSchema>) {
     if (!user) return;
@@ -193,6 +188,7 @@ export default function ProfilePage() {
 
   const makeAdminRequest = async (paymentId?: string) => {
     if (!user) return;
+    setIsRequestingAdmin(true);
     try {
       await createAdminRequest({
         userId: user.uid,
@@ -201,15 +197,17 @@ export default function ProfilePage() {
         paymentId,
       });
       toast({ title: 'Request Sent', description: 'Your request to become an admin has been sent for review.' });
-      setAdminRequest({ status: 'pending' } as AdminRequest); // Optimistic update
+      // Here you might want to show a "pending" status, but per requirement, we will always show the button for non-admins.
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Request Failed', description: error.message });
+    } finally {
+      setIsRequestingAdmin(false);
     }
   };
   
   const handleRequestAdmin = async () => {
     if (!user || !appConfig) return;
-    setLoading(true);
+    setIsRequestingAdmin(true);
 
     if (appConfig.isOrgRequestPaymentEnabled) {
       try {
@@ -240,6 +238,8 @@ export default function ProfilePage() {
                     }
                 } catch (error) {
                      toast({ variant: 'destructive', title: 'Payment Verification Error', description: 'Could not verify the payment.' });
+                } finally {
+                    setIsRequestingAdmin(false);
                 }
             },
             prefill: {
@@ -247,21 +247,26 @@ export default function ProfilePage() {
                 email: user?.email || "",
                 contact: user?.phoneNumber || ""
             },
-            theme: { color: "#72A0C1" }
+            theme: { color: "#72A0C1" },
+            modal: {
+                ondismiss: function() {
+                    setIsRequestingAdmin(false);
+                }
+            }
         };
         const rzp = new Razorpay(options);
         rzp.on('payment.failed', (response: any) => {
              toast({ variant: 'destructive', title: 'Payment Failed', description: response.error.description });
+             setIsRequestingAdmin(false);
         });
         rzp.open();
       } catch (error) {
           toast({ variant: 'destructive', title: 'Order Creation Failed', description: 'Could not create a payment order.' });
+          setIsRequestingAdmin(false);
       }
     } else {
         await makeAdminRequest();
     }
-
-    setLoading(false);
   }
 
   if (authLoading || !user) {
@@ -368,24 +373,14 @@ export default function ProfilePage() {
                         <CardDescription>Request to upgrade your account to an organization account to create and manage exams.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {adminRequest === 'loading' ? (
-                            <div className="flex items-center justify-center h-10">
-                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : adminRequest?.status === 'pending' ? (
-                            <p className="text-sm text-yellow-600 bg-yellow-100 p-3 rounded-md">Your request is pending approval.</p>
-                        ) : adminRequest?.status === 'approved' ? (
-                            <p className="text-sm text-green-600 bg-green-100 p-3 rounded-md">Your request has been approved. You are now an admin.</p>
-                        ) : (
-                            <Button onClick={handleRequestAdmin} disabled={loading}>
-                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                <Building className="mr-2 h-4 w-4" />
-                                Request Organization Account
-                                {appConfig?.isOrgRequestPaymentEnabled && (
-                                    <span className="ml-2 font-bold">(₹{appConfig.orgRequestFee})</span>
-                                )}
-                            </Button>
-                        )}
+                        <Button onClick={handleRequestAdmin} disabled={isRequestingAdmin}>
+                            {isRequestingAdmin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Building className="mr-2 h-4 w-4" />
+                            Request Organization Account
+                            {appConfig?.isOrgRequestPaymentEnabled && (
+                                <span className="ml-2 font-bold">(₹{appConfig.orgRequestFee})</span>
+                            )}
+                        </Button>
                     </CardContent>
                 </Card>
             )}
