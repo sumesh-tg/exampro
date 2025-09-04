@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet, HistoryIcon, Send } from 'lucide-react';
+import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet, HistoryIcon, Send, HelpCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -414,6 +414,12 @@ export default function Home() {
                 <DropdownMenuItem asChild>
                   <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                   <Link href="/help">
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>Help & FAQ</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem>
                     <div className="flex justify-between w-full">
                        <span>Attempts Left:</span>
@@ -468,6 +474,12 @@ export default function Home() {
                   <Link href="/admin/attempts">
                     <HistoryIcon className="mr-2 h-4 w-4" />
                     <span>Attempt History</span>
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                   <Link href="/help">
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>Help & FAQ</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
