@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, User, Camera, Building } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Camera, Building, Info } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { auth, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -25,6 +25,7 @@ import { updateUserProfile } from '@/services/userService';
 import { createAdminRequest, getAdminRequestForUser, type AdminRequest } from '@/services/adminRequestService';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 import axios from 'axios';
+import { Badge } from '@/components/ui/badge';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
@@ -88,6 +89,8 @@ export default function ProfilePage() {
   const { user, isAdmin, loading: authLoading } = useRequireAuth();
   const [loading, setLoading] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [adminRequest, setAdminRequest] = useState<AdminRequest | null>(null);
+  const [requestStatusLoading, setRequestStatusLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -108,11 +111,19 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchInitialData() {
+        setRequestStatusLoading(true);
         const config = await getAppConfig();
         setAppConfig(config);
+        if (user && !isAdmin) {
+          const request = await getAdminRequestForUser(user.uid);
+          if (request?.status === 'pending') {
+            setAdminRequest(request);
+          }
+        }
+        setRequestStatusLoading(false);
     }
     fetchInitialData();
-  }, []);
+  }, [user, isAdmin]);
 
   useEffect(() => {
     if (user) {
@@ -196,8 +207,10 @@ export default function ProfilePage() {
         email: user.email || 'No email',
         paymentId,
       });
+      // Fetch the newly created request to update the UI
+      const newRequest = await getAdminRequestForUser(user.uid);
+      setAdminRequest(newRequest);
       toast({ title: 'Request Sent', description: 'Your request to become an admin has been sent for review.' });
-      // Here you might want to show a "pending" status, but per requirement, we will always show the button for non-admins.
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Request Failed', description: error.message });
     } finally {
@@ -272,6 +285,8 @@ export default function ProfilePage() {
   if (authLoading || !user) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
+
+  const showOrgRequestSection = !isAdmin;
 
   return (
     <>
@@ -366,13 +381,21 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            {!isAdmin && (
+            {showOrgRequestSection && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Organization Account</CardTitle>
                         <CardDescription>Request to upgrade your account to an organization account to create and manage exams.</CardDescription>
                     </CardHeader>
                     <CardContent>
+                      {requestStatusLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : adminRequest && adminRequest.status === 'pending' ? (
+                        <div className="flex items-center gap-2 rounded-md border border-dashed p-4">
+                           <Info className="h-5 w-5 text-muted-foreground" />
+                           <span className="font-medium text-muted-foreground">Your request is pending review.</span>
+                        </div>
+                      ) : (
                         <Button onClick={handleRequestAdmin} disabled={isRequestingAdmin}>
                             {isRequestingAdmin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             <Building className="mr-2 h-4 w-4" />
@@ -381,6 +404,7 @@ export default function ProfilePage() {
                                 <span className="ml-2 font-bold">(₹{appConfig.orgRequestFee})</span>
                             )}
                         </Button>
+                      )}
                     </CardContent>
                 </Card>
             )}
@@ -390,3 +414,5 @@ export default function ProfilePage() {
     </>
   );
 }
+
+    
