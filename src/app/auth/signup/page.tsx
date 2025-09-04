@@ -113,7 +113,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       await window.confirmationResult.confirm(values.otp);
-      router.push('/');
+      router.push('/auth/setup');
     } catch (error: any) {
        toast({
         variant: 'destructive',
@@ -130,7 +130,7 @@ export default function SignUpPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push('/');
+      router.push('/auth/setup');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -250,3 +250,5 @@ export default function SignUpPage() {
     </div>
   );
 }
+
+    
