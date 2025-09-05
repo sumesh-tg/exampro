@@ -394,10 +394,13 @@ export default function Home() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                        <div className="flex justify-between w-full">
-                          <span>Attempts Left:</span>
-                          <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
+                      <div className="flex w-full items-center justify-between">
+                        <div className="flex items-center gap-2">
+                           <Wallet className="h-4 w-4" />
+                           <span>Attempts Left:</span>
                         </div>
+                        <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
+                      </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleRechargePayment}>
                         <RefreshCcw className="mr-2 h-4 w-4" />
@@ -531,8 +534,11 @@ export default function Home() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                      <div className="flex justify-between w-full">
-                        <span>Attempts Left:</span>
+                      <div className="flex w-full items-center justify-between">
+                        <div className="flex items-center gap-2">
+                           <Wallet className="h-4 w-4" />
+                           <span>Attempts Left:</span>
+                        </div>
                         <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
                       </div>
                   </DropdownMenuItem>
