@@ -350,8 +350,8 @@ export default function Home() {
             )}
         </>
       )}
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
-        <nav className="flex-1">
+      <header className="sticky top-0 z-10 flex h-auto flex-col items-start gap-4 border-b bg-background/80 p-4 backdrop-blur-sm md:h-16 md:flex-row md:items-center md:px-6">
+        <nav className="flex w-full flex-1 items-center justify-between">
           <Link
             href="/"
             className="flex items-center gap-2 text-lg font-semibold"
@@ -359,11 +359,114 @@ export default function Home() {
             <Image src="/images/logo_black.png" alt="ExamsPro.in logo" width={92} height={92} data-ai-hint="logo" />
             <div>
                 <span className="text-xl font-bold">ExamsPro.in</span>
-                <p className="text-xs text-muted-foreground">Perform Like a Pro</p>
+                <p className="hidden text-xs text-muted-foreground sm:block">Perform Like a Pro</p>
             </div>
           </Link>
+           <div className="md:hidden">
+              {loading ? (
+                <div/>
+              ) : user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="icon" className="rounded-full">
+                      <Avatar>
+                        <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
+                        <AvatarFallback>
+                          {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : <UserIcon size={20} />}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="sr-only">Toggle user menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/help">
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        <span>Help & FAQ</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                        <div className="flex justify-between w-full">
+                          <span>Attempts Left:</span>
+                          <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
+                        </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleRechargePayment}>
+                        <RefreshCcw className="mr-2 h-4 w-4" />
+                        <span>Recharge Attempts</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : isSuperAdmin ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="icon" className="rounded-full">
+                      <Avatar>
+                        <AvatarFallback>
+                          <ShieldCheck size={20} />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="sr-only">Toggle admin menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Super Admin</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/users">
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>User Management</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/config">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>App Configuration</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/requests">
+                        <Send className="mr-2 h-4 w-4" />
+                        <span>Admin Requests</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/attempts">
+                        <HistoryIcon className="mr-2 h-4 w-4" />
+                        <span>Attempt History</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/help">
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        <span>Help & FAQ</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild>
+                  <Link href="/auth/signin">Sign In</Link>
+                </Button>
+              )}
+          </div>
         </nav>
-        <div className="flex items-center gap-4">
+        <div className="flex w-full items-center justify-end gap-2 md:w-auto md:flex-nowrap flex-wrap">
           {(isAdmin || isSuperAdmin) && (
             <>
               {canCreateExam && (
@@ -388,112 +491,114 @@ export default function Home() {
               )}
               <Button variant="outline" onClick={() => setShareReportOpen(true)}>
                     <FileText className="mr-2 h-4 w-4" />
-                    View Share Report
+                    <span className="hidden sm:inline">View Share Report</span>
               </Button>
             </>
           )}
 
-          {loading ? (
-            <div/>
-          ) : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="icon" className="rounded-full">
-                  <Avatar>
-                    <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
-                    <AvatarFallback>
-                      {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : <UserIcon size={20} />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="sr-only">Toggle user menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                   <Link href="/help">
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Help & FAQ</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                    <div className="flex justify-between w-full">
-                       <span>Attempts Left:</span>
-                       <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
-                    </div>
-                </DropdownMenuItem>
-                 <DropdownMenuItem onClick={handleRechargePayment}>
-                    <RefreshCcw className="mr-2 h-4 w-4" />
-                    <span>Recharge Attempts</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : isSuperAdmin ? (
-             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="icon" className="rounded-full">
-                  <Avatar>
-                    <AvatarFallback>
-                      <ShieldCheck size={20} />
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="sr-only">Toggle admin menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Super Admin</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/admin/users">
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>User Management</span>
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/admin/config">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>App Configuration</span>
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/admin/requests">
-                    <Send className="mr-2 h-4 w-4" />
-                    <span>Admin Requests</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/admin/attempts">
-                    <HistoryIcon className="mr-2 h-4 w-4" />
-                    <span>Attempt History</span>
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                   <Link href="/help">
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Help & FAQ</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button asChild>
-              <Link href="/auth/signin">Sign In</Link>
-            </Button>
-          )}
+          <div className="hidden md:flex">
+             {loading ? (
+              <div/>
+            ) : user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="icon" className="rounded-full">
+                    <Avatar>
+                      <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
+                      <AvatarFallback>
+                        {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : <UserIcon size={20} />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">Toggle user menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/help">
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      <span>Help & FAQ</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                      <div className="flex justify-between w-full">
+                        <span>Attempts Left:</span>
+                        <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
+                      </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleRechargePayment}>
+                      <RefreshCcw className="mr-2 h-4 w-4" />
+                      <span>Recharge Attempts</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : isSuperAdmin ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="icon" className="rounded-full">
+                    <Avatar>
+                      <AvatarFallback>
+                        <ShieldCheck size={20} />
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">Toggle admin menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Super Admin</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/users">
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>User Management</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/config">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>App Configuration</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/requests">
+                      <Send className="mr-2 h-4 w-4" />
+                      <span>Admin Requests</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/attempts">
+                      <HistoryIcon className="mr-2 h-4 w-4" />
+                      <span>Attempt History</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/help">
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      <span>Help & FAQ</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild>
+                <Link href="/auth/signin">Sign In</Link>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
       <main className="flex-1 p-4 md:p-8">
