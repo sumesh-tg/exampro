@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building, Percent } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building, Percent, AtSign } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -114,6 +114,19 @@ export default function AdminConfigPage() {
                   id="phone-login"
                   checked={config.isPhoneLoginEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isPhoneLoginEnabled', checked)}
+                />
+              </div>
+               <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="email-link-login" className="text-base">Email Link Login</Label>
+                   <p className="text-sm text-muted-foreground">
+                    Allow users to sign in with a secure link sent to their email.
+                  </p>
+                </div>
+                <Switch
+                  id="email-link-login"
+                  checked={config.isEmailLinkLoginEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isEmailLinkLoginEnabled', checked)}
                 />
               </div>
             </CardContent>

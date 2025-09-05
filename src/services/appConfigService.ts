@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 export type AppConfig = {
   isGoogleLoginEnabled: boolean;
   isPhoneLoginEnabled: boolean;
+  isEmailLinkLoginEnabled: boolean;
   isExamCreationEnabled: boolean;
   isCampaignCreationEnabled: boolean;
   isTopicSuggesterEnabled: boolean;
@@ -38,6 +39,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       return {
         isGoogleLoginEnabled: data.isGoogleLoginEnabled ?? true,
         isPhoneLoginEnabled: data.isPhoneLoginEnabled ?? true,
+        isEmailLinkLoginEnabled: data.isEmailLinkLoginEnabled ?? true,
         isExamCreationEnabled: data.isExamCreationEnabled ?? true,
         isCampaignCreationEnabled: data.isCampaignCreationEnabled ?? true,
         isTopicSuggesterEnabled: data.isTopicSuggesterEnabled ?? true,
@@ -55,6 +57,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       const defaultConfig: AppConfig = {
         isGoogleLoginEnabled: true,
         isPhoneLoginEnabled: true,
+        isEmailLinkLoginEnabled: true,
         isExamCreationEnabled: true,
         isCampaignCreationEnabled: true,
         isTopicSuggesterEnabled: true,
@@ -76,6 +79,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
     return {
       isGoogleLoginEnabled: true,
       isPhoneLoginEnabled: true,
+      isEmailLinkLoginEnabled: true,
       isExamCreationEnabled: true,
       isCampaignCreationEnabled: true,
       isTopicSuggesterEnabled: true,

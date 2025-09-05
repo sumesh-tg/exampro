@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { signInWithPhoneNumber, RecaptchaVerifier, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithPhoneNumber, RecaptchaVerifier, GoogleAuthProvider, signInWithPopup, sendSignInLinkToEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MailCheck } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -36,6 +36,10 @@ const otpSchema = z.object({
   otp: z.string().length(6, { message: 'OTP must be 6 digits.' }),
 });
 
+const emailSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
+});
+
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 48 48" {...props}>
       <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
@@ -48,7 +52,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'options' | 'otp' | 'email_sent'>('options');
   const [isClient, setIsClient] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const router = useRouter();
@@ -64,30 +68,30 @@ export default function SignUpPage() {
   }, []);
   
   const handleSuccessfulSignUp = () => {
+    // On sign-up, always go to the setup page to create the user profile
     router.push('/auth/setup');
   };
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
-    defaultValues: {
-      phone: '',
-    },
+    defaultValues: { phone: '' },
   });
 
   const otpForm = useForm<z.infer<typeof otpSchema>>({
     resolver: zodResolver(otpSchema),
-    defaultValues: {
-      otp: '',
-    },
+    defaultValues: { otp: '' },
+  });
+
+  const emailForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: '' },
   });
 
   const setupRecaptcha = () => {
     if (!window.recaptchaVerifier) {
       window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        },
+        'callback': (response: any) => {},
       });
     }
   };
@@ -103,11 +107,7 @@ export default function SignUpPage() {
       toast({ title: 'OTP sent successfully!' });
     } catch (error: any) {
       console.error("Error sending OTP:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign up failed',
-        description: 'Failed to send OTP. Make sure to include the country code.',
-      });
+      toast({ variant: 'destructive', title: 'Sign up failed', description: 'Failed to send OTP. Make sure to include the country code.' });
     } finally {
       setLoading(false);
     }
@@ -119,11 +119,27 @@ export default function SignUpPage() {
       await window.confirmationResult.confirm(values.otp);
       handleSuccessfulSignUp();
     } catch (error: any) {
-       toast({
-        variant: 'destructive',
-        title: 'Sign up failed',
-        description: 'Invalid OTP. Please try again.',
-      });
+       toast({ variant: 'destructive', title: 'Sign up failed', description: 'Invalid OTP. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+   async function onEmailSubmit(values: z.infer<typeof emailSchema>) {
+    setLoading(true);
+    const actionCodeSettings = {
+      // URL to redirect to after email verification. We'll handle the sign-in completion on the sign-in page.
+      url: `${window.location.origin}/auth/signin`,
+      handleCodeInApp: true,
+    };
+
+    try {
+      await sendSignInLinkToEmail(auth, values.email, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', values.email); // Store email for sign-in completion
+      setStep('email_sent');
+      toast({ title: 'Sign-up Link Sent', description: 'Check your email for the verification link.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setLoading(false);
     }
@@ -136,60 +152,21 @@ export default function SignUpPage() {
       await signInWithPopup(auth, provider);
       handleSuccessfulSignUp();
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: error.message,
-      });
+      toast({ variant: 'destructive', title: 'Google Sign-Up Failed', description: error.message });
     } finally {
       setLoading(false);
     }
   }
-  
-  const renderPhoneLogin = () => (
-     <>
-        <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-            </div>
-        </div>
-      <Form {...phoneForm}>
-        <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
-          <FormField
-            control={phoneForm.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <PhoneInput
-                    {...field}
-                    international
-                    withCountryCallingCode
-                    country="IN"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Send OTP
-          </Button>
-        </form>
-      </Form>
-    </>
-  );
 
-  const renderGoogleLogin = () => (
-     <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
-        <GoogleIcon className="mr-2 h-5 w-5" /> Sign up with Google
-    </Button>
+  const renderDivider = () => (
+    <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or</span>
+        </div>
+      </div>
   );
 
   return (
@@ -199,9 +176,9 @@ export default function SignUpPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Sign Up</CardTitle>
           <CardDescription>
-            {step === 'phone'
-              ? 'Choose a sign-up method below.'
-              : 'Enter the OTP sent to your phone.'}
+            {step === 'options' && 'Choose a sign-up method below.'}
+            {step === 'otp' && 'Enter the OTP sent to your phone.'}
+            {step === 'email_sent' && 'Check your inbox for a verification link.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,12 +186,77 @@ export default function SignUpPage() {
             <div className="flex justify-center items-center h-40">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-           ) : step === 'phone' ? (
+           ) : step === 'email_sent' ? (
+             <div className="flex flex-col items-center justify-center text-center space-y-4 h-40">
+                <MailCheck className="h-16 w-16 text-primary" />
+                <p className="text-muted-foreground">A verification link has been sent to your email. Click it to complete sign-up.</p>
+                 <Button variant="link" onClick={() => setStep('options')}>Back to sign-up options</Button>
+            </div>
+          ) : step === 'options' ? (
             <div className="space-y-4">
-              {appConfig.isGoogleLoginEnabled && renderGoogleLogin()}
-              {appConfig.isGoogleLoginEnabled && appConfig.isPhoneLoginEnabled && <div className="h-px" />}
-              {appConfig.isPhoneLoginEnabled && renderPhoneLogin()}
-              {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && (
+               {appConfig.isGoogleLoginEnabled && (
+                  <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
+                      <GoogleIcon className="mr-2 h-5 w-5" /> Sign up with Google
+                  </Button>
+              )}
+              
+              {(appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled)) && renderDivider()}
+
+              {appConfig.isEmailLinkLoginEnabled && (
+                <Form {...emailForm}>
+                    <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                        <FormField
+                            control={emailForm.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email Address</FormLabel>
+                                    <FormControl><Input type="email" placeholder="you@example.com" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit" disabled={loading} className="w-full">
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Sign Up with Email
+                        </Button>
+                    </form>
+                </Form>
+              )}
+
+              {(appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled) && renderDivider()}
+              
+              {appConfig.isPhoneLoginEnabled && (
+                <Form {...phoneForm}>
+                  <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
+                    <FormField
+                      control={phoneForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <PhoneInput
+                              {...field}
+                              international
+                              withCountryCallingCode
+                              country="IN"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" disabled={loading} className="w-full">
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Send OTP
+                    </Button>
+                  </form>
+                </Form>
+              )}
+
+              {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && !appConfig.isEmailLinkLoginEnabled && (
                 <div className="text-center text-muted-foreground">
                   Sign up is currently disabled. Please contact an administrator.
                 </div>
@@ -240,6 +282,7 @@ export default function SignUpPage() {
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Sign Up
                 </Button>
+                <Button variant="link" onClick={() => setStep('options')}>Back to sign-up options</Button>
               </form>
             </Form>
           ) : null}
