@@ -20,6 +20,7 @@ import 'react-phone-number-input/style.css';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 import { FeaturesSection } from '@/components/features-section';
 import { Footer } from '@/components/footer';
+import { useUnrequireAuth } from '@/hooks/use-auth';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -44,36 +45,35 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 function SignInFormComponent() {
+  useUnrequireAuth();
   const [loading, setLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [step, setStep] = useState<'options' | 'otp' | 'email_sent'>('options');
-  const [isClient, setIsClient] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsClient(true);
     const redirectUrl = searchParams.get('redirect');
     if (redirectUrl) {
       sessionStorage.setItem('redirectUrl', redirectUrl);
     }
     
     async function fetchLoginConfig() {
+      setConfigLoading(true);
       const config = await getAppConfig();
       setAppConfig(config);
+      setConfigLoading(false);
     }
     fetchLoginConfig();
     
-    // Check if the page is loaded via email link
     const href = window.location.href;
     if (isSignInWithEmailLink(auth, href)) {
       setLoading(true);
       let email = window.localStorage.getItem('emailForSignIn');
       if (!email) {
-        // This can happen if the user opens the link on a different device.
-        // We can prompt the user for their email.
         email = window.prompt('Please provide your email for confirmation');
       }
 
@@ -157,7 +157,7 @@ function SignInFormComponent() {
   async function onEmailSubmit(values: z.infer<typeof emailSchema>) {
     setLoading(true);
     const actionCodeSettings = {
-        url: window.location.href, // This will redirect back to the current page to complete sign-in
+        url: window.location.href, 
         handleCodeInApp: true,
     };
 
@@ -179,7 +179,8 @@ function SignInFormComponent() {
     try {
       await signInWithPopup(auth, provider);
       handleSuccessfulSignIn();
-    } catch (error: any) {
+    } catch (error: any)
+{
       toast({ variant: 'destructive', title: 'Google Sign-In Failed', description: error.message });
     } finally {
       setLoading(false);
@@ -196,6 +197,8 @@ function SignInFormComponent() {
         </div>
       </div>
   );
+  
+  const isAuthReady = !configLoading;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -212,7 +215,7 @@ function SignInFormComponent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!isClient || !appConfig || loading && step !== 'otp' ? (
+              {loading && step !== 'otp' ? (
                 <div className="flex justify-center items-center h-40">
                     <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
@@ -224,15 +227,16 @@ function SignInFormComponent() {
                 </div>
               ) : step === 'options' ? (
                 <div className="space-y-4">
-                  {appConfig.isGoogleLoginEnabled && (
-                      <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
-                          <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google
+                  {(!isAuthReady || appConfig?.isGoogleLoginEnabled) && (
+                      <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" disabled={!isAuthReady || loading}>
+                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                         {!isAuthReady ? 'Loading...' : <> <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google </>}
                       </Button>
                   )}
                   
-                  {(appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled)) && renderDivider()}
+                  {appConfig && appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled) && renderDivider()}
 
-                  {appConfig.isEmailLinkLoginEnabled && (
+                  {(!isAuthReady || appConfig?.isEmailLinkLoginEnabled) && (
                     <Form {...emailForm}>
                         <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
                             <FormField
@@ -241,22 +245,22 @@ function SignInFormComponent() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Email Address</FormLabel>
-                                        <FormControl><Input type="email" placeholder="you@example.com" {...field} /></FormControl>
+                                        <FormControl><Input type="email" placeholder="you@example.com" {...field} disabled={!isAuthReady} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit" disabled={loading} className="w-full">
+                            <Button type="submit" disabled={!isAuthReady || loading} className="w-full">
                                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Send Sign-In Link
+                                {!isAuthReady ? 'Loading...' : 'Send Sign-In Link'}
                             </Button>
                         </form>
                     </Form>
                   )}
 
-                  {(appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled) && renderDivider()}
+                  {appConfig && appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled && renderDivider()}
                   
-                  {appConfig.isPhoneLoginEnabled && (
+                  {(!isAuthReady || appConfig?.isPhoneLoginEnabled) && (
                     <Form {...phoneForm}>
                       <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
                         <FormField
@@ -271,6 +275,7 @@ function SignInFormComponent() {
                                   international
                                   withCountryCallingCode
                                   country="IN"
+                                  disabled={!isAuthReady}
                                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                 />
                               </FormControl>
@@ -278,15 +283,15 @@ function SignInFormComponent() {
                             </FormItem>
                           )}
                         />
-                        <Button type="submit" disabled={loading} className="w-full">
+                        <Button type="submit" disabled={!isAuthReady || loading} className="w-full">
                           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Send OTP
+                           {!isAuthReady ? 'Loading...' : 'Send OTP'}
                         </Button>
                       </form>
                     </Form>
                   )}
 
-                  {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && !appConfig.isEmailLinkLoginEnabled && (
+                  {isAuthReady && !appConfig?.isGoogleLoginEnabled && !appConfig?.isPhoneLoginEnabled && !appConfig?.isEmailLinkLoginEnabled && (
                     <div className="text-center text-muted-foreground">
                       Sign in is currently disabled. Please contact an administrator.
                     </div>
@@ -334,7 +339,7 @@ function SignInFormComponent() {
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
       <SignInFormComponent />
     </Suspense>
   )

@@ -18,7 +18,7 @@ import { Loader2, MailCheck } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
-
+import { useUnrequireAuth } from '@/hooks/use-auth';
 
 // Extend window interface for reCAPTCHA
 declare global {
@@ -51,18 +51,20 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 export default function SignUpPage() {
+  useUnrequireAuth();
   const [loading, setLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
   const [step, setStep] = useState<'options' | 'otp' | 'email_sent'>('options');
-  const [isClient, setIsClient] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsClient(true);
     async function fetchLoginConfig() {
+      setConfigLoading(true);
       const config = await getAppConfig();
       setAppConfig(config);
+      setConfigLoading(false);
     }
     fetchLoginConfig();
   }, []);
@@ -168,6 +170,8 @@ export default function SignUpPage() {
         </div>
       </div>
   );
+  
+  const isAuthReady = !configLoading;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -182,11 +186,7 @@ export default function SignUpPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!isClient || !appConfig ? (
-            <div className="flex justify-center items-center h-40">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-           ) : step === 'email_sent' ? (
+           {step === 'email_sent' ? (
              <div className="flex flex-col items-center justify-center text-center space-y-4 h-40">
                 <MailCheck className="h-16 w-16 text-primary" />
                 <p className="text-muted-foreground">A verification link has been sent to your email. Click it to complete sign-up.</p>
@@ -194,15 +194,16 @@ export default function SignUpPage() {
             </div>
           ) : step === 'options' ? (
             <div className="space-y-4">
-               {appConfig.isGoogleLoginEnabled && (
-                  <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
-                      <GoogleIcon className="mr-2 h-5 w-5" /> Sign up with Google
+               {(!isAuthReady || appConfig?.isGoogleLoginEnabled) && (
+                  <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" disabled={!isAuthReady || loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {!isAuthReady ? 'Loading...' : <><GoogleIcon className="mr-2 h-5 w-5" /> Sign up with Google</>}
                   </Button>
               )}
               
-              {(appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled)) && renderDivider()}
+              {appConfig && appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled) && renderDivider()}
 
-              {appConfig.isEmailLinkLoginEnabled && (
+              {(!isAuthReady || appConfig?.isEmailLinkLoginEnabled) && (
                 <Form {...emailForm}>
                     <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
                         <FormField
@@ -211,22 +212,22 @@ export default function SignUpPage() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Email Address</FormLabel>
-                                    <FormControl><Input type="email" placeholder="you@example.com" {...field} /></FormControl>
+                                    <FormControl><Input type="email" placeholder="you@example.com" {...field} disabled={!isAuthReady} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" disabled={loading} className="w-full">
+                        <Button type="submit" disabled={!isAuthReady || loading} className="w-full">
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Sign Up with Email
+                             {!isAuthReady ? 'Loading...' : 'Sign Up with Email'}
                         </Button>
                     </form>
                 </Form>
               )}
 
-              {(appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled) && renderDivider()}
+              {appConfig && appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled && renderDivider()}
               
-              {appConfig.isPhoneLoginEnabled && (
+              {(!isAuthReady || appConfig?.isPhoneLoginEnabled) && (
                 <Form {...phoneForm}>
                   <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
                     <FormField
@@ -241,6 +242,7 @@ export default function SignUpPage() {
                               international
                               withCountryCallingCode
                               country="IN"
+                              disabled={!isAuthReady}
                               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                             />
                           </FormControl>
@@ -248,15 +250,15 @@ export default function SignUpPage() {
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" disabled={loading} className="w-full">
+                    <Button type="submit" disabled={!isAuthReady || loading} className="w-full">
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Send OTP
+                      {!isAuthReady ? 'Loading...' : 'Send OTP'}
                     </Button>
                   </form>
                 </Form>
               )}
 
-              {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && !appConfig.isEmailLinkLoginEnabled && (
+              {isAuthReady && !appConfig?.isGoogleLoginEnabled && !appConfig?.isPhoneLoginEnabled && !appConfig?.isEmailLinkLoginEnabled && (
                 <div className="text-center text-muted-foreground">
                   Sign up is currently disabled. Please contact an administrator.
                 </div>
