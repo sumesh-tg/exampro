@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet, HistoryIcon, Send, HelpCircle, BarChart, PlusCircle, Wand2 } from 'lucide-react';
+import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Wallet, HistoryIcon, Send, HelpCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -65,7 +65,8 @@ import { cn } from '@/lib/utils';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 import axios from 'axios';
 import { SuperAdminHistoryReport } from '@/components/super-admin-history-report';
-
+import { FeaturesSection } from '@/components/features-section';
+import { Footer } from '@/components/footer';
 
 const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
@@ -75,39 +76,6 @@ declare const Razorpay: any;
 const isCustomExam = (examId: string) => {
   return examId.startsWith('custom-');
 }
-
-const features = [
-    {
-        icon: BookOpen,
-        title: "Take Exams",
-        description: "Test your knowledge with a wide variety of exams. Track your progress and review your past performance."
-    },
-    {
-        icon: Wand2,
-        title: "AI Topic Suggestions",
-        description: "Not sure what to study? Let our AI suggest relevant exam topics based on your interests."
-    },
-    {
-        icon: PlusCircle,
-        title: "Create & Manage Exams",
-        description: "Admins can create custom exams, add questions manually, or generate them instantly with AI."
-    },
-    {
-        icon: Layers,
-        title: "Campaign Management",
-        description: "Group multiple exams into campaigns with specific time windows and share them with users."
-    },
-    {
-        icon: BarChart,
-        title: "Detailed Analytics",
-        description: "View detailed reports on exam performance and see who has completed exams you've shared."
-    },
-    {
-        icon: Wallet,
-        title: "Secure Payments & Attempts",
-        description: "Easily manage your exam attempts by recharging your account through our secure payment system."
-    }
-];
 
 export default function Home() {
   useRequireAuth();
@@ -902,41 +870,10 @@ export default function Home() {
           </div>
         )}
         
-        <section className="py-12 sm:py-16">
-            <div className="mx-auto max-w-6xl">
-                <div className="text-center">
-                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Key Features</h2>
-                    <p className="mt-4 text-lg text-muted-foreground">Everything you need to excel in one platform.</p>
-                </div>
-                <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                    {features.map((feature) => (
-                        <Card key={feature.title} className="text-center">
-                            <CardHeader className="items-center">
-                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-800/20">
-                                    <feature.icon className="h-6 w-6 text-green-600 dark:text-green-400" />
-                                </div>
-                            </CardHeader>
-                             <CardTitle>{feature.title}</CardTitle>
-                            <CardContent className="pt-4">
-                                <CardDescription>{feature.description}</CardDescription>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            </div>
-        </section>
+        <FeaturesSection />
 
       </main>
-      <footer className="bg-primary/80 text-primary-foreground">
-        <div className="mx-auto max-w-6xl py-8 px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center">
-                <p>&copy; {new Date().getFullYear()} ExamsPro.in. All rights reserved.</p>
-                 <div className="flex items-center space-x-6">
-                    <Link href="/help" className="text-sm hover:underline">Help & FAQ</Link>
-                </div>
-            </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

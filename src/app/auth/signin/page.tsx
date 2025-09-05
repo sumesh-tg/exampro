@@ -18,6 +18,8 @@ import { Loader2, MailCheck } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
+import { FeaturesSection } from '@/components/features-section';
+import { Footer } from '@/components/footer';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -196,80 +198,111 @@ function SignInFormComponent() {
   );
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4">
-      <div className="absolute bottom-4 right-4 text-lg font-bold text-muted-foreground/50">ExamsPro.in</div>
-      <div id="recaptcha-container"></div>
-      <Card className="w-full max-w-sm z-10">
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign In</CardTitle>
-          <CardDescription>
-            {step === 'options' && 'Choose a sign-in method below.'}
-            {step === 'otp' && 'Enter the OTP sent to your phone.'}
-            {step === 'email_sent' && 'Check your inbox for a sign-in link.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!isClient || !appConfig || loading && step !== 'otp' ? (
-            <div className="flex justify-center items-center h-40">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : step === 'email_sent' ? (
-             <div className="flex flex-col items-center justify-center text-center space-y-4 h-40">
-                <MailCheck className="h-16 w-16 text-primary" />
-                <p className="text-muted-foreground">A sign-in link has been sent to your email address. Please check your inbox and promotions folder.</p>
-                <Button variant="link" onClick={() => setStep('options')}>Back to sign-in options</Button>
-            </div>
-          ) : step === 'options' ? (
-            <div className="space-y-4">
-              {appConfig.isGoogleLoginEnabled && (
-                  <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
-                      <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google
-                  </Button>
-              )}
-              
-              {(appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled)) && renderDivider()}
+    <div className="flex flex-col min-h-screen bg-background">
+      <main className="flex-grow">
+        <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4 py-12">
+          <div id="recaptcha-container"></div>
+          <Card className="w-full max-w-sm z-10">
+            <CardHeader>
+              <CardTitle className="text-2xl">Sign In</CardTitle>
+              <CardDescription>
+                {step === 'options' && 'Choose a sign-in method below.'}
+                {step === 'otp' && 'Enter the OTP sent to your phone.'}
+                {step === 'email_sent' && 'Check your inbox for a sign-in link.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!isClient || !appConfig || loading && step !== 'otp' ? (
+                <div className="flex justify-center items-center h-40">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : step === 'email_sent' ? (
+                 <div className="flex flex-col items-center justify-center text-center space-y-4 h-40">
+                    <MailCheck className="h-16 w-16 text-primary" />
+                    <p className="text-muted-foreground">A sign-in link has been sent to your email address. Please check your inbox and promotions folder.</p>
+                    <Button variant="link" onClick={() => setStep('options')}>Back to sign-in options</Button>
+                </div>
+              ) : step === 'options' ? (
+                <div className="space-y-4">
+                  {appConfig.isGoogleLoginEnabled && (
+                      <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
+                          <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google
+                      </Button>
+                  )}
+                  
+                  {(appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled)) && renderDivider()}
 
-              {appConfig.isEmailLinkLoginEnabled && (
-                <Form {...emailForm}>
-                    <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                  {appConfig.isEmailLinkLoginEnabled && (
+                    <Form {...emailForm}>
+                        <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                            <FormField
+                                control={emailForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email Address</FormLabel>
+                                        <FormControl><Input type="email" placeholder="you@example.com" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" disabled={loading} className="w-full">
+                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Send Sign-In Link
+                            </Button>
+                        </form>
+                    </Form>
+                  )}
+
+                  {(appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled) && renderDivider()}
+                  
+                  {appConfig.isPhoneLoginEnabled && (
+                    <Form {...phoneForm}>
+                      <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
                         <FormField
-                            control={emailForm.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Email Address</FormLabel>
-                                    <FormControl><Input type="email" placeholder="you@example.com" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
+                          control={phoneForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number</FormLabel>
+                              <FormControl>
+                                <PhoneInput 
+                                  {...field}
+                                  international
+                                  withCountryCallingCode
+                                  country="IN"
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
                         <Button type="submit" disabled={loading} className="w-full">
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Send Sign-In Link
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Send OTP
                         </Button>
-                    </form>
-                </Form>
-              )}
+                      </form>
+                    </Form>
+                  )}
 
-              {(appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled) && renderDivider()}
-              
-              {appConfig.isPhoneLoginEnabled && (
-                <Form {...phoneForm}>
-                  <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
+                  {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && !appConfig.isEmailLinkLoginEnabled && (
+                    <div className="text-center text-muted-foreground">
+                      Sign in is currently disabled. Please contact an administrator.
+                    </div>
+                  )}
+                </div>
+              ) : step === 'otp' ? (
+                <Form {...otpForm}>
+                  <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
                     <FormField
-                      control={phoneForm.control}
-                      name="phone"
+                      control={otpForm.control}
+                      name="otp"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
+                          <FormLabel>OTP</FormLabel>
                           <FormControl>
-                            <PhoneInput 
-                              {...field}
-                              international
-                              withCountryCallingCode
-                              country="IN"
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                            />
+                            <Input placeholder="123456" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -277,50 +310,24 @@ function SignInFormComponent() {
                     />
                     <Button type="submit" disabled={loading} className="w-full">
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Send OTP
+                      Sign In
                     </Button>
+                     <Button variant="link" onClick={() => setStep('options')}>Back to sign-in options</Button>
                   </form>
                 </Form>
-              )}
-
-              {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && !appConfig.isEmailLinkLoginEnabled && (
-                <div className="text-center text-muted-foreground">
-                  Sign in is currently disabled. Please contact an administrator.
-                </div>
-              )}
-            </div>
-          ) : step === 'otp' ? (
-            <Form {...otpForm}>
-              <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
-                <FormField
-                  control={otpForm.control}
-                  name="otp"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>OTP</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123456" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
-                </Button>
-                 <Button variant="link" onClick={() => setStep('options')}>Back to sign-in options</Button>
-              </form>
-            </Form>
-          ) : null}
-          <div className="mt-4 text-center text-sm">
-            Don't have an account?{' '}
-            <Link href="/auth/signup" className="underline">
-              Sign up
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+              ) : null}
+              <div className="mt-4 text-center text-sm">
+                Don't have an account?{' '}
+                <Link href="/auth/signup" className="underline">
+                  Sign up
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <FeaturesSection />
+      </main>
+      <Footer />
     </div>
   );
 }
