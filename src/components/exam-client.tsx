@@ -390,13 +390,13 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             </CardContent>
           </Card>
       </div>
-      <div className="hidden md:block">
-        <Card className="w-full shadow-lg sticky top-8">
+      <div>
+        <Card className="w-full shadow-lg md:sticky md:top-8">
             <CardHeader>
             <CardTitle className="text-xl">Question Navigator</CardTitle>
             </CardHeader>
             <CardContent>
-            <div className="grid grid-cols-4 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {shuffledExam.questions.map((_, index) => (
                 <Button
                     key={index}
