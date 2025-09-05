@@ -174,65 +174,67 @@ export function CampaignsList() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : campaigns.length > 0 ? (
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead>Campaign Name</TableHead>
-                          <TableHead>Assignee</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Joined Users</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {paginatedCampaigns.map((campaign) => (
-                          <TableRow key={campaign.id}>
-                              <TableCell>
-                                  <div className="font-medium">{campaign.name}</div>
-                                  <div className="text-sm text-muted-foreground">{campaign.description}</div>
-                                   {(campaign.updatedAt as any)?.toDate && (
-                                    <p className="text-xs text-muted-foreground pt-1">
-                                        Last updated: {formatDistanceToNow((campaign.updatedAt as any).toDate(), { addSuffix: true })}
-                                    </p>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                  {campaign.assignee ? (
-                                      <div className="flex items-center gap-2">
-                                          <Avatar className="h-8 w-8">
-                                              <AvatarImage src={getAssigneeAvatar(campaign.assignee)} />
-                                              <AvatarFallback>{getAssigneeFallback(campaign.assignee)}</AvatarFallback>
-                                          </Avatar>
-                                          <span>{getAssigneeName(campaign.assignee)}</span>
-                                      </div>
-                                  ) : 'N/A'}
-                              </TableCell>
-                              <TableCell>{getStatus(campaign)}</TableCell>
-                              <TableCell>
-                                <Button variant="link" className="p-0 h-auto" onClick={() => handleOpenReport(campaign)}>
-                                  {campaignUserCounts[campaign.id] ?? 0}
-                                </Button>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end items-center space-x-2">
-                                  <Button variant="outline" size="sm" onClick={() => handleOpenEdit(campaign)}>
-                                    <Edit className="mr-2 h-4 w-4" /> Edit
+              <div className="overflow-x-auto">
+                <Table className="min-w-[800px]">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Campaign Name</TableHead>
+                            <TableHead>Assignee</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Joined Users</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {paginatedCampaigns.map((campaign) => (
+                            <TableRow key={campaign.id}>
+                                <TableCell>
+                                    <div className="font-medium">{campaign.name}</div>
+                                    <div className="text-sm text-muted-foreground">{campaign.description}</div>
+                                     {(campaign.updatedAt as any)?.toDate && (
+                                      <p className="text-xs text-muted-foreground pt-1">
+                                          Last updated: {formatDistanceToNow((campaign.updatedAt as any).toDate(), { addSuffix: true })}
+                                      </p>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                    {campaign.assignee ? (
+                                        <div className="flex items-center gap-2">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={getAssigneeAvatar(campaign.assignee)} />
+                                                <AvatarFallback>{getAssigneeFallback(campaign.assignee)}</AvatarFallback>
+                                            </Avatar>
+                                            <span>{getAssigneeName(campaign.assignee)}</span>
+                                        </div>
+                                    ) : 'N/A'}
+                                </TableCell>
+                                <TableCell>{getStatus(campaign)}</TableCell>
+                                <TableCell>
+                                  <Button variant="link" className="p-0 h-auto" onClick={() => handleOpenReport(campaign)}>
+                                    {campaignUserCounts[campaign.id] ?? 0}
                                   </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => handleShareCampaign(campaign.id)}
-                                    disabled={new Date() > (campaign.endDate as any).toDate()}
-                                  >
-                                      <Share2 className="mr-2 h-4 w-4" />
-                                      Share
-                                  </Button>
-                                </div>
-                              </TableCell>
-                          </TableRow>
-                      ))}
-                  </TableBody>
-              </Table>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end items-center space-x-2">
+                                    <Button variant="outline" size="sm" onClick={() => handleOpenEdit(campaign)}>
+                                      <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => handleShareCampaign(campaign.id)}
+                                      disabled={new Date() > (campaign.endDate as any).toDate()}
+                                    >
+                                        <Share2 className="mr-2 h-4 w-4" />
+                                        Share
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+              </div>
           ) : (
             <div className="text-center text-muted-foreground py-10">No campaigns found for you.</div>
           )}
