@@ -190,7 +190,7 @@ export function TopicSuggester() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-accent" />
+          <Sparkles className="h-6 w-6 text-primary" />
           <CardTitle>Stuck for ideas?</CardTitle>
         </div>
         <CardDescription>Let AI suggest some exam topics based on your interests.</CardDescription>
