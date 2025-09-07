@@ -39,7 +39,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 48 48" {...props}>
       <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
       <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
-      <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+      <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path
       <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.021,35.596,44,30.138,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
     </svg>
 );
@@ -203,11 +203,10 @@ function SignInFormComponent() {
 
   const backgroundStyle = {
     backgroundImage: `
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='hsl(220 15% 90%)' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-book-open'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E"),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='hsl(220 15% 90%)' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-graduation-cap'%3E%3Cpath d='M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z'/%3E%3Cpath d='M22 10v6'/%3E%3Cpath d='M6 12.5V16a6 3 0 0 0 12 0v-3.5'/%3E%3C/svg%3E"),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='hsl(220 15% 90%)' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-atom'%3E%3Ccircle cx='12' cy='12' r='1'/%3E%3Cpath d='M20.2 20.2c2.04-2.03.02-5.72-2.3-8.04-2.3-2.32-5.99-4.34-8.04-2.3'/%3E%3Cpath d='M3.8 3.8c-2.04 2.03-.02 5.72 2.3 8.04 2.3 2.32 5.99 4.34 8.04 2.3'/%3E%3Cpath d='M20.2 3.8c-2.03 2.04-5.72.02-8.04-2.3-2.32-2.3-4.34-5.99-2.3-8.04'/%3E%3Cpath d='M3.8 20.2c2.03-2.04 5.72-.02 8.04 2.3 2.32 2.3 4.34 5.99 2.3 8.04'/%3E%3C/svg%3E")
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='hsl(220 15% 90%)' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-keyboard'%3E%3Crect width='20' height='16' x='2' y='4' rx='2' ry='2'/%3E%3Cpath d='M6 8h.01'/%3E%3Cpath d='M10 8h.01'/%3E%3Cpath d='M14 8h.01'/%3E%3Cpath d='M18 8h.01'/%3E%3Cpath d='M6 12h.01'/%3E%3Cpath d='M10 12h4'/%3E%3Cpath d='M18 12h.01'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='hsl(220 15% 90%)' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-laptop'%3E%3Cpath d='M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9h16Z'/%3E%3Cpath d='M12 19h.01'/%3E%3Cpath d='M2 20h20'/%3E%3C/svg%3E")
     `,
-    backgroundPosition: '0 0, 25px 25px, 50px 50px, 75px 75px',
+    backgroundPosition: '0 0, 50px 50px',
     backgroundSize: '100px 100px',
     backgroundColor: 'hsl(var(--background))',
   };
@@ -363,6 +362,3 @@ export default function SignInPage() {
     </Suspense>
   )
 }
-
-    
-    
