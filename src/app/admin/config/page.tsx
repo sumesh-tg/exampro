@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building, Percent, AtSign } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building, Percent, AtSign, EyeOff } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -200,6 +200,31 @@ export default function AdminConfigPage() {
                   id="ai-question-generation"
                   checked={config.isAiQuestionGenerationEnabled}
                   onCheckedChange={(checked) => handleConfigChange('isAiQuestionGenerationEnabled', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+          
+           <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <EyeOff className="h-6 w-6 text-accent" />
+                <CardTitle>Exam Proctoring</CardTitle>
+              </div>
+              <CardDescription>Configure anti-cheating and proctoring measures for exams.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="tab-switch-submit" className="text-base">Auto-Submit on Tab Switch</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically submit a user's exam if they switch to another tab or window.
+                  </p>
+                </div>
+                <Switch
+                  id="tab-switch-submit"
+                  checked={config.isTabSwitchSubmitEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isTabSwitchSubmitEnabled', checked)}
                 />
               </div>
             </CardContent>

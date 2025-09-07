@@ -17,6 +17,7 @@ export type AppConfig = {
   orgRequestFee: number;
   isCommissionEnabled: boolean;
   commissionRatePercentage: number;
+  isTabSwitchSubmitEnabled: boolean;
 };
 
 const CONFIG_COLLECTION = 'app_config';
@@ -51,6 +52,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         orgRequestFee: data.orgRequestFee ?? 100,
         isCommissionEnabled: data.isCommissionEnabled ?? false,
         commissionRatePercentage: data.commissionRatePercentage ?? 5,
+        isTabSwitchSubmitEnabled: data.isTabSwitchSubmitEnabled ?? true,
       };
     } else {
       // If the document doesn't exist, create it with default values
@@ -69,6 +71,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         orgRequestFee: 100,
         isCommissionEnabled: false,
         commissionRatePercentage: 5,
+        isTabSwitchSubmitEnabled: true,
       };
       await setDoc(configDocRef, defaultConfig);
       return defaultConfig;
@@ -91,6 +94,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       orgRequestFee: 100,
       isCommissionEnabled: false,
       commissionRatePercentage: 5,
+      isTabSwitchSubmitEnabled: true,
     };
   }
 };

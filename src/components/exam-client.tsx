@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Timer, CheckCircle, XCircle, Download, HelpCircle } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, Download, HelpCircle, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -18,6 +18,9 @@ import { addExamHistory } from '@/services/examHistoryService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from './ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { getAppConfig, AppConfig } from '@/services/appConfigService';
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -56,6 +59,20 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const resultCardRef = useRef<HTMLDivElement>(null);
   const timeTakenRef = useRef(0);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isWarningModalOpen, setWarningModalOpen] = useState(false);
+  const [warningCountdown, setWarningCountdown] = useState(10);
+  const { toast } = useToast();
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+
+
+  useEffect(() => {
+    async function fetchConfig() {
+      const config = await getAppConfig();
+      setAppConfig(config);
+    }
+    fetchConfig();
+  }, []);
 
   useEffect(() => {
     // Randomize questions and options once on mount
@@ -66,8 +83,22 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     setShuffledExam({ ...exam, questions: randomizedQuestions });
   }, [exam]);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     if (isSubmitted || !shuffledExam) return;
+    
+    // Clear any active timers
+    if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+    }
+    setWarningModalOpen(false);
+    
+    if(isAutoSubmit) {
+        toast({
+            variant: 'destructive',
+            title: 'Exam Auto-Submitted',
+            description: 'You did not return to the exam tab in time.',
+        });
+    }
     
     let finalScore = 0;
     const analysis: TagAnalysis = {};
@@ -125,7 +156,42 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         await addExamHistory(historyEntry);
       }
     }
-  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam]);
+  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam, toast]);
+  
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!appConfig?.isTabSwitchSubmitEnabled || isSubmitted) return;
+
+            if (document.visibilityState === 'hidden') {
+                setWarningModalOpen(true);
+                setWarningCountdown(10);
+                countdownTimerRef.current = setInterval(() => {
+                    setWarningCountdown(prev => {
+                        if (prev <= 1) {
+                            clearInterval(countdownTimerRef.current!);
+                            handleSubmit(true);
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+            } else {
+                if (countdownTimerRef.current) {
+                    clearInterval(countdownTimerRef.current);
+                }
+                setWarningModalOpen(false);
+            }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if(countdownTimerRef.current) {
+                clearInterval(countdownTimerRef.current);
+            }
+        };
+    }, [isSubmitted, handleSubmit, appConfig]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -395,87 +461,106 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const progress = ((currentQuestionIndex + 1) / shuffledExam.questions.length) * 100;
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-6">
-      <div className="flex flex-col gap-6">
-          <Card className="w-full shadow-lg">
-            <CardHeader>
-              <div className="flex justify-between items-center mb-2">
-                <CardTitle>{shuffledExam.title}</CardTitle>
-                <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
-                    <Timer className="h-4 w-4" />
-                    <span>{formatTime(time)}</span>
+    <>
+      <AlertDialog open={isWarningModalOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                    Inactive Tab Detected
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                    You have switched to another tab or window. Please return to the exam immediately. The exam will be auto-submitted in...
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="text-center text-6xl font-bold text-destructive">
+                {warningCountdown}
+            </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-6">
+        <div className="flex flex-col gap-6">
+            <Card className="w-full shadow-lg">
+              <CardHeader>
+                <div className="flex justify-between items-center mb-2">
+                  <CardTitle>{shuffledExam.title}</CardTitle>
+                  <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                      <Timer className="h-4 w-4" />
+                      <span>{formatTime(time)}</span>
+                  </div>
                 </div>
-              </div>
-              <Progress value={progress} className="w-full" />
-              <CardDescription className="pt-2 text-center text-base">
-                Question {currentQuestionIndex + 1} of {shuffledExam.questions.length}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
-              <RadioGroup
-                value={selectedAnswers[currentQuestionIndex]}
-                onValueChange={handleAnswerSelect}
-                className="space-y-2"
-              >
-                {currentQuestion.options.map((option, index) => (
-                  <Label key={index} className="flex items-center gap-3 rounded-lg border p-2 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
-                    <RadioGroupItem value={option} id={`option-${index}`} />
-                    <span>{option}</span>
-                  </Label>
-                ))}
-              </RadioGroup>
-              <div className="flex justify-end pt-2 gap-2">
-                <Button onClick={handleMarkForReview} variant={markedForReview.has(currentQuestionIndex) ? 'default' : 'outline'} size="lg">
-                  {markedForReview.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
-                </Button>
-                {currentQuestionIndex < shuffledExam.questions.length - 1 ? (
-                  <Button onClick={handleNext} size="lg">Next</Button>
-                ) : (
-                  <Button onClick={handleSubmit} size="lg">Submit</Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-      </div>
-      <div>
-        <Card className="w-full shadow-lg md:sticky md:top-8">
-            <CardHeader>
-            <CardTitle className="text-xl">Question Navigator</CardTitle>
-            </CardHeader>
-            <CardContent>
-            <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {shuffledExam.questions.map((_, index) => (
-                <Button
-                    key={index}
-                    onClick={() => goToQuestion(index)}
-                    variant="outline"
-                    size="icon"
-                    className={cn(
-                      'font-bold',
-                      {
-                        'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex === index,
-                        'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-primary text-primary-foreground hover:bg-primary/90': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-red-400 hover:bg-red-500 text-red-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-gray-300 hover:bg-gray-400 text-gray-800': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
-                      }
-                    )}
+                <Progress value={progress} className="w-full" />
+                <CardDescription className="pt-2 text-center text-base">
+                  Question {currentQuestionIndex + 1} of {shuffledExam.questions.length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
+                <RadioGroup
+                  value={selectedAnswers[currentQuestionIndex]}
+                  onValueChange={handleAnswerSelect}
+                  className="space-y-2"
                 >
-                    {index + 1}
-                </Button>
-                ))}
-            </div>
-             <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Current</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Answered</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-red-400"></span> Unanswered</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-orange-400"></span> Marked for Review</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-gray-300"></span> Not Visited</div>
-            </div>
-            </CardContent>
-        </Card>
+                  {currentQuestion.options.map((option, index) => (
+                    <Label key={index} className="flex items-center gap-3 rounded-lg border p-2 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
+                      <RadioGroupItem value={option} id={`option-${index}`} />
+                      <span>{option}</span>
+                    </Label>
+                  ))}
+                </RadioGroup>
+                <div className="flex justify-end pt-2 gap-2">
+                  <Button onClick={handleMarkForReview} variant={markedForReview.has(currentQuestionIndex) ? 'default' : 'outline'} size="lg">
+                    {markedForReview.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
+                  </Button>
+                  {currentQuestionIndex < shuffledExam.questions.length - 1 ? (
+                    <Button onClick={handleNext} size="lg">Next</Button>
+                  ) : (
+                    <Button onClick={() => handleSubmit(false)} size="lg">Submit</Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+        </div>
+        <div>
+          <Card className="w-full shadow-lg md:sticky md:top-8">
+              <CardHeader>
+              <CardTitle className="text-xl">Question Navigator</CardTitle>
+              </CardHeader>
+              <CardContent>
+              <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                  {shuffledExam.questions.map((_, index) => (
+                  <Button
+                      key={index}
+                      onClick={() => goToQuestion(index)}
+                      variant="outline"
+                      size="icon"
+                      className={cn(
+                        'font-bold',
+                        {
+                          'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex === index,
+                          'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
+                          'bg-primary text-primary-foreground hover:bg-primary/90': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
+                          'bg-red-400 hover:bg-red-500 text-red-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
+                          'bg-gray-300 hover:bg-gray-400 text-gray-800': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        }
+                      )}
+                  >
+                      {index + 1}
+                  </Button>
+                  ))}
+              </div>
+               <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Current</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Answered</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-red-400"></span> Unanswered</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-orange-400"></span> Marked for Review</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-gray-300"></span> Not Visited</div>
+              </div>
+              </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
