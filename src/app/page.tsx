@@ -86,6 +86,7 @@ export default function Home() {
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [examToEdit, setExamToEdit] = useState<Exam | null>(null);
   const [isCreateCampaignOpen, setCreateCampaignOpen] = useState(false);
+  const [campaignsLastUpdated, setCampaignsLastUpdated] = useState<Date | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [isShareReportOpen, setShareReportOpen] = useState(false);
@@ -203,6 +204,7 @@ export default function Home() {
   
   const handleCampaignCreated = () => {
     toast({ title: "Campaign Created!", description: "The new campaign has been successfully created." });
+    setCampaignsLastUpdated(new Date()); // Trigger refresh
     setCreateCampaignOpen(false);
   }
 
@@ -358,7 +360,7 @@ export default function Home() {
         {(user || isSuperAdmin) ? (
             <div className="mx-auto grid max-w-6xl gap-8">
                 {user && (
-                    <JoinedCampaigns allExams={exams} />
+                    <JoinedCampaigns allExams={exams} refreshTrigger={campaignsLastUpdated} />
                 )}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
@@ -578,11 +580,11 @@ export default function Home() {
                     </div>
                 </div>
                 {(isAdmin || isSuperAdmin) && !isSuperAdmin && (
-                    <CampaignsList />
+                    <CampaignsList refreshTrigger={campaignsLastUpdated} />
                 )}
                 {isSuperAdmin && (
                     <div className="grid grid-cols-1 gap-8">
-                        <CampaignsList />
+                        <CampaignsList refreshTrigger={campaignsLastUpdated} />
                         <SuperAdminHistoryReport />
                     </div>
                 )}
@@ -617,3 +619,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

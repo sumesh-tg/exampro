@@ -26,6 +26,7 @@ declare const Razorpay: any;
 
 interface JoinedCampaignsProps {
     allExams: Exam[];
+    refreshTrigger: Date | null;
 }
 
 interface CampaignChampion {
@@ -35,7 +36,7 @@ interface CampaignChampion {
 
 const CAMPAIGNS_PAGE_SIZE = 3;
 
-export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
+export function JoinedCampaigns({ allExams, refreshTrigger }: JoinedCampaignsProps) {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -140,7 +141,7 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
       }
     }
     fetchData();
-  }, [user]);
+  }, [user, refreshTrigger]);
 
   const handlePayment = (exam: Exam, campaign: CampaignDetail) => {
     if (!user || !appConfig) return;
@@ -332,3 +333,5 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
     </Card>
   );
 }
+
+    

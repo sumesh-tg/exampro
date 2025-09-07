@@ -21,7 +21,11 @@ import { formatDistanceToNow } from 'date-fns';
 
 const CAMPAIGNS_PAGE_SIZE = 5;
 
-export function CampaignsList() {
+interface CampaignsListProps {
+  refreshTrigger: Date | null;
+}
+
+export function CampaignsList({ refreshTrigger }: CampaignsListProps) {
   const [campaigns, setCampaigns] = useState<CampaignDetail[]>([]);
   const [allExams, setAllExams] = useState<Exam[]>([]);
   const [users, setUsers] = useState<Record<string, AdminUserRecord>>({});
@@ -92,7 +96,7 @@ export function CampaignsList() {
 
   useEffect(() => {
     fetchData();
-  }, [toast, user, isAdmin, isSuperAdmin]);
+  }, [toast, user, isAdmin, isSuperAdmin, refreshTrigger]);
   
   const getAssigneeName = (uid: string) => {
     return users[uid]?.displayName || users[uid]?.email || 'N/A';
@@ -254,3 +258,5 @@ export function CampaignsList() {
     </>
   );
 }
+
+    
