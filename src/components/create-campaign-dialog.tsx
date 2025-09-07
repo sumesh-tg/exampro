@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { addUserToCampaign } from '@/services/userCampaignsService';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
@@ -122,13 +123,20 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
 
     try {
         const creatorId = user?.uid || 'super-admin';
-        await addCampaignDetail({
+        const assigneeId = isSuperAdmin ? values.assignee : user?.uid;
+
+        const docRef = await addCampaignDetail({
             ...values,
             createdBy: creatorId,
             updatedBy: creatorId,
-            assignee: isSuperAdmin ? values.assignee : user?.uid,
+            assignee: assigneeId,
             freeAttemptsDisabledFor: [],
         });
+
+        // Auto-join the assignee to the campaign
+        if (assigneeId) {
+            await addUserToCampaign(assigneeId, docRef.id);
+        }
 
         // Deduct credits if necessary
         if (!isSuperAdmin && sponsorshipCost > 0 && user) {
