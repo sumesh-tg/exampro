@@ -21,6 +21,7 @@ import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 import { FeaturesSection } from '@/components/features-section';
 import { Footer } from '@/components/footer';
 import { useUnrequireAuth } from '@/hooks/use-auth';
+import { Header } from '@/components/header';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -202,6 +203,7 @@ function SignInFormComponent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      <Header />
       <main className="flex-grow">
         <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4 py-12">
           <div id="recaptcha-container"></div>

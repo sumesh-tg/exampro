@@ -2,8 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Wallet, HistoryIcon, Send, HelpCircle } from 'lucide-react';
+import { BookOpen, History, Share2, FileText, Lock, Edit, Trash2, Star, Wallet, RefreshCcw, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -24,20 +23,17 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { useAuth, useRequireAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
-import type { Exam, ExamHistory, CampaignDetail } from '@/lib/data';
+import type { Exam, ExamHistory } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory, getAllExamHistory } from '@/services/examHistoryService';
@@ -67,6 +63,8 @@ import axios from 'axios';
 import { SuperAdminHistoryReport } from '@/components/super-admin-history-report';
 import { FeaturesSection } from '@/components/features-section';
 import { Footer } from '@/components/footer';
+import { Header } from '@/components/header';
+import { useRouter } from 'next/navigation';
 
 const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
@@ -190,16 +188,6 @@ export default function Home() {
     fetchInitialData();
   }, [user, isSuperAdmin]);
 
-  const handleSignOut = async () => {
-    if (isSuperAdmin) {
-      setSuperAdmin(false);
-      sessionStorage.removeItem('isSuperAdmin');
-      router.push('/auth/admin/signin');
-    } else {
-      await signOut(auth);
-      router.push('/auth/signin');
-    }
-  };
 
   const handleDeleteExam = async (id: string) => {
     await deleteExam(id);
@@ -351,269 +339,21 @@ export default function Home() {
             )}
         </>
       )}
-      <header className="sticky top-0 z-10 flex h-auto flex-col items-start gap-4 border-b bg-background/80 p-4 backdrop-blur-sm md:h-16 md:flex-row md:items-center md:px-6">
-        <nav className="flex w-full flex-1 items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-lg font-semibold"
-          >
-            <Image src="/images/logo_black.png" alt="ExamsPro.in logo" width={92} height={92} data-ai-hint="logo" />
-            <div>
-                <span className="text-xl font-bold">ExamsPro.in</span>
-                <p className="hidden text-xs text-muted-foreground sm:block">Perform Like a Pro</p>
-            </div>
-          </Link>
-           <div className="md:hidden">
-              {loading ? (
-                <div/>
-              ) : user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="icon" className="rounded-full">
-                      <Avatar>
-                        <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
-                        <AvatarFallback>
-                          {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : <UserIcon size={20} />}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="sr-only">Toggle user menu</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile">
-                        <UserIcon className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/help">
-                        <HelpCircle className="mr-2 h-4 w-4" />
-                        <span>Help & FAQ</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <div className="flex w-full items-center justify-between">
-                        <div className="flex items-center gap-2">
-                           <Wallet className="h-4 w-4" />
-                           <span>Attempts Left:</span>
-                        </div>
-                        <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleRechargePayment}>
-                        <RefreshCcw className="mr-2 h-4 w-4" />
-                        <span>Recharge Attempts</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : isSuperAdmin ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="icon" className="rounded-full">
-                      <Avatar>
-                        <AvatarFallback>
-                          <ShieldCheck size={20} />
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="sr-only">Toggle admin menu</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Super Admin</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/users">
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>User Management</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/config">
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>App Configuration</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/requests">
-                        <Send className="mr-2 h-4 w-4" />
-                        <span>Admin Requests</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/attempts">
-                        <HistoryIcon className="mr-2 h-4 w-4" />
-                        <span>Attempt History</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/help">
-                        <HelpCircle className="mr-2 h-4 w-4" />
-                        <span>Help & FAQ</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button asChild>
-                  <Link href="/auth/signin">Sign In</Link>
-                </Button>
-              )}
-          </div>
-        </nav>
-        <div className="flex w-full items-center justify-end gap-2 md:w-auto md:flex-nowrap flex-wrap">
-          {(isAdmin || isSuperAdmin) && (
-            <>
-              {canCreateExam && (
-                <CreateExamDialog 
-                  open={isCreateExamOpen}
-                  onOpenChange={(isOpen) => {
-                    setCreateExamOpen(isOpen);
-                    if (!isOpen) setExamToEdit(null);
-                  }}
-                  onExamCreated={handleExamCreated}
-                  examToEdit={examToEdit}
-                />
-              )}
-              {canCreateCampaign && (
-                  <CreateCampaignDialog
-                    open={isCreateCampaignOpen}
-                    onOpenChange={setCreateCampaignOpen}
-                    onCampaignCreated={handleCampaignCreated}
-                    allExams={exams}
-                    allAdmins={allAdmins}
-                  />
-              )}
-              <Button variant="outline" onClick={() => setShareReportOpen(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">View Share Report</span>
-              </Button>
-            </>
-          )}
-
-          <div className="hidden md:flex">
-             {loading ? (
-              <div/>
-            ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="icon" className="rounded-full">
-                    <Avatar>
-                      <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
-                      <AvatarFallback>
-                        {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : <UserIcon size={20} />}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="sr-only">Toggle user menu</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">
-                      <UserIcon className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/help">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      <span>Help & FAQ</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                      <div className="flex w-full items-center justify-between">
-                        <div className="flex items-center gap-2">
-                           <Wallet className="h-4 w-4" />
-                           <span>Attempts Left:</span>
-                        </div>
-                        <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
-                      </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleRechargePayment}>
-                      <RefreshCcw className="mr-2 h-4 w-4" />
-                      <span>Recharge Attempts</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : isSuperAdmin ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="icon" className="rounded-full">
-                    <Avatar>
-                      <AvatarFallback>
-                        <ShieldCheck size={20} />
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="sr-only">Toggle admin menu</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Super Admin</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/users">
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>User Management</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/config">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>App Configuration</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/requests">
-                      <Send className="mr-2 h-4 w-4" />
-                      <span>Admin Requests</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/attempts">
-                      <HistoryIcon className="mr-2 h-4 w-4" />
-                      <span>Attempt History</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/help">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      <span>Help & FAQ</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button asChild>
-                <Link href="/auth/signin">Sign In</Link>
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+      <Header 
+        userProfile={userProfile}
+        handleRechargePayment={handleRechargePayment}
+        isCreateExamOpen={isCreateExamOpen}
+        setCreateExamOpen={setCreateExamOpen}
+        setExamToEdit={setExamToEdit}
+        handleExamCreated={handleExamCreated}
+        examToEdit={examToEdit}
+        isCreateCampaignOpen={isCreateCampaignOpen}
+        setCreateCampaignOpen={setCreateCampaignOpen}
+        handleCampaignCreated={handleCampaignCreated}
+        exams={exams}
+        allAdmins={allAdmins}
+        setShareReportOpen={setShareReportOpen}
+      />
       <main className="flex-1 p-4 md:p-8">
         {(user || isSuperAdmin) ? (
             <div className="mx-auto grid max-w-6xl gap-8">
