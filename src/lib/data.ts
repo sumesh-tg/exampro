@@ -39,6 +39,7 @@ export type ExamHistory = {
   feedback?: string;
   status?: 'Pass' | 'Fail';
   winPercentage?: number;
+  timeTakenInSeconds?: number;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;

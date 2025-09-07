@@ -55,6 +55,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const resultCardRef = useRef<HTMLDivElement>(null);
+  const timeTakenRef = useRef(0);
 
   useEffect(() => {
     // Randomize questions and options once on mount
@@ -108,6 +109,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         updatedBy: user.uid,
         status: hasPassed ? 'Pass' : 'Fail',
         winPercentage: winPercentage,
+        timeTakenInSeconds: timeTakenRef.current,
       };
 
       if (sharedBy) {
@@ -130,6 +132,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     if (timeLimit) {
       timer = setInterval(() => {
         if (!isSubmitted) {
+          timeTakenRef.current += 1;
           setTime((prevTime) => {
             if (prevTime <= 1) {
               clearInterval(timer);
@@ -143,6 +146,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     } else {
       timer = setInterval(() => {
         if (!isSubmitted) {
+          timeTakenRef.current += 1;
           setTime((prevTime) => prevTime + 1);
         }
       }, 1000);
@@ -269,7 +273,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                 </div>
                 <div className="flex items-center gap-2">
                     <Timer />
-                    <span>{formatTime(timeLimit ? timeLimit - time : time)}</span>
+                    <span>{formatTime(timeTakenRef.current)}</span>
                 </div>
             </div>
 
@@ -467,4 +471,5 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     
 
     
+
 
