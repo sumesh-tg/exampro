@@ -11,7 +11,7 @@ import type { Exam, AdminUserRecord } from '@/lib/data';
 
 import { 
     LogOut, User as UserIcon, ShieldCheck, Users, Settings, Send, 
-    HistoryIcon, HelpCircle, Wallet, RefreshCcw, FileText 
+    HistoryIcon, HelpCircle, Wallet, RefreshCcw, FileText, Moon, Sun
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -20,6 +20,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +32,7 @@ import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { CreateCampaignDialog } from '@/components/create-campaign-dialog';
 import { getAppConfig } from '@/services/appConfigService';
 import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 
 interface HeaderProps {
     userProfile?: { attemptBalance?: number } | null;
@@ -63,6 +68,7 @@ export function Header({
 }: HeaderProps) {
   const { user, loading, isAdmin, isSuperAdmin, setSuperAdmin } = useAuth();
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [appConfig, setAppConfig] = useState<{ isExamCreationEnabled?: boolean, isCampaignCreationEnabled?: boolean } | null>(null);
 
   useEffect(() => {
@@ -190,7 +196,27 @@ export function Header({
                 </>
             )}
 
-            <div className="hidden md:flex">
+            <div className="hidden md:flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                      <span className="sr-only">Toggle theme</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setTheme("light")}>
+                      Light
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>
+                      Dark
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                      System
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {!loading && (user || isSuperAdmin) && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
