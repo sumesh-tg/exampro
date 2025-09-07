@@ -192,8 +192,23 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // Add watermark
+      pdf.setFontSize(50);
+      pdf.setTextColor(230, 230, 230); // Light grey color
+      pdf.setGState(new pdf.GState({opacity: 0.5}));
+      pdf.text(
+          "ExamsPro.in", 
+          pdfWidth / 2, 
+          pdfHeight / 2, 
+          { angle: -45, align: 'center' }
+      );
+      
       pdf.save(`exam-result-${exam.id}.pdf`);
     }
   };
