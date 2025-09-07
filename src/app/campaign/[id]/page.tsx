@@ -4,18 +4,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/use-auth';
-import { addUserToCampaign, hasUserJoinedCampaign } from '@/services/userCampaignsService';
+import { addUserToCampaign, getUsersForCampaign, hasUserJoinedCampaign } from '@/services/userCampaignsService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import type { CampaignDetail } from '@/lib/data';
+import { getCampaignDetail } from '@/services/campaignDetailsService';
 
 export default function JoinCampaignPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const router = useRouter();
   const params = useParams();
   const campaignId = params.id as string;
-  const [status, setStatus] = useState<'loading' | 'success' | 'already_joined' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'already_joined' | 'error' | 'full'>('loading');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,6 +28,17 @@ export default function JoinCampaignPage() {
           if (alreadyJoined) {
             setStatus('already_joined');
             setTimeout(() => router.push('/'), 2000);
+            return;
+          }
+
+          // Check if campaign is full
+          const campaignDetails = await getCampaignDetail(campaignId) as CampaignDetail | null;
+          if (!campaignDetails) {
+            throw new Error("Campaign not found.");
+          }
+          const joinedUsers = await getUsersForCampaign(campaignId);
+          if (joinedUsers.length >= campaignDetails.maxJoinees) {
+            setStatus('full');
             return;
           }
 
@@ -61,11 +74,13 @@ export default function JoinCampaignPage() {
                 <CardTitle className="text-2xl">
                     {status === 'success' && 'Successfully Joined!'}
                     {status === 'already_joined' && 'Already a Member!'}
+                    {status === 'full' && 'Campaign Full'}
                     {status === 'error' && 'Something Went Wrong'}
                 </CardTitle>
                 <CardDescription>
                     {status === 'success' && 'You have been added to the campaign.'}
                     {status === 'already_joined' && 'You are already a member of this campaign.'}
+                    {status === 'full' && 'Sorry, this campaign has reached its maximum number of participants.'}
                     {status === 'error' && 'We could not add you to the campaign.'}
                 </CardDescription>
             </CardHeader>
@@ -75,6 +90,9 @@ export default function JoinCampaignPage() {
                 )}
                 {status === 'already_joined' && (
                     <CheckCircle className="mx-auto h-16 w-16 text-blue-500" />
+                )}
+                 {status === 'full' && (
+                    <XCircle className="mx-auto h-16 w-16 text-destructive" />
                 )}
                  {status === 'error' && (
                     <>
@@ -91,4 +109,3 @@ export default function JoinCampaignPage() {
     </div>
   );
 }
-

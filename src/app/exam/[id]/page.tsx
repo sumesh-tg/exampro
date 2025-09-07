@@ -7,7 +7,7 @@ import { notFound, useSearchParams, useRouter } from 'next/navigation';
 import type { Exam } from '@/lib/data';
 import { getExam } from '@/services/examService';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserProfile, decrementAttemptBalance } from '@/services/userService';
+import { getUserProfile, deductAttemptBalance } from '@/services/userService';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -65,7 +65,7 @@ export default function ExamPage({ params }: { params: { id: string } }) {
               return;
           }
            // Decrement balance before loading exam
-          await decrementAttemptBalance(user.uid, 'EXAM_ATTEMPT', { examId: exam.id, examTitle: exam.title });
+          await deductAttemptBalance(user.uid, 1, 'EXAM_ATTEMPT', { examId: exam.id, examTitle: exam.title });
         }
         
         setExamData(exam);

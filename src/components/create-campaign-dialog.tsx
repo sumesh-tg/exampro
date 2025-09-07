@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Loader2, Layers, Calendar as CalendarIcon, User } from 'lucide-react';
-import type { Exam } from '@/lib/data';
+import type { Exam, UserProfile } from '@/lib/data';
 import { Checkbox } from './ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
@@ -27,10 +27,11 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addCampaignDetail } from '@/services/campaignDetailsService';
 import { useAuth } from '@/hooks/use-auth';
-import type { AdminUserRecord } from '@/services/userService';
+import { AdminUserRecord, deductAttemptBalance, getUserProfile } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
@@ -39,7 +40,8 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
-  freeAttempts: z.coerce.number().min(0).max(100, { message: 'Cannot exceed 100 free attempts.' }).default(1),
+  freeAttempts: z.coerce.number().min(1).max(100, { message: 'Cannot exceed 100 free attempts.' }).default(1),
+  maxJoinees: z.coerce.number().min(1, { message: 'There must be at least one joinee.' }).max(1000, { message: 'Cannot exceed 1000 joinees.' }).default(10),
 });
 
 interface CreateCampaignDialogProps {
@@ -52,7 +54,8 @@ interface CreateCampaignDialogProps {
 
 export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, allExams, allAdmins }: CreateCampaignDialogProps) {
   const [loading, setLoading] = useState(false);
-  const { user, isSuperAdmin, isAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
+  const [adminProfile, setAdminProfile] = useState<UserProfile | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof campaignSchema>>({
@@ -62,9 +65,28 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
       description: '',
       examIds: [],
       freeAttempts: 1,
+      maxJoinees: 10,
       startDate: new Date(),
     },
   });
+
+  const freeAttempts = form.watch('freeAttempts');
+  const maxJoinees = form.watch('maxJoinees');
+  const sponsorshipCost = freeAttempts > 1 ? (freeAttempts - 1) * maxJoinees : 0;
+  const hasEnoughCredits = (adminProfile?.attemptBalance ?? 0) >= sponsorshipCost;
+
+  useEffect(() => {
+    async function fetchAdminProfile() {
+      if (user && !isSuperAdmin) {
+        const profile = await getUserProfile(user.uid);
+        setAdminProfile(profile);
+      }
+    }
+    if (open) {
+      fetchAdminProfile();
+    }
+  }, [open, user, isSuperAdmin]);
+
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -73,6 +95,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
         description: '',
         examIds: [],
         freeAttempts: 1,
+        maxJoinees: 10,
         startDate: new Date(),
       });
     }
@@ -80,20 +103,22 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
   };
   
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
-    setLoading(true);
+    if (!user && !isSuperAdmin) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a campaign.' });
+      return;
+    }
 
-    const loggedInUser = user || isSuperAdmin;
-    if (!loggedInUser) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a campaign.' });
-        setLoading(false);
+    if (!isSuperAdmin && !hasEnoughCredits) {
+      toast({ variant: 'destructive', title: 'Insufficient Credits', description: 'You do not have enough attempt credits to sponsor this campaign.' });
+      return;
+    }
+
+    if (isSuperAdmin && !values.assignee) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Super Admins must assign the campaign to an admin.' });
         return;
     }
     
-    if (isSuperAdmin && !values.assignee) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Super Admins must assign the campaign to an admin.' });
-        setLoading(false);
-        return;
-    }
+    setLoading(true);
 
     try {
         const creatorId = user?.uid || 'super-admin';
@@ -104,6 +129,12 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
             assignee: isSuperAdmin ? values.assignee : user?.uid,
             freeAttemptsDisabledFor: [],
         });
+
+        // Deduct credits if necessary
+        if (!isSuperAdmin && sponsorshipCost > 0 && user) {
+          await deductAttemptBalance(user.uid, sponsorshipCost, 'CAMPAIGN_SPONSORSHIP', { campaignName: values.name });
+        }
+
         toast({ title: 'Campaign Created!', description: 'The new campaign has been successfully created.' });
         onCampaignCreated();
         handleOpenChange(false);
@@ -181,18 +212,40 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
                     )}
                 />
             )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="freeAttempts"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Free Attempts per User</FormLabel>
+                    <FormControl><Input type="number" min="1" max="100" {...field} /></FormControl>
+                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="maxJoinees"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Maximum Joinees</FormLabel>
+                    <FormControl><Input type="number" min="1" max="1000" {...field} /></FormControl>
+                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
-            <FormField
-              control={form.control}
-              name="freeAttempts"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Number of Free Attempts</FormLabel>
-                  <FormControl><Input type="number" min="0" max="100" {...field} /></FormControl>
-                   <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isSuperAdmin && sponsorshipCost > 0 && (
+              <Alert variant={hasEnoughCredits ? 'default' : 'destructive'}>
+                <AlertTitle>Sponsorship Cost</AlertTitle>
+                <AlertDescription>
+                  This campaign will cost <strong>{sponsorshipCost}</strong> attempt credits to sponsor. Your current balance is <strong>{adminProfile?.attemptBalance ?? 0}</strong>.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <FormField
               control={form.control}
@@ -302,7 +355,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onCampaignCreated, al
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || (!isSuperAdmin && !hasEnoughCredits)}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Campaign
               </Button>

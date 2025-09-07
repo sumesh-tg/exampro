@@ -8,6 +8,7 @@ import { httpsCallable } from 'firebase/functions';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getAppConfig } from './appConfigService';
 import { logAttemptChange } from './attemptHistoryService';
+import type { AttemptHistoryLog } from '@/lib/data';
 
 
 export type UserProfile = {
@@ -82,7 +83,7 @@ const getAuthenticatedUser = (): Promise<User | null> => {
   });
 };
 
-export const decrementAttemptBalance = async (userId: string, reason: 'EXAM_ATTEMPT' | 'TOPIC_SUGGESTION', context?: object) => {
+export const deductAttemptBalance = async (userId: string, amount: number, reason: AttemptHistoryLog['reason'], context?: object) => {
     const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
     
     const newBalance = await runTransaction(db, async (transaction) => {
@@ -91,12 +92,15 @@ export const decrementAttemptBalance = async (userId: string, reason: 'EXAM_ATTE
             throw "User document does not exist!";
         }
         const currentBalance = userDoc.data().attemptBalance ?? 0;
-        const updatedBalance = currentBalance - 1;
-        transaction.update(userDocRef, { attemptBalance: increment(-1) });
+        if (currentBalance < amount) {
+            throw new Error("Insufficient attempt balance.");
+        }
+        const updatedBalance = currentBalance - amount;
+        transaction.update(userDocRef, { attemptBalance: increment(-amount) });
         return updatedBalance;
     });
 
-    await logAttemptChange({ userId, changeAmount: -1, newBalance, reason, context });
+    await logAttemptChange({ userId, changeAmount: -amount, newBalance, reason, context });
 };
 
 export const incrementAttemptBalance = async (userId: string, count: number) => {

@@ -17,7 +17,7 @@ import { Loader2, Sparkles, Info, RefreshCcw, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
-import { getUserProfile, decrementAttemptBalance, UserProfile, incrementAttemptBalance } from "@/services/userService";
+import { getUserProfile, UserProfile, incrementAttemptBalance } from "@/services/userService";
 import { getAppConfig, AppConfig } from "@/services/appConfigService";
 import axios from "axios";
 
@@ -106,8 +106,7 @@ export function TopicSuggester() {
       };
       
       // The attempt is now only decremented when the user starts the exam from the next page.
-      sessionStorage.setItem('tempExam', JSON.stringify(newExam));
-      router.push('/exam/custom');
+      router.push(`/exam/configure/custom?examData=${encodeURIComponent(JSON.stringify(newExam))}`);
 
     } catch (error) {
       console.error('Failed to generate exam:', error);
@@ -239,7 +238,7 @@ export function TopicSuggester() {
                                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Clicking on your desired topic below to start exam. This will use 1 attempt.</p>
+                                    <p>Clicking on your desired topic below to generate a new custom exam.</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>

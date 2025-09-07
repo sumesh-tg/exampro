@@ -64,6 +64,7 @@ export type CampaignDetail = {
     createdBy: string;
     assignee?: string;
     freeAttempts: number;
+    maxJoinees: number;
     freeAttemptsDisabledFor?: string[];
     createdAt: Date;
     updatedAt: Date;
@@ -81,11 +82,12 @@ export type AttemptHistoryLog = {
   userId: string;
   changeAmount: number;
   newBalance: number;
-  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION';
+  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION' | 'CAMPAIGN_SPONSORSHIP';
   context?: {
     examId?: string;
     examTitle?: string;
     adminId?: string;
+    campaignName?: string;
   };
   createdAt: Date;
 };
