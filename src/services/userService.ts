@@ -103,7 +103,7 @@ export const deductAttemptBalance = async (userId: string, amount: number, reaso
     await logAttemptChange({ userId, changeAmount: -amount, newBalance, reason, context });
 };
 
-export const incrementAttemptBalance = async (userId: string, count: number) => {
+export const incrementAttemptBalance = async (userId: string, count: number, reason: AttemptHistoryLog['reason'] = 'USER_RECHARGE', context?: object) => {
     const userDocRef = doc(db, process.env.NEXT_PUBLIC_FIRESTORE_COLLECTION_USERS || 'users', userId);
     
     const newBalance = await runTransaction(db, async (transaction) => {
@@ -117,7 +117,7 @@ export const incrementAttemptBalance = async (userId: string, count: number) => 
         return updatedBalance;
     });
 
-    await logAttemptChange({ userId, changeAmount: count, newBalance, reason: 'USER_RECHARGE' });
+    await logAttemptChange({ userId, changeAmount: count, newBalance, reason, context });
 };
 
 

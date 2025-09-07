@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,7 +18,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Loader2, Calendar as CalendarIcon, User } from 'lucide-react';
-import type { Exam, CampaignDetail } from '@/lib/data';
+import type { Exam, CampaignDetail, UserProfile } from '@/lib/data';
 import { Checkbox } from './ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
@@ -26,10 +27,11 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { updateCampaignDetail } from '@/services/campaignDetailsService';
 import { useAuth } from '@/hooks/use-auth';
-import type { AdminUserRecord } from '@/services/userService';
+import { AdminUserRecord, getUserProfile, deductAttemptBalance, incrementAttemptBalance } from '@/services/userService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 const campaignSchema = z.object({
   name: z.string().min(5, { message: 'Campaign name must be at least 5 characters.' }),
@@ -38,7 +40,8 @@ const campaignSchema = z.object({
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
   assignee: z.string().optional(),
-  freeAttempts: z.coerce.number().min(0).max(100, { message: 'Cannot exceed 100 free attempts.' }).default(1),
+  freeAttempts: z.coerce.number().min(1).max(100, { message: 'Cannot exceed 100 free attempts.' }).default(1),
+  maxJoinees: z.coerce.number().min(1, { message: 'There must be at least one joinee.' }).max(1000, { message: 'Cannot exceed 1000 joinees.' }).default(10),
 });
 
 interface EditCampaignDialogProps {
@@ -52,6 +55,8 @@ interface EditCampaignDialogProps {
 
 export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpdated, allExams, allAdmins }: EditCampaignDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [costDifference, setCostDifference] = useState(0);
+  const [adminProfile, setAdminProfile] = useState<UserProfile | null>(null);
   const { user, isSuperAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -63,8 +68,27 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
         examIds: [],
         assignee: '',
         freeAttempts: 1,
+        maxJoinees: 10,
     },
   });
+
+  const freeAttempts = form.watch('freeAttempts');
+  const maxJoinees = form.watch('maxJoinees');
+  
+  const hasEnoughCredits = (adminProfile?.attemptBalance ?? 0) >= costDifference;
+
+  useEffect(() => {
+    async function fetchAdminProfile() {
+      if (user && !isSuperAdmin) {
+        const profile = await getUserProfile(user.uid);
+        setAdminProfile(profile);
+      }
+    }
+    if (open) {
+      fetchAdminProfile();
+    }
+  }, [open, user, isSuperAdmin]);
+
 
   useEffect(() => {
     if (campaign) {
@@ -76,9 +100,17 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
         endDate: (campaign.endDate as any).toDate(),
         assignee: campaign.assignee,
         freeAttempts: campaign.freeAttempts,
+        maxJoinees: campaign.maxJoinees,
       });
     }
   }, [campaign, form]);
+  
+  useEffect(() => {
+      const oldCost = campaign.freeAttempts > 1 ? (campaign.freeAttempts - 1) * campaign.maxJoinees : 0;
+      const newCost = freeAttempts > 1 ? (freeAttempts - 1) * maxJoinees : 0;
+      setCostDifference(newCost - oldCost);
+  }, [freeAttempts, maxJoinees, campaign]);
+
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -90,14 +122,29 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
   const onSubmit = async (values: z.infer<typeof campaignSchema>) => {
     setLoading(true);
     
+    if (!isSuperAdmin && !hasEnoughCredits) {
+        toast({ variant: 'destructive', title: 'Insufficient Credits', description: 'You do not have enough attempt credits to cover these changes.' });
+        setLoading(false);
+        return;
+    }
+    
     const updaterId = user?.uid ?? 'System';
 
     try {
+        if (!isSuperAdmin && user && costDifference !== 0) {
+            if (costDifference > 0) {
+                await deductAttemptBalance(user.uid, costDifference, 'CAMPAIGN_EDIT', { campaignName: values.name });
+            } else {
+                // Refund credits
+                await incrementAttemptBalance(user.uid, Math.abs(costDifference), 'CAMPAIGN_EDIT', { campaignName: values.name });
+            }
+        }
+    
         await updateCampaignDetail(campaign.id, {
             ...values,
-            freeAttemptsDisabledFor: campaign.freeAttemptsDisabledFor || [],
             updatedBy: updaterId,
         });
+        
         toast({ title: 'Campaign Updated!', description: 'The campaign has been successfully updated.' });
         onCampaignUpdated();
         handleOpenChange(false);
@@ -173,17 +220,39 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
                 />
             )}
             
-            <FormField
-              control={form.control}
-              name="freeAttempts"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Number of Free Attempts</FormLabel>
-                  <FormControl><Input type="number" min="0" max="100" {...field} /></FormControl>
-                   <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="freeAttempts"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Free Attempts per User</FormLabel>
+                    <FormControl><Input type="number" min="1" max="100" {...field} /></FormControl>
+                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="maxJoinees"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Maximum Joinees</FormLabel>
+                    <FormControl><Input type="number" min="1" max="1000" {...field} /></FormControl>
+                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            {!isSuperAdmin && costDifference !== 0 && (
+              <Alert variant={hasEnoughCredits ? 'default' : 'destructive'}>
+                <AlertTitle>Credit Change</AlertTitle>
+                <AlertDescription>
+                  This change will {costDifference > 0 ? 'cost' : 'refund'} <strong>{Math.abs(costDifference)}</strong> attempt credits. Your current balance is <strong>{adminProfile?.attemptBalance ?? 0}</strong>.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <FormField
               control={form.control}
@@ -282,7 +351,7 @@ export function EditCampaignDialog({ campaign, open, onOpenChange, onCampaignUpd
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || (!isSuperAdmin && !hasEnoughCredits)}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
               </Button>

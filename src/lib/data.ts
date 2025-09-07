@@ -82,7 +82,7 @@ export type AttemptHistoryLog = {
   userId: string;
   changeAmount: number;
   newBalance: number;
-  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION' | 'CAMPAIGN_SPONSORSHIP';
+  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION' | 'CAMPAIGN_SPONSORSHIP' | 'CAMPAIGN_EDIT';
   context?: {
     examId?: string;
     examTitle?: string;
