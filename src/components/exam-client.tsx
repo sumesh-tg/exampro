@@ -224,13 +224,19 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
 
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg">
+        <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg relative overflow-hidden">
+           <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+              <span className="text-8xl font-bold text-gray-200/50 dark:text-gray-700/50 -rotate-45">
+                ExamsPro.in
+              </span>
+            </div>
+          <div className="relative z-10">
           <CardHeader>
             <CardTitle className="text-3xl font-bold">Exam Completed!</CardTitle>
             <CardDescription>Here's your result for "{shuffledExam.title}".</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4",
+            <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4 bg-background/80",
               hasPassed ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500"
             )}>
               <p className="text-muted-foreground">You scored</p>
@@ -353,6 +359,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
               </Button>
             </div>
           </CardContent>
+          </div>
         </Card>
       </div>
     );
