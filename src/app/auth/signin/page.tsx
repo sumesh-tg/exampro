@@ -207,7 +207,7 @@ function SignInFormComponent() {
       <main className="flex-grow flex flex-col">
         <div className="flex-grow flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4 py-12">
           <div id="recaptcha-container"></div>
-          <Card className="w-full max-w-sm z-10">
+          <Card className="w-full max-w-sm">
             <CardHeader>
               <CardTitle className="text-2xl">Sign In</CardTitle>
               <CardDescription>
@@ -332,7 +332,7 @@ function SignInFormComponent() {
             </CardContent>
           </Card>
         </div>
-        <div className="p-4 md:p-8">
+        <div className="mx-auto max-w-6xl p-4 md:p-8">
             <FeaturesSection />
         </div>
       </main>
@@ -348,5 +348,3 @@ export default function SignInPage() {
     </Suspense>
   )
 }
-
-    
