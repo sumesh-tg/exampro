@@ -201,11 +201,27 @@ function SignInFormComponent() {
   
   const isAuthReady = !configLoading;
 
+  const backgroundStyle = {
+    '--icon-fill': 'hsl(var(--primary) / 0.05)',
+    backgroundImage: `
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-book-open'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-graduation-cap'%3E%3Cpath d='M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z'/%3E%3Cpath d='M22 10v6'/%3E%3Cpath d='M6 12.5V16a6 3 0 0 0 12 0v-3.5'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-atom'%3E%3Ccircle cx='12' cy='12' r='1'/%3E%3Cpath d='M20.2 20.2c2.04-2.03.02-5.72-2.3-8.04-2.3-2.32-5.99-4.34-8.04-2.3'/%3E%3Cpath d='M3.8 3.8c-2.04 2.03-.02 5.72 2.3 8.04 2.3 2.32 5.99 4.34 8.04 2.3'/%3E%3Cpath d='M20.2 3.8c-2.03 2.04-5.72.02-8.04-2.3-2.32-2.3-4.34-5.99-2.3-8.04'/%3E%3Cpath d='M3.8 20.2c2.03-2.04 5.72-.02 8.04 2.3 2.32 2.3 4.34 5.99 2.3 8.04'/%3E%3C/svg%3E")
+    `,
+    backgroundPosition: '0 0, 25px 25px, 50px 50px, 75px 75px',
+    backgroundSize: '100px 100px',
+    backgroundColor: 'hsl(var(--background))',
+  };
+
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-grow flex flex-col">
-        <div className="flex-grow flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4 py-12">
+        <div 
+          className="flex-grow flex items-center justify-center p-4 py-12"
+          style={backgroundStyle}
+        >
           <div id="recaptcha-container"></div>
           <Card className="w-full max-w-sm">
             <CardHeader>
@@ -332,7 +348,7 @@ function SignInFormComponent() {
             </CardContent>
           </Card>
         </div>
-        <div className="mx-auto max-w-6xl p-4 md:p-8">
+        <div className="mx-auto max-w-6xl w-full p-4 md:p-8">
             <FeaturesSection />
         </div>
       </main>
@@ -348,3 +364,5 @@ export default function SignInPage() {
     </Suspense>
   )
 }
+
+    
