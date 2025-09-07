@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Timer, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, Download, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -222,6 +222,12 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     const userPercentage = (score / shuffledExam.questions.length) * 100;
     const hasPassed = userPercentage >= winPercentage;
 
+    const correctCount = score;
+    const answeredCount = Object.keys(selectedAnswers).length;
+    const incorrectCount = answeredCount - correctCount;
+    const unansweredCount = shuffledExam.questions.length - answeredCount;
+
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg relative overflow-hidden">
@@ -251,11 +257,15 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             <div className="flex flex-wrap justify-around text-lg gap-4">
                 <div className="flex items-center gap-2">
                     <CheckCircle className="text-green-500" />
-                    <span>{score} Correct</span>
+                    <span>{correctCount} Correct</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <XCircle className="text-red-500" />
-                    <span>{shuffledExam.questions.length - score} Incorrect</span>
+                    <span>{incorrectCount} Incorrect</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <HelpCircle className="text-yellow-500" />
+                    <span>{unansweredCount} Unanswered</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <Timer />
@@ -457,3 +467,4 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     
 
     
+
