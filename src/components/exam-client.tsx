@@ -191,29 +191,41 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
 
   const handleDownloadPdf = async () => {
     const input = resultCardRef.current;
-    if (input) {
-      const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      
-      // Add watermark
-      pdf.setFontSize(50);
-      pdf.setTextColor(230, 230, 230); // Light grey color
-      pdf.setGState(new pdf.GState({opacity: 0.5}));
-      pdf.text(
-          "ExamsPro.in", 
-          pdfWidth / 2, 
-          pdfHeight / 2, 
-          { angle: -45, align: 'center' }
-      );
-      
-      pdf.save(`exam-result-${exam.id}.pdf`);
+    if (!input) return;
+
+    const wasDarkMode = document.documentElement.classList.contains('dark');
+    if (wasDarkMode) {
+        document.documentElement.classList.remove('dark');
+    }
+
+    try {
+        const canvas = await html2canvas(input, { 
+            scale: 2,
+            backgroundColor: wasDarkMode ? '#ffffff' : null // Force white background if it was dark
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        pdf.setFontSize(50);
+        pdf.setTextColor(230, 230, 230);
+        pdf.setGState(new pdf.GState({opacity: 0.5}));
+        pdf.text(
+            "ExamsPro.in", 
+            pdfWidth / 2, 
+            pdf.internal.pageSize.getHeight() / 2, 
+            { angle: -45, align: 'center' }
+        );
+        
+        pdf.save(`exam-result-${exam.id}.pdf`);
+    } finally {
+        if (wasDarkMode) {
+            document.documentElement.classList.add('dark');
+        }
     }
   };
   
@@ -467,9 +479,3 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     </div>
   );
 }
-
-    
-
-    
-
-
