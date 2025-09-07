@@ -74,7 +74,14 @@ export function JoinedCampaigns({ allExams }: JoinedCampaignsProps) {
         setAllUsers(usersMap);
         setAppConfig(config);
 
-        const campaignIds = userCampaigns.map(uc => (uc as any).campaignId);
+        // Sort userCampaigns by joinedAt date, most recent first
+        const sortedUserCampaigns = (userCampaigns as { campaignId: string; joinedAt: any }[]).sort((a, b) => {
+            const dateA = a.joinedAt?.toDate() || 0;
+            const dateB = b.joinedAt?.toDate() || 0;
+            return dateB - dateA;
+        });
+
+        const campaignIds = sortedUserCampaigns.map(uc => uc.campaignId);
         
         const campaignDetails = await Promise.all(
           campaignIds.map(id => getCampaignDetail(id))
