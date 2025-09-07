@@ -222,7 +222,7 @@ function SignInFormComponent() {
           style={backgroundStyle}
         >
           <div id="recaptcha-container"></div>
-          <Card className="w-full max-w-sm">
+          <Card className="w-full max-w-sm shadow-lg shadow-primary/20">
             <CardHeader>
               <CardTitle className="text-2xl">Sign In</CardTitle>
               <CardDescription>
