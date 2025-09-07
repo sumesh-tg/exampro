@@ -97,7 +97,7 @@ export function Header({
                 <Image src="/images/logo_black.png" alt="ExamsPro.in logo" width={92} height={92} data-ai-hint="logo" />
                 <div>
                     <span className="text-xl font-bold">ExamsPro.in</span>
-                    <p className="hidden text-xs text-muted-foreground sm:block">Perform Like a Pro</p>
+                    <p className="text-xs text-muted-foreground">Perform Like a Pro</p>
                 </div>
             </Link>
             <div className="md:hidden">
