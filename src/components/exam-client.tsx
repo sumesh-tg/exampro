@@ -142,6 +142,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         status: hasPassed ? 'Pass' : 'Fail',
         winPercentage: winPercentage,
         timeTakenInSeconds: timeTakenRef.current,
+        isAutoSubmitted: isAutoSubmit,
       };
 
       if (sharedBy) {

@@ -40,6 +40,7 @@ export type ExamHistory = {
   status?: 'Pass' | 'Fail';
   winPercentage?: number;
   timeTakenInSeconds?: number;
+  isAutoSubmitted?: boolean;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
