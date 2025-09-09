@@ -64,6 +64,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [warningCountdown, setWarningCountdown] = useState(10);
   const { toast } = useToast();
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const isTimerRunningRef = useRef(false);
 
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     if (countdownTimerRef.current) {
         clearInterval(countdownTimerRef.current);
     }
+    isTimerRunningRef.current = false;
     setWarningModalOpen(false);
     
     if(isAutoSubmit) {
@@ -162,7 +164,8 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         const handleVisibilityChange = () => {
             if (!appConfig?.isTabSwitchSubmitEnabled || isSubmitted) return;
 
-            if (document.visibilityState === 'hidden') {
+            if (document.visibilityState === 'hidden' && !isTimerRunningRef.current) {
+                isTimerRunningRef.current = true;
                 setWarningModalOpen(true);
                 setWarningCountdown(10);
                 countdownTimerRef.current = setInterval(() => {
@@ -175,10 +178,11 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                         return prev - 1;
                     });
                 }, 1000);
-            } else {
+            } else if (document.visibilityState === 'visible' && isTimerRunningRef.current) {
                 if (countdownTimerRef.current) {
                     clearInterval(countdownTimerRef.current);
                 }
+                isTimerRunningRef.current = false;
                 setWarningModalOpen(false);
             }
         };
