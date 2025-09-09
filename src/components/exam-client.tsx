@@ -162,40 +162,42 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   
     useEffect(() => {
         const handleVisibilityChange = () => {
-            if (!appConfig?.isTabSwitchSubmitEnabled || isSubmitted) return;
+            if (isSubmitted || !appConfig?.isTabSwitchSubmitEnabled) return;
 
-            if (document.visibilityState === 'hidden' && !isTimerRunningRef.current) {
-                isTimerRunningRef.current = true;
-                setWarningModalOpen(true);
-                setWarningCountdown(10);
-                countdownTimerRef.current = setInterval(() => {
-                    setWarningCountdown(prev => {
-                        if (prev <= 1) {
-                            clearInterval(countdownTimerRef.current!);
-                            handleSubmit(true);
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
-            } else if (document.visibilityState === 'visible' && isTimerRunningRef.current) {
-                if (countdownTimerRef.current) {
-                    clearInterval(countdownTimerRef.current);
+            if (document.visibilityState === 'hidden') {
+                if (!isTimerRunningRef.current) {
+                    isTimerRunningRef.current = true;
+                    setWarningModalOpen(true);
+                    setWarningCountdown(10);
+                    countdownTimerRef.current = setInterval(() => {
+                        setWarningCountdown(prev => {
+                            if (prev <= 1) {
+                                clearInterval(countdownTimerRef.current!);
+                                handleSubmit(true);
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
                 }
-                isTimerRunningRef.current = false;
-                setWarningModalOpen(false);
+            } else if (document.visibilityState === 'visible') {
+                if (isTimerRunningRef.current) {
+                    clearInterval(countdownTimerRef.current!);
+                    isTimerRunningRef.current = false;
+                    setWarningModalOpen(false);
+                }
             }
         };
-        
-        document.addEventListener('visibilitychange', handleVisibilityChange);
 
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
-            if(countdownTimerRef.current) {
+            if (countdownTimerRef.current) {
                 clearInterval(countdownTimerRef.current);
             }
         };
-    }, [isSubmitted, handleSubmit, appConfig]);
+    }, [isSubmitted, appConfig, handleSubmit]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
