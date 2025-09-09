@@ -18,7 +18,7 @@ import { addExamHistory } from '@/services/examHistoryService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from './ui/alert-dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getAppConfig, AppConfig } from '@/services/appConfigService';
 
@@ -59,12 +59,11 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const resultCardRef = useRef<HTMLDivElement>(null);
   const timeTakenRef = useRef(0);
-  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isWarningModalOpen, setWarningModalOpen] = useState(false);
   const [warningCountdown, setWarningCountdown] = useState(10);
   const { toast } = useToast();
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
-  const isTimerRunningRef = useRef(false);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
 
   useEffect(() => {
@@ -90,8 +89,8 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     // Clear any active timers
     if (countdownTimerRef.current) {
         clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
     }
-    isTimerRunningRef.current = false;
     setWarningModalOpen(false);
     
     if(isAutoSubmit) {
@@ -160,44 +159,45 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     }
   }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam, toast]);
   
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (isSubmitted || !appConfig?.isTabSwitchSubmitEnabled) return;
+  const stopWarningTimer = useCallback(() => {
+      if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+          setWarningModalOpen(false);
+      }
+  }, []);
 
-            if (document.visibilityState === 'hidden') {
-                if (!isTimerRunningRef.current) {
-                    isTimerRunningRef.current = true;
-                    setWarningModalOpen(true);
-                    setWarningCountdown(10);
-                    countdownTimerRef.current = setInterval(() => {
-                        setWarningCountdown(prev => {
-                            if (prev <= 1) {
-                                clearInterval(countdownTimerRef.current!);
-                                handleSubmit(true);
-                                return 0;
-                            }
-                            return prev - 1;
-                        });
-                    }, 1000);
-                }
-            } else if (document.visibilityState === 'visible') {
-                if (isTimerRunningRef.current) {
-                    clearInterval(countdownTimerRef.current!);
-                    isTimerRunningRef.current = false;
-                    setWarningModalOpen(false);
-                }
-            }
-        };
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (isSubmitted || !appConfig?.isTabSwitchSubmitEnabled) return;
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            if (countdownTimerRef.current) {
-                clearInterval(countdownTimerRef.current);
-            }
-        };
-    }, [isSubmitted, appConfig, handleSubmit]);
+      if (document.visibilityState === 'hidden') {
+        if (!countdownTimerRef.current) {
+          setWarningCountdown(10);
+          setWarningModalOpen(true);
+
+          countdownTimerRef.current = setInterval(() => {
+            setWarningCountdown(prev => {
+              if (prev <= 1) {
+                handleSubmit(true);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+    };
+  }, [isSubmitted, appConfig, handleSubmit]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -273,7 +273,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     try {
         const canvas = await html2canvas(input, { 
             scale: 2,
-            backgroundColor: wasDarkMode ? '#ffffff' : null // Force white background if it was dark
+            backgroundColor: '#ffffff'
         });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -285,7 +285,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         
         pdf.setFontSize(50);
         pdf.setTextColor(230, 230, 230);
-        pdf.setGState(new pdf.GState({opacity: 0.5}));
+        pdf.setGState(new jsPDF.GState({opacity: 0.5}));
         pdf.text(
             "ExamsPro.in", 
             pdfWidth / 2, 
@@ -331,10 +331,10 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
           </CardHeader>
           <CardContent className="space-y-6">
             <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4 bg-background/80",
-              hasPassed ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500"
+              hasPassed ? "bg-green-100 dark:bg-green-900/20 border-green-500" : "bg-red-100 dark:bg-red-900/20 border-red-500"
             )}>
               <p className="text-muted-foreground">You scored</p>
-              <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600" : "text-red-600")}>
+              <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
                 {score} / {shuffledExam.questions.length}
               </p>
                <p className="text-lg text-muted-foreground font-semibold">({userPercentage.toFixed(1)}%)</p>
@@ -482,6 +482,9 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             <div className="text-center text-6xl font-bold text-destructive">
                 {warningCountdown}
             </div>
+            <AlertDialogFooter>
+                <AlertDialogAction onClick={stopWarningTimer}>I'm Back</AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
