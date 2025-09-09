@@ -2,13 +2,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Exam, ExamHistory } from '@/lib/data';
+import type { Exam, ExamHistory, ExamHistoryResponse } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Timer, CheckCircle, XCircle, Download, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, Download, HelpCircle, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -65,6 +65,9 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // For per-question time tracking
+  const questionStartTimeRef = useRef<number>(Date.now());
+  const timePerQuestionRef = useRef<number[]>([]);
 
   useEffect(() => {
     async function fetchConfig() {
@@ -81,12 +84,27 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
       options: shuffleArray(question.options),
     }));
     setShuffledExam({ ...exam, questions: randomizedQuestions });
+    timePerQuestionRef.current = new Array(exam.questions.length).fill(0);
   }, [exam]);
+
+  const recordTimeOnQuestion = useCallback((index: number) => {
+      const now = Date.now();
+      const startTime = questionStartTimeRef.current;
+      const timeSpent = (now - startTime) / 1000; // in seconds
+      
+      const newTimes = [...timePerQuestionRef.current];
+      newTimes[index] = (newTimes[index] || 0) + timeSpent;
+      timePerQuestionRef.current = newTimes;
+
+      questionStartTimeRef.current = now; // Reset timer for the new question
+  }, []);
 
   const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     if (isSubmitted || !shuffledExam) return;
     
-    // Clear any active timers
+    // Record time for the final question
+    recordTimeOnQuestion(currentQuestionIndex);
+
     if (countdownTimerRef.current) {
         clearInterval(countdownTimerRef.current);
         countdownTimerRef.current = null;
@@ -103,6 +121,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     
     let finalScore = 0;
     const analysis: TagAnalysis = {};
+    const responses: ExamHistoryResponse[] = [];
 
     shuffledExam.questions.forEach((q, index) => {
       const isCorrect = selectedAnswers[index] === q.correctAnswer;
@@ -119,6 +138,13 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
           analysis[tag].correct++;
         }
       }
+       responses.push({
+          questionText: q.questionText,
+          selectedAnswer: selectedAnswers[index],
+          correctAnswer: q.correctAnswer,
+          isCorrect,
+          timeSpentSeconds: timePerQuestionRef.current[index] || 0,
+       });
     });
 
     setScore(finalScore);
@@ -143,6 +169,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         winPercentage: winPercentage,
         timeTakenInSeconds: timeTakenRef.current,
         isAutoSubmitted: isAutoSubmit,
+        responses: responses,
       };
 
       if (sharedBy) {
@@ -158,7 +185,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         await addExamHistory(historyEntry);
       }
     }
-  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam, toast]);
+  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam, toast, recordTimeOnQuestion, currentQuestionIndex]);
   
   const stopWarningTimer = useCallback(() => {
       if (countdownTimerRef.current) {
@@ -240,13 +267,14 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   
   const goToQuestion = (index: number) => {
     if (index >= 0 && shuffledExam && index < shuffledExam.questions.length) {
+      recordTimeOnQuestion(currentQuestionIndex);
       setCurrentQuestionIndex(index);
     }
   };
 
   const handleNext = () => {
     if (shuffledExam && currentQuestionIndex < shuffledExam.questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+      goToQuestion(currentQuestionIndex + 1);
     }
   };
 
@@ -397,6 +425,8 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                             {shuffledExam.questions.map((q, index) => {
                                 const userAnswer = selectedAnswers[index];
                                 const isCorrect = userAnswer === q.correctAnswer;
+                                const timeSpent = timePerQuestionRef.current[index] || 0;
+                                
                                 return (
                                     <AccordionItem value={`question-${index}`} key={index} className="border rounded-lg">
                                         <AccordionTrigger className="p-4 hover:no-underline text-left [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
@@ -432,12 +462,18 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                                                     );
                                                 })}
                                             </div>
-                                            {!isCorrect && userAnswer && (
-                                                <p className="mt-2 text-sm text-muted-foreground">Your answer was <span className="font-semibold text-red-600">{userAnswer}</span>. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
-                                            )}
-                                            {!userAnswer && (
-                                                <p className="mt-2 text-sm text-muted-foreground">You did not answer this question. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
-                                            )}
+                                             <div className="mt-4 flex flex-col gap-2">
+                                                {!isCorrect && userAnswer && (
+                                                    <p className="text-sm text-muted-foreground">Your answer was <span className="font-semibold text-red-600">{userAnswer}</span>. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                                )}
+                                                {!userAnswer && (
+                                                    <p className="text-sm text-muted-foreground">You did not answer this question. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                                )}
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <Clock className="h-4 w-4" />
+                                                    <span>Time spent: {Math.round(timeSpent)} seconds</span>
+                                                </div>
+                                            </div>
                                         </AccordionContent>
                                     </AccordionItem>
                                 );

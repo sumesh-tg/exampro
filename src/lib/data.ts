@@ -24,6 +24,14 @@ export type Exam = {
   isGeneratedBySuperAdmin?: boolean;
 };
 
+export type ExamHistoryResponse = {
+  questionText: string;
+  selectedAnswer?: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  timeSpentSeconds: number;
+};
+
 export type ExamHistory = {
   id: string;
   userId: string;
@@ -41,6 +49,7 @@ export type ExamHistory = {
   winPercentage?: number;
   timeTakenInSeconds?: number;
   isAutoSubmitted?: boolean;
+  responses?: ExamHistoryResponse[];
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
