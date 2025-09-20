@@ -7,8 +7,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 
 
 export const metadata: Metadata = {
-  title: 'ExamsPro.in: Perform Like a Pro',
-  description: 'An online exam platform.',
+  title: 'ExamsPro.in: Create, Share, and Take Online Exams | Perform Like a Pro',
+  description: 'The ultimate platform for creating, sharing, and taking online exams. Utilize AI-powered tools, detailed analytics, and secure proctoring to excel. Perfect for students, educators, and organizations.',
+  keywords: ['online exams', 'exam platform', 'AI question generation', 'proctored exams', 'test maker', 'quiz creator', 'online testing'],
   icons: {
     icon: '/images/favicon.ico',
   },
