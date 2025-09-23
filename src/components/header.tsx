@@ -100,7 +100,7 @@ export function Header({
                 href="/"
                 className="flex items-center gap-2 text-lg font-semibold"
             >
-                <Image src="/images/logo_black.png" alt="ExamsPro.in logo" width={92} height={92} data-ai-hint="logo" />
+                <Image src="/logo.png" alt="ExamsPro.in logo" width={40} height={40} data-ai-hint="logo" />
                 <div>
                     <span className="text-xl font-bold">ExamsPro.in</span>
                     <p className="text-xs text-muted-foreground">Perform Like a Pro</p>
@@ -297,3 +297,5 @@ export function Header({
     </header>
   );
 }
+
+    
