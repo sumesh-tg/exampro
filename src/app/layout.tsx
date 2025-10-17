@@ -31,7 +31,7 @@ export default function RootLayout({
           crossOrigin="anonymous"></script>
         <title>ExamsPro.in: Create, Share, and Take Online Exams | Perform Like a Pro</title>
         <meta name="description" content="The ultimate platform for creating, sharing, and taking online exams. Utilize AI-powered tools, detailed analytics, and secure proctoring to excel. Perfect for students, educators, and organizations."></meta>
-
+        <link rel="icon" href="/logo.png" sizes="any" />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
         <ThemeProvider
@@ -49,5 +49,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
