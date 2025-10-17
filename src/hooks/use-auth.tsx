@@ -109,3 +109,16 @@ export const useRequireAuth = () => {
 
   return { user, loading, isSuperAdmin };
 };
+
+export const useUnrequireAuth = () => {
+    const { user, loading, isSuperAdmin } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (loading) return;
+
+        if (user || isSuperAdmin) {
+            router.push('/');
+        }
+    }, [user, loading, isSuperAdmin, router]);
+};

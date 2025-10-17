@@ -19,13 +19,15 @@ type CreateAdminRequestPayload = {
   userId: string;
   displayName: string;
   email: string;
+  paymentId?: string;
 };
 
 export const createAdminRequest = async (payload: CreateAdminRequestPayload): Promise<void> => {
-  // Check if a request already exists for this user
-  const existingRequest = await getAdminRequestForUser(payload.userId);
-  if (existingRequest) {
-    throw new Error('You already have a pending or approved request.');
+  // Check if a PENDING request already exists for this user
+  const q = query(adminRequestsCollectionRef, where('userId', '==', payload.userId), where('status', '==', 'pending'));
+  const snapshot = await getDocs(q);
+  if (!snapshot.empty) {
+    throw new Error('You already have a pending request.');
   }
 
   await addDoc(adminRequestsCollectionRef, {

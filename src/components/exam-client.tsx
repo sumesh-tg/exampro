@@ -2,13 +2,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Exam, ExamHistory } from '@/lib/data';
+import type { Exam, ExamHistory, ExamHistoryResponse } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Timer, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, Download, HelpCircle, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -18,6 +18,9 @@ import { addExamHistory } from '@/services/examHistoryService';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from './ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { getAppConfig, AppConfig } from '@/services/appConfigService';
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -55,6 +58,24 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const [visited, setVisited] = useState<Set<number>>(new Set([0]));
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const resultCardRef = useRef<HTMLDivElement>(null);
+  const timeTakenRef = useRef(0);
+  const [isWarningModalOpen, setWarningModalOpen] = useState(false);
+  const [warningCountdown, setWarningCountdown] = useState(10);
+  const { toast } = useToast();
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // For per-question time tracking
+  const questionStartTimeRef = useRef<number>(Date.now());
+  const timePerQuestionRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    async function fetchConfig() {
+      const config = await getAppConfig();
+      setAppConfig(config);
+    }
+    fetchConfig();
+  }, []);
 
   useEffect(() => {
     // Randomize questions and options once on mount
@@ -63,13 +84,44 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
       options: shuffleArray(question.options),
     }));
     setShuffledExam({ ...exam, questions: randomizedQuestions });
+    timePerQuestionRef.current = new Array(exam.questions.length).fill(0);
   }, [exam]);
 
-  const handleSubmit = useCallback(async () => {
+  const recordTimeOnQuestion = useCallback((index: number) => {
+      const now = Date.now();
+      const startTime = questionStartTimeRef.current;
+      const timeSpent = (now - startTime) / 1000; // in seconds
+      
+      const newTimes = [...timePerQuestionRef.current];
+      newTimes[index] = (newTimes[index] || 0) + timeSpent;
+      timePerQuestionRef.current = newTimes;
+
+      questionStartTimeRef.current = now; // Reset timer for the new question
+  }, []);
+
+  const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     if (isSubmitted || !shuffledExam) return;
+    
+    // Record time for the final question
+    recordTimeOnQuestion(currentQuestionIndex);
+
+    if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+    }
+    setWarningModalOpen(false);
+    
+    if(isAutoSubmit) {
+        toast({
+            variant: 'destructive',
+            title: 'Exam Auto-Submitted',
+            description: 'You did not return to the exam tab in time.',
+        });
+    }
     
     let finalScore = 0;
     const analysis: TagAnalysis = {};
+    const responses: ExamHistoryResponse[] = [];
 
     shuffledExam.questions.forEach((q, index) => {
       const isCorrect = selectedAnswers[index] === q.correctAnswer;
@@ -86,6 +138,13 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
           analysis[tag].correct++;
         }
       }
+       responses.push({
+          questionText: q.questionText,
+          selectedAnswer: selectedAnswers[index],
+          correctAnswer: q.correctAnswer,
+          isCorrect,
+          timeSpentSeconds: timePerQuestionRef.current[index] || 0,
+       });
     });
 
     setScore(finalScore);
@@ -108,6 +167,9 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         updatedBy: user.uid,
         status: hasPassed ? 'Pass' : 'Fail',
         winPercentage: winPercentage,
+        timeTakenInSeconds: timeTakenRef.current,
+        isAutoSubmitted: isAutoSubmit,
+        responses: responses,
       };
 
       if (sharedBy) {
@@ -123,13 +185,54 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
         await addExamHistory(historyEntry);
       }
     }
-  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam]);
+  }, [isSubmitted, selectedAnswers, shuffledExam, user, sharedBy, isSuperAdmin, exam, toast, recordTimeOnQuestion, currentQuestionIndex]);
+  
+  const stopWarningTimer = useCallback(() => {
+      if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+          setWarningModalOpen(false);
+      }
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (isSubmitted || !appConfig?.isTabSwitchSubmitEnabled) return;
+
+      if (document.visibilityState === 'hidden') {
+        if (!countdownTimerRef.current) {
+          setWarningCountdown(10);
+          setWarningModalOpen(true);
+
+          countdownTimerRef.current = setInterval(() => {
+            setWarningCountdown(prev => {
+              if (prev <= 1) {
+                handleSubmit(true);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+    };
+  }, [isSubmitted, appConfig, handleSubmit]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (timeLimit) {
       timer = setInterval(() => {
         if (!isSubmitted) {
+          timeTakenRef.current += 1;
           setTime((prevTime) => {
             if (prevTime <= 1) {
               clearInterval(timer);
@@ -143,6 +246,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     } else {
       timer = setInterval(() => {
         if (!isSubmitted) {
+          timeTakenRef.current += 1;
           setTime((prevTime) => prevTime + 1);
         }
       }, 1000);
@@ -163,13 +267,14 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   
   const goToQuestion = (index: number) => {
     if (index >= 0 && shuffledExam && index < shuffledExam.questions.length) {
+      recordTimeOnQuestion(currentQuestionIndex);
       setCurrentQuestionIndex(index);
     }
   };
 
   const handleNext = () => {
     if (shuffledExam && currentQuestionIndex < shuffledExam.questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+      goToQuestion(currentQuestionIndex + 1);
     }
   };
 
@@ -187,14 +292,41 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
 
   const handleDownloadPdf = async () => {
     const input = resultCardRef.current;
-    if (input) {
-      const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`exam-result-${exam.id}.pdf`);
+    if (!input) return;
+
+    const wasDarkMode = document.documentElement.classList.contains('dark');
+    if (wasDarkMode) {
+        document.documentElement.classList.remove('dark');
+    }
+
+    try {
+        const canvas = await html2canvas(input, { 
+            scale: 2,
+            backgroundColor: '#ffffff'
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        pdf.setFontSize(50);
+        pdf.setTextColor(230, 230, 230);
+        pdf.setGState(new jsPDF.GState({opacity: 0.5}));
+        pdf.text(
+            "ExamsPro.in", 
+            pdfWidth / 2, 
+            pdf.internal.pageSize.getHeight() / 2, 
+            { angle: -45, align: 'center' }
+        );
+        
+        pdf.save(`exam-result-${exam.id}.pdf`);
+    } finally {
+        if (wasDarkMode) {
+            document.documentElement.classList.add('dark');
+        }
     }
   };
   
@@ -207,19 +339,31 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
     const userPercentage = (score / shuffledExam.questions.length) * 100;
     const hasPassed = userPercentage >= winPercentage;
 
+    const correctCount = score;
+    const answeredCount = Object.keys(selectedAnswers).length;
+    const incorrectCount = answeredCount - correctCount;
+    const unansweredCount = shuffledExam.questions.length - answeredCount;
+
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg">
+        <Card ref={resultCardRef} className="w-full max-w-2xl text-center shadow-lg relative overflow-hidden">
+           <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+              <span className="text-8xl font-bold text-gray-200/50 dark:text-gray-700/50 -rotate-45">
+                ExamsPro.in
+              </span>
+            </div>
+          <div className="relative z-10">
           <CardHeader>
             <CardTitle className="text-3xl font-bold">Exam Completed!</CardTitle>
             <CardDescription>Here's your result for "{shuffledExam.title}".</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4",
-              hasPassed ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500"
+            <div className={cn("rounded-full p-6 w-48 h-48 mx-auto flex flex-col justify-center items-center border-4 bg-background/80",
+              hasPassed ? "bg-green-100 dark:bg-green-900/20 border-green-500" : "bg-red-100 dark:bg-red-900/20 border-red-500"
             )}>
               <p className="text-muted-foreground">You scored</p>
-              <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600" : "text-red-600")}>
+              <p className={cn("text-5xl font-bold", hasPassed ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
                 {score} / {shuffledExam.questions.length}
               </p>
                <p className="text-lg text-muted-foreground font-semibold">({userPercentage.toFixed(1)}%)</p>
@@ -230,15 +374,19 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
             <div className="flex flex-wrap justify-around text-lg gap-4">
                 <div className="flex items-center gap-2">
                     <CheckCircle className="text-green-500" />
-                    <span>{score} Correct</span>
+                    <span>{correctCount} Correct</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <XCircle className="text-red-500" />
-                    <span>{shuffledExam.questions.length - score} Incorrect</span>
+                    <span>{incorrectCount} Incorrect</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <HelpCircle className="text-yellow-500" />
+                    <span>{unansweredCount} Unanswered</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <Timer />
-                    <span>{formatTime(timeLimit ? timeLimit - time : time)}</span>
+                    <span>{formatTime(timeTakenRef.current)}</span>
                 </div>
             </div>
 
@@ -277,6 +425,8 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                             {shuffledExam.questions.map((q, index) => {
                                 const userAnswer = selectedAnswers[index];
                                 const isCorrect = userAnswer === q.correctAnswer;
+                                const timeSpent = timePerQuestionRef.current[index] || 0;
+                                
                                 return (
                                     <AccordionItem value={`question-${index}`} key={index} className="border rounded-lg">
                                         <AccordionTrigger className="p-4 hover:no-underline text-left [&[data-state=open]>div>svg.lucide-chevron-down]:rotate-180">
@@ -312,12 +462,18 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
                                                     );
                                                 })}
                                             </div>
-                                            {!isCorrect && userAnswer && (
-                                                <p className="mt-2 text-sm text-muted-foreground">Your answer was <span className="font-semibold text-red-600">{userAnswer}</span>. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
-                                            )}
-                                            {!userAnswer && (
-                                                <p className="mt-2 text-sm text-muted-foreground">You did not answer this question. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
-                                            )}
+                                             <div className="mt-4 flex flex-col gap-2">
+                                                {!isCorrect && userAnswer && (
+                                                    <p className="text-sm text-muted-foreground">Your answer was <span className="font-semibold text-red-600">{userAnswer}</span>. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                                )}
+                                                {!userAnswer && (
+                                                    <p className="text-sm text-muted-foreground">You did not answer this question. The correct answer is <span className="font-semibold text-green-600">{q.correctAnswer}</span>.</p>
+                                                )}
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <Clock className="h-4 w-4" />
+                                                    <span>Time spent: {Math.round(timeSpent)} seconds</span>
+                                                </div>
+                                            </div>
                                         </AccordionContent>
                                     </AccordionItem>
                                 );
@@ -338,6 +494,7 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
               </Button>
             </div>
           </CardContent>
+          </div>
         </Card>
       </div>
     );
@@ -347,91 +504,109 @@ export function ExamClient({ exam, timeLimit, sharedBy }: { exam: Exam, timeLimi
   const progress = ((currentQuestionIndex + 1) / shuffledExam.questions.length) * 100;
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-6">
-      <div className="flex flex-col gap-6">
-          <Card className="w-full shadow-lg">
-            <CardHeader>
-              <div className="flex justify-between items-center mb-2">
-                <CardTitle>{shuffledExam.title}</CardTitle>
-                <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
-                    <Timer className="h-4 w-4" />
-                    <span>{formatTime(time)}</span>
+    <>
+      <AlertDialog open={isWarningModalOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                    Inactive Tab Detected
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                    You have switched to another tab or window. Please return to the exam immediately. The exam will be auto-submitted in...
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="text-center text-6xl font-bold text-destructive">
+                {warningCountdown}
+            </div>
+            <AlertDialogFooter>
+                <AlertDialogAction onClick={stopWarningTimer}>I'm Back</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="grid min-h-screen w-full md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-6 p-4 md:p-6">
+        <div className="flex flex-col gap-6">
+            <Card className="w-full shadow-lg">
+              <CardHeader>
+                <div className="flex justify-between items-center mb-2">
+                  <CardTitle>{shuffledExam.title}</CardTitle>
+                  <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                      <Timer className="h-4 w-4" />
+                      <span>{formatTime(time)}</span>
+                  </div>
                 </div>
-              </div>
-              <Progress value={progress} className="w-full" />
-              <CardDescription className="pt-2 text-center text-base">
-                Question {currentQuestionIndex + 1} of {shuffledExam.questions.length}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
-              <RadioGroup
-                value={selectedAnswers[currentQuestionIndex]}
-                onValueChange={handleAnswerSelect}
-                className="space-y-2"
-              >
-                {currentQuestion.options.map((option, index) => (
-                  <Label key={index} className="flex items-center gap-3 rounded-lg border p-2 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
-                    <RadioGroupItem value={option} id={`option-${index}`} />
-                    <span>{option}</span>
-                  </Label>
-                ))}
-              </RadioGroup>
-              <div className="flex justify-end pt-2 gap-2">
-                <Button onClick={handleMarkForReview} variant={markedForReview.has(currentQuestionIndex) ? 'default' : 'outline'} size="lg">
-                  {markedForReview.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
-                </Button>
-                {currentQuestionIndex < shuffledExam.questions.length - 1 ? (
-                  <Button onClick={handleNext} size="lg">Next</Button>
-                ) : (
-                  <Button onClick={handleSubmit} size="lg">Submit</Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-      </div>
-      <div className="hidden md:block">
-        <Card className="w-full shadow-lg sticky top-8">
-            <CardHeader>
-            <CardTitle className="text-xl">Question Navigator</CardTitle>
-            </CardHeader>
-            <CardContent>
-            <div className="grid grid-cols-4 lg:grid-cols-5 gap-2">
-                {shuffledExam.questions.map((_, index) => (
-                <Button
-                    key={index}
-                    onClick={() => goToQuestion(index)}
-                    variant="outline"
-                    size="icon"
-                    className={cn(
-                      'font-bold',
-                      {
-                        'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex === index,
-                        'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-primary text-primary-foreground hover:bg-primary/90': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-red-400 hover:bg-red-500 text-red-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
-                        'bg-gray-300 hover:bg-gray-400 text-gray-800': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
-                      }
-                    )}
+                <Progress value={progress} className="w-full" />
+                <CardDescription className="pt-2 text-center text-base">
+                  Question {currentQuestionIndex + 1} of {shuffledExam.questions.length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-lg font-semibold text-center">{currentQuestion.questionText}</p>
+                <RadioGroup
+                  value={selectedAnswers[currentQuestionIndex]}
+                  onValueChange={handleAnswerSelect}
+                  className="space-y-2"
                 >
-                    {index + 1}
-                </Button>
-                ))}
-            </div>
-             <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Current</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Answered</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-red-400"></span> Unanswered</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-orange-400"></span> Marked for Review</div>
-                <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-gray-300"></span> Not Visited</div>
-            </div>
-            </CardContent>
-        </Card>
+                  {currentQuestion.options.map((option, index) => (
+                    <Label key={index} className="flex items-center gap-3 rounded-lg border p-2 cursor-pointer transition-all hover:bg-accent/10 has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:border-primary">
+                      <RadioGroupItem value={option} id={`option-${index}`} />
+                      <span>{option}</span>
+                    </Label>
+                  ))}
+                </RadioGroup>
+                <div className="flex justify-end pt-2 gap-2">
+                  <Button onClick={handleMarkForReview} variant={markedForReview.has(currentQuestionIndex) ? 'default' : 'outline'} size="lg">
+                    {markedForReview.has(currentQuestionIndex) ? 'Unmark' : 'Mark for Review'}
+                  </Button>
+                  {currentQuestionIndex < shuffledExam.questions.length - 1 ? (
+                    <Button onClick={handleNext} size="lg">Next</Button>
+                  ) : (
+                    <Button onClick={() => handleSubmit(false)} size="lg">Submit</Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+        </div>
+        <div>
+          <Card className="w-full shadow-lg md:sticky md:top-8">
+              <CardHeader>
+              <CardTitle className="text-xl">Question Navigator</CardTitle>
+              </CardHeader>
+              <CardContent>
+              <div className="grid grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                  {shuffledExam.questions.map((_, index) => (
+                  <Button
+                      key={index}
+                      onClick={() => goToQuestion(index)}
+                      variant="outline"
+                      size="icon"
+                      className={cn(
+                        'font-bold',
+                        {
+                          'bg-green-400 hover:bg-green-500 text-green-900': currentQuestionIndex === index,
+                          'bg-orange-400 hover:bg-orange-500 text-orange-900': markedForReview.has(index) && currentQuestionIndex !== index,
+                          'bg-primary text-primary-foreground hover:bg-primary/90': selectedAnswers[index] && !markedForReview.has(index) && currentQuestionIndex !== index,
+                          'bg-red-400 hover:bg-red-500 text-red-900': !selectedAnswers[index] && visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
+                          'bg-gray-300 hover:bg-gray-400 text-gray-800': !visited.has(index) && !markedForReview.has(index) && currentQuestionIndex !== index,
+                        }
+                      )}
+                  >
+                      {index + 1}
+                  </Button>
+                  ))}
+              </div>
+               <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-green-400"></span> Current</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-primary"></span> Answered</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-red-400"></span> Unanswered</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-orange-400"></span> Marked for Review</div>
+                  <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-gray-300"></span> Not Visited</div>
+              </div>
+              </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
-
-    
-
-    

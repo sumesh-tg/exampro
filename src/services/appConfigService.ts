@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 export type AppConfig = {
   isGoogleLoginEnabled: boolean;
   isPhoneLoginEnabled: boolean;
+  isEmailLinkLoginEnabled: boolean;
   isExamCreationEnabled: boolean;
   isCampaignCreationEnabled: boolean;
   isTopicSuggesterEnabled: boolean;
@@ -12,6 +13,11 @@ export type AppConfig = {
   initialFreeAttempts: number;
   rechargeAmount: number;
   attemptsPerRecharge: number;
+  isOrgRequestPaymentEnabled: boolean;
+  orgRequestFee: number;
+  isCommissionEnabled: boolean;
+  commissionRatePercentage: number;
+  isTabSwitchSubmitEnabled: boolean;
 };
 
 const CONFIG_COLLECTION = 'app_config';
@@ -34,6 +40,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       return {
         isGoogleLoginEnabled: data.isGoogleLoginEnabled ?? true,
         isPhoneLoginEnabled: data.isPhoneLoginEnabled ?? true,
+        isEmailLinkLoginEnabled: data.isEmailLinkLoginEnabled ?? true,
         isExamCreationEnabled: data.isExamCreationEnabled ?? true,
         isCampaignCreationEnabled: data.isCampaignCreationEnabled ?? true,
         isTopicSuggesterEnabled: data.isTopicSuggesterEnabled ?? true,
@@ -41,12 +48,18 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         initialFreeAttempts: data.initialFreeAttempts ?? 5,
         rechargeAmount: data.rechargeAmount ?? 10,
         attemptsPerRecharge: data.attemptsPerRecharge ?? 5,
+        isOrgRequestPaymentEnabled: data.isOrgRequestPaymentEnabled ?? false,
+        orgRequestFee: data.orgRequestFee ?? 100,
+        isCommissionEnabled: data.isCommissionEnabled ?? false,
+        commissionRatePercentage: data.commissionRatePercentage ?? 5,
+        isTabSwitchSubmitEnabled: data.isTabSwitchSubmitEnabled ?? true,
       };
     } else {
       // If the document doesn't exist, create it with default values
       const defaultConfig: AppConfig = {
         isGoogleLoginEnabled: true,
         isPhoneLoginEnabled: true,
+        isEmailLinkLoginEnabled: true,
         isExamCreationEnabled: true,
         isCampaignCreationEnabled: true,
         isTopicSuggesterEnabled: true,
@@ -54,6 +67,11 @@ export const getAppConfig = async (): Promise<AppConfig> => {
         initialFreeAttempts: 5,
         rechargeAmount: 10,
         attemptsPerRecharge: 5,
+        isOrgRequestPaymentEnabled: false,
+        orgRequestFee: 100,
+        isCommissionEnabled: false,
+        commissionRatePercentage: 5,
+        isTabSwitchSubmitEnabled: true,
       };
       await setDoc(configDocRef, defaultConfig);
       return defaultConfig;
@@ -64,6 +82,7 @@ export const getAppConfig = async (): Promise<AppConfig> => {
     return {
       isGoogleLoginEnabled: true,
       isPhoneLoginEnabled: true,
+      isEmailLinkLoginEnabled: true,
       isExamCreationEnabled: true,
       isCampaignCreationEnabled: true,
       isTopicSuggesterEnabled: true,
@@ -71,6 +90,11 @@ export const getAppConfig = async (): Promise<AppConfig> => {
       initialFreeAttempts: 5,
       rechargeAmount: 10,
       attemptsPerRecharge: 5,
+      isOrgRequestPaymentEnabled: false,
+      orgRequestFee: 100,
+      isCommissionEnabled: false,
+      commissionRatePercentage: 5,
+      isTabSwitchSubmitEnabled: true,
     };
   }
 };

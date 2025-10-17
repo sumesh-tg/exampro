@@ -24,6 +24,14 @@ export type Exam = {
   isGeneratedBySuperAdmin?: boolean;
 };
 
+export type ExamHistoryResponse = {
+  questionText: string;
+  selectedAnswer?: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  timeSpentSeconds: number;
+};
+
 export type ExamHistory = {
   id: string;
   userId: string;
@@ -39,6 +47,9 @@ export type ExamHistory = {
   feedback?: string;
   status?: 'Pass' | 'Fail';
   winPercentage?: number;
+  timeTakenInSeconds?: number;
+  isAutoSubmitted?: boolean;
+  responses?: ExamHistoryResponse[];
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -64,6 +75,7 @@ export type CampaignDetail = {
     createdBy: string;
     assignee?: string;
     freeAttempts: number;
+    maxJoinees: number;
     freeAttemptsDisabledFor?: string[];
     createdAt: Date;
     updatedAt: Date;
@@ -81,11 +93,12 @@ export type AttemptHistoryLog = {
   userId: string;
   changeAmount: number;
   newBalance: number;
-  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION';
+  reason: 'INITIAL_ALLOCATION' | 'USER_RECHARGE' | 'EXAM_ATTEMPT' | 'ADMIN_RESET' | 'TOPIC_SUGGESTION' | 'CAMPAIGN_SPONSORSHIP' | 'CAMPAIGN_EDIT';
   context?: {
     examId?: string;
     examTitle?: string;
     adminId?: string;
+    campaignName?: string;
   };
   createdAt: Date;
 };
@@ -96,8 +109,23 @@ export type AdminRequest = {
   displayName: string;
   email: string;
   status: 'pending' | 'approved' | 'rejected';
+  paymentId?: string;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type Transaction = {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  transactionType: 'PAID_EXAM_ATTEMPT';
+  campaignId: string;
+  examId: string;
+  adminOwnerId: string;
+  commissionRate: number; // The commission rate at the time of transaction
+  razorpayPaymentId: string;
+  createdAt: Date;
 };
 
     

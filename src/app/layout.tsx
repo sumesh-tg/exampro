@@ -3,13 +3,15 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/use-auth';
+import { ThemeProvider } from '@/components/theme-provider';
 
 
 export const metadata: Metadata = {
-  title: 'ExamsPro.in: Perform Like a Pro',
-  description: 'An online exam platform.',
+  title: 'ExamsPro.in: Create, Share, and Take Online Exams | Perform Like a Pro',
+  description: 'The ultimate platform for creating, sharing, and taking online exams. Utilize AI-powered tools, detailed analytics, and secure proctoring to excel. Perfect for students, educators, and organizations.',
+  keywords: ['online exams', 'exam platform', 'AI question generation', 'proctored exams', 'test maker', 'quiz creator', 'online testing'],
   icons: {
-    icon: '/images/favicon.ico',
+    icon: '/logo.png',
   },
 };
 
@@ -25,13 +27,27 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8320621258438791"
+          crossOrigin="anonymous"></script>
+        <title>ExamsPro.in: Create, Share, and Take Online Exams | Perform Like a Pro</title>
+        <meta name="description" content="The ultimate platform for creating, sharing, and taking online exams. Utilize AI-powered tools, detailed analytics, and secure proctoring to excel. Perfect for students, educators, and organizations."></meta>
+
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-        <Toaster />
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+            <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
 }
+
+    

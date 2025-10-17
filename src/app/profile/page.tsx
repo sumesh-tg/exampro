@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, User, Camera, Building } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Camera, Building, Info } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { auth, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -23,10 +23,15 @@ import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css';
 import { updateUserProfile } from '@/services/userService';
 import { createAdminRequest, getAdminRequestForUser, type AdminRequest } from '@/services/adminRequestService';
+import { getAppConfig, type AppConfig } from '@/services/appConfigService';
+import axios from 'axios';
+import { Badge } from '@/components/ui/badge';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
 });
+
+declare const Razorpay: any;
 
 function getCroppedImg(image: HTMLImageElement, crop: Crop, fileName: string): Promise<File> {
     const canvas = document.createElement('canvas');
@@ -83,6 +88,9 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
 export default function ProfilePage() {
   const { user, isAdmin, loading: authLoading } = useRequireAuth();
   const [loading, setLoading] = useState(false);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [adminRequest, setAdminRequest] = useState<AdminRequest | null>(null);
+  const [requestStatusLoading, setRequestStatusLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -90,7 +98,7 @@ export default function ProfilePage() {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [isCropModalOpen, setCropModalOpen] = useState(false);
-  const [adminRequest, setAdminRequest] = useState<AdminRequest | null | 'loading'>('loading');
+  const [isRequestingAdmin, setIsRequestingAdmin] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,17 +110,26 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
+    async function fetchInitialData() {
+        setRequestStatusLoading(true);
+        const config = await getAppConfig();
+        setAppConfig(config);
+        if (user && !isAdmin) {
+          const request = await getAdminRequestForUser(user.uid);
+          setAdminRequest(request);
+        }
+        setRequestStatusLoading(false);
+    }
+    fetchInitialData();
+  }, [user, isAdmin]);
+
+  useEffect(() => {
     if (user) {
       form.reset({
         displayName: user.displayName ?? '',
       });
-      if (!isAdmin) {
-        getAdminRequestForUser(user.uid).then(setAdminRequest);
-      } else {
-        setAdminRequest(null); // Admins don't need to see this
-      }
     }
-  }, [user, form, isAdmin]);
+  }, [user, form]);
 
   async function onUpdateDisplayName(values: z.infer<typeof profileSchema>) {
     if (!user) return;
@@ -177,28 +194,97 @@ export default function ProfilePage() {
         setLoading(false);
     }
   }
-  
-  const handleRequestAdmin = async () => {
+
+  const makeAdminRequest = async (paymentId?: string) => {
     if (!user) return;
-    setLoading(true);
+    setIsRequestingAdmin(true);
     try {
       await createAdminRequest({
         userId: user.uid,
         displayName: user.displayName || 'Unnamed User',
         email: user.email || 'No email',
+        paymentId,
       });
+      // Fetch the newly created request to update the UI
+      const newRequest = await getAdminRequestForUser(user.uid);
+      setAdminRequest(newRequest);
       toast({ title: 'Request Sent', description: 'Your request to become an admin has been sent for review.' });
-      setAdminRequest({ status: 'pending' } as AdminRequest); // Optimistic update
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Request Failed', description: error.message });
     } finally {
-      setLoading(false);
+      setIsRequestingAdmin(false);
+    }
+  };
+  
+  const handleRequestAdmin = async () => {
+    if (!user || !appConfig) return;
+    setIsRequestingAdmin(true);
+
+    if (appConfig.isOrgRequestPaymentEnabled) {
+      try {
+        const { data } = await axios.post('/api/razorpay/create-order', {
+            amount: appConfig.orgRequestFee * 100, // Amount in paise
+            currency: 'INR',
+        });
+
+        const options = {
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            amount: data.amount,
+            currency: 'INR',
+            name: "ExamsPro.in Organization Request",
+            description: "One-time fee for organization account request.",
+            order_id: data.id,
+            handler: async function (response: any) {
+                try {
+                    const { data: verifyData } = await axios.post('/api/razorpay/verify-payment', {
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                    });
+
+                    if (verifyData.success) {
+                        await makeAdminRequest(response.razorpay_payment_id);
+                    } else {
+                        toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Please contact support.' });
+                    }
+                } catch (error) {
+                     toast({ variant: 'destructive', title: 'Payment Verification Error', description: 'Could not verify the payment.' });
+                } finally {
+                    setIsRequestingAdmin(false);
+                }
+            },
+            prefill: {
+                name: user?.displayName || "Anonymous User",
+                email: user?.email || "",
+                contact: user?.phoneNumber || ""
+            },
+            theme: { color: "#72A0C1" },
+            modal: {
+                ondismiss: function() {
+                    setIsRequestingAdmin(false);
+                }
+            }
+        };
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', (response: any) => {
+             toast({ variant: 'destructive', title: 'Payment Failed', description: response.error.description });
+             setIsRequestingAdmin(false);
+        });
+        rzp.open();
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Order Creation Failed', description: 'Could not create a payment order.' });
+          setIsRequestingAdmin(false);
+      }
+    } else {
+        await makeAdminRequest();
     }
   }
 
   if (authLoading || !user) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
+
+  const showOrgRequestSection = !isAdmin;
 
   return (
     <>
@@ -293,28 +379,30 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            {!isAdmin && (
+            {showOrgRequestSection && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Organization Account</CardTitle>
                         <CardDescription>Request to upgrade your account to an organization account to create and manage exams.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {adminRequest === 'loading' ? (
-                            <div className="flex items-center justify-center h-10">
-                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : adminRequest?.status === 'pending' ? (
-                            <p className="text-sm text-yellow-600 bg-yellow-100 p-3 rounded-md">Your request is pending approval.</p>
-                        ) : adminRequest?.status === 'approved' ? (
-                            <p className="text-sm text-green-600 bg-green-100 p-3 rounded-md">Your request has been approved. You are now an admin.</p>
-                        ) : (
-                            <Button onClick={handleRequestAdmin} disabled={loading}>
-                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                <Building className="mr-2 h-4 w-4" />
-                                Request Organization Account
-                            </Button>
-                        )}
+                      {requestStatusLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : adminRequest && adminRequest.status === 'pending' ? (
+                        <div className="flex items-center gap-2 rounded-md border border-dashed p-4">
+                           <Info className="h-5 w-5 text-muted-foreground" />
+                           <span className="font-medium text-muted-foreground">Your request is pending review.</span>
+                        </div>
+                      ) : (
+                        <Button onClick={handleRequestAdmin} disabled={isRequestingAdmin}>
+                            {isRequestingAdmin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Building className="mr-2 h-4 w-4" />
+                            Request Organization Account
+                            {appConfig?.isOrgRequestPaymentEnabled && (
+                                <span className="ml-2 font-bold">(₹{appConfig.orgRequestFee})</span>
+                            )}
+                        </Button>
+                      )}
                     </CardContent>
                 </Card>
             )}

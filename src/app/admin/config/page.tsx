@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Wand2, Banknote, Building, Percent, AtSign, EyeOff } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAppConfig, updateAppConfig, type AppConfig } from '@/services/appConfigService';
@@ -116,6 +116,19 @@ export default function AdminConfigPage() {
                   onCheckedChange={(checked) => handleConfigChange('isPhoneLoginEnabled', checked)}
                 />
               </div>
+               <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="email-link-login" className="text-base">Email Link Login</Label>
+                   <p className="text-sm text-muted-foreground">
+                    Allow users to sign in with a secure link sent to their email.
+                  </p>
+                </div>
+                <Switch
+                  id="email-link-login"
+                  checked={config.isEmailLinkLoginEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isEmailLinkLoginEnabled', checked)}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -191,6 +204,31 @@ export default function AdminConfigPage() {
               </div>
             </CardContent>
           </Card>
+          
+           <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <EyeOff className="h-6 w-6 text-accent" />
+                <CardTitle>Exam Proctoring</CardTitle>
+              </div>
+              <CardDescription>Configure anti-cheating and proctoring measures for exams.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="tab-switch-submit" className="text-base">Auto-Submit on Tab Switch</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically submit a user's exam if they switch to another tab or window.
+                  </p>
+                </div>
+                <Switch
+                  id="tab-switch-submit"
+                  checked={config.isTabSwitchSubmitEnabled}
+                  onCheckedChange={(checked) => handleConfigChange('isTabSwitchSubmitEnabled', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
             <Card>
                 <CardHeader>
@@ -244,6 +282,88 @@ export default function AdminConfigPage() {
                             value={config.attemptsPerRecharge}
                             onChange={(e) => handleInputChange('attemptsPerRecharge', e.target.value)}
                             className="w-full md:w-24"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Building className="h-6 w-6 text-accent" />
+                        <CardTitle>Organization Account Settings</CardTitle>
+                    </div>
+                  <CardDescription>Configure the process for users requesting an organization (admin) account.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enable-payment" className="text-base">Enable One-Time Fee</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Charge a one-time fee for users requesting an admin role.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enable-payment"
+                            checked={config.isOrgRequestPaymentEnabled}
+                            onCheckedChange={(checked) => handleConfigChange('isOrgRequestPaymentEnabled', checked)}
+                        />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="request-fee" className="text-base">Request Fee (INR)</Label>
+                          <p className="text-sm text-muted-foreground">
+                            The amount to charge for an organization account request.
+                          </p>
+                        </div>
+                        <Input
+                            id="request-fee"
+                            type="number"
+                            value={config.orgRequestFee}
+                            onChange={(e) => handleInputChange('orgRequestFee', e.target.value)}
+                            className="w-full md:w-24"
+                            disabled={!config.isOrgRequestPaymentEnabled}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Percent className="h-6 w-6 text-accent" />
+                        <CardTitle>Commissions</CardTitle>
+                    </div>
+                  <CardDescription>Configure the commission system for campaign owners.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enable-commission" className="text-base">Enable Commissions</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Pay admins a commission for paid attempts in their campaigns.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enable-commission"
+                            checked={config.isCommissionEnabled}
+                            onCheckedChange={(checked) => handleConfigChange('isCommissionEnabled', checked)}
+                        />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="commission-rate" className="text-base">Commission Rate (%)</Label>
+                          <p className="text-sm text-muted-foreground">
+                            The percentage of a paid attempt that goes to the admin.
+                          </p>
+                        </div>
+                        <Input
+                            id="commission-rate"
+                            type="number"
+                            value={config.commissionRatePercentage}
+                            onChange={(e) => handleInputChange('commissionRatePercentage', e.target.value)}
+                            className="w-full md:w-24"
+                            disabled={!config.isCommissionEnabled}
                         />
                     </div>
                 </CardContent>

@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { signInWithPhoneNumber, RecaptchaVerifier, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithPhoneNumber, RecaptchaVerifier, GoogleAuthProvider, signInWithPopup, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -14,10 +14,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MailCheck } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input/react-hook-form-input';
 import 'react-phone-number-input/style.css';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
+import { FeaturesSection } from '@/components/features-section';
+import { Footer } from '@/components/footer';
+import { useUnrequireAuth } from '@/hooks/use-auth';
+import { Header } from '@/components/header';
 
 const phoneSchema = z.object({
   phone: z.string().min(10, { message: "Invalid phone number." }),
@@ -25,6 +29,10 @@ const phoneSchema = z.object({
 
 const otpSchema = z.object({
   otp: z.string().length(6, { message: "OTP must be 6 digits." }),
+});
+
+const emailSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -38,28 +46,54 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 function SignInFormComponent() {
+  useUnrequireAuth();
   const [loading, setLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [isClient, setIsClient] = useState(false);
+  const [step, setStep] = useState<'options' | 'otp' | 'email_sent'>('options');
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsClient(true);
     const redirectUrl = searchParams.get('redirect');
     if (redirectUrl) {
       sessionStorage.setItem('redirectUrl', redirectUrl);
     }
     
     async function fetchLoginConfig() {
+      setConfigLoading(true);
       const config = await getAppConfig();
       setAppConfig(config);
+      setConfigLoading(false);
     }
     fetchLoginConfig();
-  }, [searchParams]);
+    
+    const href = window.location.href;
+    if (isSignInWithEmailLink(auth, href)) {
+      setLoading(true);
+      let email = window.localStorage.getItem('emailForSignIn');
+      if (!email) {
+        email = window.prompt('Please provide your email for confirmation');
+      }
+
+      if (email) {
+        signInWithEmailLink(auth, email, href)
+          .then(() => {
+            window.localStorage.removeItem('emailForSignIn');
+            handleSuccessfulSignIn();
+          })
+          .catch((error) => {
+            toast({ variant: 'destructive', title: 'Sign-in Failed', description: 'The sign-in link is invalid or has expired.' });
+            setLoading(false);
+          });
+      } else {
+         toast({ variant: 'destructive', title: 'Sign-in Failed', description: 'Email is required to complete sign-in.' });
+         setLoading(false);
+      }
+    }
+  }, [searchParams, toast]);
 
   const handleSuccessfulSignIn = () => {
     const redirectUrl = sessionStorage.getItem('redirectUrl');
@@ -69,25 +103,25 @@ function SignInFormComponent() {
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
-    defaultValues: {
-      phone: '',
-    },
+    defaultValues: { phone: '' },
   });
 
   const otpForm = useForm<z.infer<typeof otpSchema>>({
     resolver: zodResolver(otpSchema),
-    defaultValues: {
-      otp: '',
-    },
+    defaultValues: { otp: '' },
   });
+  
+  const emailForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: '' },
+  });
+
 
   const setupRecaptcha = () => {
     if (!(window as any).recaptchaVerifier) {
       (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        },
+        'callback': (response: any) => {},
       });
     }
   };
@@ -103,11 +137,7 @@ function SignInFormComponent() {
       toast({ title: 'OTP sent successfully!' });
     } catch (error: any) {
       console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign in failed',
-        description: 'Failed to send OTP. Please try again.',
-      });
+      toast({ variant: 'destructive', title: 'Sign in failed', description: 'Failed to send OTP. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -119,13 +149,28 @@ function SignInFormComponent() {
       await confirmationResult.confirm(values.otp);
       handleSuccessfulSignIn();
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Sign in failed',
-        description: 'Invalid OTP. Please try again.',
-      });
+      toast({ variant: 'destructive', title: 'Sign in failed', description: 'Invalid OTP. Please try again.' });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onEmailSubmit(values: z.infer<typeof emailSchema>) {
+    setLoading(true);
+    const actionCodeSettings = {
+        url: window.location.href, 
+        handleCodeInApp: true,
+    };
+
+    try {
+        await sendSignInLinkToEmail(auth, values.email, actionCodeSettings);
+        window.localStorage.setItem('emailForSignIn', values.email);
+        setStep('email_sent');
+        toast({ title: 'Sign-in Link Sent', description: 'Check your email for the sign-in link.' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } finally {
+        setLoading(false);
     }
   }
 
@@ -135,130 +180,184 @@ function SignInFormComponent() {
     try {
       await signInWithPopup(auth, provider);
       handleSuccessfulSignIn();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: error.message,
-      });
+    } catch (error: any)
+{
+      toast({ variant: 'destructive', title: 'Google Sign-In Failed', description: error.message });
     } finally {
       setLoading(false);
     }
   }
-
-  const renderPhoneLogin = () => (
-    <>
-      <div className="relative">
+  
+  const renderDivider = () => (
+    <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            <span className="bg-background px-2 text-muted-foreground">Or</span>
         </div>
       </div>
-      <Form {...phoneForm}>
-        <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
-          <FormField
-            control={phoneForm.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <PhoneInput 
-                    {...field}
-                    international
-                    withCountryCallingCode
-                    country="IN"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Send OTP
-          </Button>
-        </form>
-      </Form>
-    </>
   );
+  
+  const isAuthReady = !configLoading;
 
-  const renderGoogleLogin = () => (
-     <Button onClick={handleGoogleSignIn} variant="outline" className="w-full">
-        <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google
-      </Button>
-  );
+  const backgroundStyle = {
+    backgroundImage: `
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='hsl(220 15% 90%)' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-keyboard'%3E%3Crect width='20' height='16' x='2' y='4' rx='2' ry='2'/%3E%3Cpath d='M6 8h.01'/%3E%3Cpath d='M10 8h.01'/%3E%3Cpath d='M14 8h.01'/%3E%3Cpath d='M18 8h.01'/%3E%3Cpath d='M6 12h.01'/%3E%3Cpath d='M10 12h4'/%3E%3Cpath d='M18 12h.01'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='hsl(220 15% 90%)' stroke-width='0.5' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-laptop'%3E%3Cpath d='M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9h16Z'/%3E%3Cpath d='M12 19h.01'/%3E%3Cpath d='M2 20h20'/%3E%3C/svg%3E")
+    `,
+    backgroundPosition: '0 0, 50px 50px',
+    backgroundSize: '100px 100px',
+    backgroundColor: 'hsl(var(--background))',
+  };
+
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/20 via-accent/20 to-background p-4">
-      <div className="absolute bottom-4 right-4 text-lg font-bold text-muted-foreground/50">ExamsPro.in</div>
-      <div id="recaptcha-container"></div>
-      <Card className="w-full max-w-sm z-10">
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign In</CardTitle>
-          <CardDescription>
-            {step === 'phone'
-              ? 'Choose a sign-in method below.'
-              : 'Enter the OTP sent to your phone.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!isClient || !appConfig ? (
-            <div className="flex justify-center items-center h-40">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : step === 'phone' ? (
-            <div className="space-y-4">
-              {appConfig.isGoogleLoginEnabled && renderGoogleLogin()}
-              {appConfig.isGoogleLoginEnabled && appConfig.isPhoneLoginEnabled && <div className="h-px" />}
-              {appConfig.isPhoneLoginEnabled && renderPhoneLogin()}
-              {!appConfig.isGoogleLoginEnabled && !appConfig.isPhoneLoginEnabled && (
-                <div className="text-center text-muted-foreground">
-                  Sign in is currently disabled. Please contact an administrator.
+    <div className="flex flex-col min-h-screen bg-background">
+      <Header />
+      <main className="flex-grow flex flex-col">
+        <div 
+          className="flex-grow flex items-center justify-center p-4 py-12"
+          style={backgroundStyle}
+        >
+          <div id="recaptcha-container"></div>
+          <Card className="w-full max-w-sm shadow-lg shadow-primary/20">
+            <CardHeader>
+              <CardTitle className="text-2xl">Sign In</CardTitle>
+              <CardDescription>
+                {step === 'options' && 'Choose a sign-in method below.'}
+                {step === 'otp' && 'Enter the OTP sent to your phone.'}
+                {step === 'email_sent' && 'Check your inbox for a sign-in link.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading && step !== 'otp' ? (
+                <div className="flex justify-center items-center h-40">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              )}
-            </div>
-          ) : step === 'otp' ? (
-            <Form {...otpForm}>
-              <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
-                <FormField
-                  control={otpForm.control}
-                  name="otp"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>OTP</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123456" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+              ) : step === 'email_sent' ? (
+                 <div className="flex flex-col items-center justify-center text-center space-y-4 h-40">
+                    <MailCheck className="h-16 w-16 text-primary" />
+                    <p className="text-muted-foreground">A sign-in link has been sent to your email address. Please check your inbox and promotions folder.</p>
+                    <Button variant="link" onClick={() => setStep('options')}>Back to sign-in options</Button>
+                </div>
+              ) : step === 'options' ? (
+                <div className="space-y-4">
+                  {(!isAuthReady || appConfig?.isGoogleLoginEnabled) && (
+                      <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" disabled={!isAuthReady || loading}>
+                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                         {!isAuthReady ? 'Loading...' : <> <GoogleIcon className="mr-2 h-5 w-5" /> Sign in with Google </>}
+                      </Button>
                   )}
-                />
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
-                </Button>
-              </form>
-            </Form>
-          ) : null}
-          <div className="mt-4 text-center text-sm">
-            Don't have an account?{' '}
-            <Link href="/auth/signup" className="underline">
-              Sign up
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+                  
+                  {appConfig && appConfig.isGoogleLoginEnabled && (appConfig.isPhoneLoginEnabled || appConfig.isEmailLinkLoginEnabled) && renderDivider()}
+
+                  {(!isAuthReady || appConfig?.isEmailLinkLoginEnabled) && (
+                    <Form {...emailForm}>
+                        <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                            <FormField
+                                control={emailForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email Address</FormLabel>
+                                        <FormControl><Input type="email" placeholder="you@example.com" {...field} disabled={!isAuthReady} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" disabled={!isAuthReady || loading} className="w-full">
+                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {!isAuthReady ? 'Loading...' : 'Send Sign-In Link'}
+                            </Button>
+                        </form>
+                    </Form>
+                  )}
+
+                  {appConfig && appConfig.isEmailLinkLoginEnabled && appConfig.isPhoneLoginEnabled && renderDivider()}
+                  
+                  {(!isAuthReady || appConfig?.isPhoneLoginEnabled) && (
+                    <Form {...phoneForm}>
+                      <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
+                        <FormField
+                          control={phoneForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number</FormLabel>
+                              <FormControl>
+                                <PhoneInput 
+                                  {...field}
+                                  international
+                                  withCountryCallingCode
+                                  country="IN"
+                                  disabled={!isAuthReady}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" disabled={!isAuthReady || loading} className="w-full">
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           {!isAuthReady ? 'Loading...' : 'Send OTP'}
+                        </Button>
+                      </form>
+                    </Form>
+                  )}
+
+                  {isAuthReady && !appConfig?.isGoogleLoginEnabled && !appConfig?.isPhoneLoginEnabled && !appConfig?.isEmailLinkLoginEnabled && (
+                    <div className="text-center text-muted-foreground">
+                      Sign in is currently disabled. Please contact an administrator.
+                    </div>
+                  )}
+                </div>
+              ) : step === 'otp' ? (
+                <Form {...otpForm}>
+                  <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
+                    <FormField
+                      control={otpForm.control}
+                      name="otp"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>OTP</FormLabel>
+                          <FormControl>
+                            <Input placeholder="123456" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" disabled={loading} className="w-full">
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Sign In
+                    </Button>
+                     <Button variant="link" onClick={() => setStep('options')}>Back to sign-in options</Button>
+                  </form>
+                </Form>
+              ) : null}
+              <div className="mt-4 text-center text-sm">
+                Don't have an account?{' '}
+                <Link href="/auth/signup" className="underline">
+                  Sign up
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="mx-auto max-w-6xl w-full p-4 md:p-8">
+            <FeaturesSection />
+        </div>
+      </main>
+      <Footer />
     </div>
   );
 }
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
       <SignInFormComponent />
     </Suspense>
   )

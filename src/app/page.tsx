@@ -2,8 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { BookOpen, History, Upload, LogOut, User as UserIcon, MoreHorizontal, ShieldCheck, Users, ChevronLeft, ChevronRight, Share2, FileText, Lock, RefreshCcw, Layers, Edit, Trash2, Star, Settings, Sparkles, Wallet, HistoryIcon, Send } from 'lucide-react';
+import { BookOpen, History, Share2, FileText, Lock, Edit, Trash2, Star, Wallet, RefreshCcw, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -24,20 +23,17 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { useAuth, useRequireAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
-import type { Exam, ExamHistory, CampaignDetail } from '@/lib/data';
+import type { Exam, ExamHistory } from '@/lib/data';
 import { CreateExamDialog } from '@/components/create-exam-dialog';
 import { getExams, deleteExam } from '@/services/examService';
 import { getExamHistory, getAllExamHistory } from '@/services/examHistoryService';
@@ -65,7 +61,10 @@ import { cn } from '@/lib/utils';
 import { getAppConfig, type AppConfig } from '@/services/appConfigService';
 import axios from 'axios';
 import { SuperAdminHistoryReport } from '@/components/super-admin-history-report';
-
+import { FeaturesSection } from '@/components/features-section';
+import { Footer } from '@/components/footer';
+import { Header } from '@/components/header';
+import { useRouter } from 'next/navigation';
 
 const EXAMS_PAGE_SIZE = 3;
 const EXAM_HISTORY_PAGE_SIZE = 3;
@@ -87,6 +86,7 @@ export default function Home() {
   const [isCreateExamOpen, setCreateExamOpen] = useState(false);
   const [examToEdit, setExamToEdit] = useState<Exam | null>(null);
   const [isCreateCampaignOpen, setCreateCampaignOpen] = useState(false);
+  const [campaignsLastUpdated, setCampaignsLastUpdated] = useState<Date | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [isShareReportOpen, setShareReportOpen] = useState(false);
@@ -189,16 +189,6 @@ export default function Home() {
     fetchInitialData();
   }, [user, isSuperAdmin]);
 
-  const handleSignOut = async () => {
-    if (isSuperAdmin) {
-      setSuperAdmin(false);
-      sessionStorage.removeItem('isSuperAdmin');
-      router.push('/auth/admin/signin');
-    } else {
-      await signOut(auth);
-      router.push('/auth/signin');
-    }
-  };
 
   const handleDeleteExam = async (id: string) => {
     await deleteExam(id);
@@ -214,6 +204,7 @@ export default function Home() {
   
   const handleCampaignCreated = () => {
     toast({ title: "Campaign Created!", description: "The new campaign has been successfully created." });
+    setCampaignsLastUpdated(new Date()); // Trigger refresh
     setCreateCampaignOpen(false);
   }
 
@@ -350,145 +341,26 @@ export default function Home() {
             )}
         </>
       )}
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
-        <nav className="flex-1">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-lg font-semibold"
-          >
-            <Image src="/images/logo_black.png" alt="ExamsPro.in logo" width={92} height={92} data-ai-hint="logo" />
-            <div>
-                <span className="text-xl font-bold">ExamsPro.in</span>
-                <p className="text-xs text-muted-foreground">Perform Like a Pro</p>
-            </div>
-          </Link>
-        </nav>
-        <div className="flex items-center gap-4">
-          {(isAdmin || isSuperAdmin) && (
-            <>
-              {canCreateExam && (
-                <CreateExamDialog 
-                  open={isCreateExamOpen}
-                  onOpenChange={(isOpen) => {
-                    setCreateExamOpen(isOpen);
-                    if (!isOpen) setExamToEdit(null);
-                  }}
-                  onExamCreated={handleExamCreated}
-                  examToEdit={examToEdit}
-                />
-              )}
-              {canCreateCampaign && (
-                  <CreateCampaignDialog
-                    open={isCreateCampaignOpen}
-                    onOpenChange={setCreateCampaignOpen}
-                    onCampaignCreated={handleCampaignCreated}
-                    allExams={exams}
-                    allAdmins={allAdmins}
-                  />
-              )}
-              <Button variant="outline" onClick={() => setShareReportOpen(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    View Share Report
-              </Button>
-            </>
-          )}
-
-          {loading ? (
-            <div/>
-          ) : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="icon" className="rounded-full">
-                  <Avatar>
-                    <AvatarImage src={user.photoURL ?? ''} alt="user avatar" />
-                    <AvatarFallback>
-                      {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : <UserIcon size={20} />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="sr-only">Toggle user menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                    <div className="flex justify-between w-full">
-                       <span>Attempts Left:</span>
-                       <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
-                    </div>
-                </DropdownMenuItem>
-                 <DropdownMenuItem onClick={handleRechargePayment}>
-                    <RefreshCcw className="mr-2 h-4 w-4" />
-                    <span>Recharge Attempts</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : isSuperAdmin ? (
-             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="icon" className="rounded-full">
-                  <Avatar>
-                    <AvatarFallback>
-                      <ShieldCheck size={20} />
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="sr-only">Toggle admin menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Super Admin</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/admin/users">
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>User Management</span>
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/admin/config">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>App Configuration</span>
-                  </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                  <Link href="/admin/requests">
-                    <Send className="mr-2 h-4 w-4" />
-                    <span>Admin Requests</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/admin/attempts">
-                    <HistoryIcon className="mr-2 h-4 w-4" />
-                    <span>Attempt History</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button asChild>
-              <Link href="/auth/signin">Sign In</Link>
-            </Button>
-          )}
-        </div>
-      </header>
+      <Header 
+        userProfile={userProfile}
+        handleRechargePayment={handleRechargePayment}
+        isCreateExamOpen={isCreateExamOpen}
+        setCreateExamOpen={setCreateExamOpen}
+        setExamToEdit={setExamToEdit}
+        handleExamCreated={handleExamCreated}
+        examToEdit={examToEdit}
+        isCreateCampaignOpen={isCreateCampaignOpen}
+        setCreateCampaignOpen={setCreateCampaignOpen}
+        handleCampaignCreated={handleCampaignCreated}
+        exams={exams}
+        allAdmins={allAdmins}
+        setShareReportOpen={setShareReportOpen}
+      />
       <main className="flex-1 p-4 md:p-8">
         {(user || isSuperAdmin) ? (
             <div className="mx-auto grid max-w-6xl gap-8">
                 {user && (
-                    <JoinedCampaigns allExams={exams} />
+                    <JoinedCampaigns allExams={exams} refreshTrigger={campaignsLastUpdated} />
                 )}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
@@ -708,21 +580,44 @@ export default function Home() {
                     </div>
                 </div>
                 {(isAdmin || isSuperAdmin) && !isSuperAdmin && (
-                    <CampaignsList />
+                    <CampaignsList refreshTrigger={campaignsLastUpdated} />
                 )}
                 {isSuperAdmin && (
                     <div className="grid grid-cols-1 gap-8">
-                        <CampaignsList />
+                        <CampaignsList refreshTrigger={campaignsLastUpdated} />
                         <SuperAdminHistoryReport />
                     </div>
                 )}
             </div>
         ) : (
-           <div className="flex min-h-screen items-center justify-center">
-             <h2 className="text-2xl font-bold">Welcome to ExamsPro.in</h2>
-           </div>
+          <div className="text-center">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl md:text-6xl">
+                Welcome to <span className="text-primary">ExamsPro.in</span>
+            </h1>
+            <p className="mt-3 max-w-md mx-auto text-base text-gray-500 dark:text-gray-400 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+                Perform Like a Pro. The ultimate platform to create, share, and take exams.
+            </p>
+            <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
+                <div className="rounded-md shadow">
+                    <Button asChild size="lg">
+                        <Link href="/auth/signup">Get Started</Link>
+                    </Button>
+                </div>
+                 <div className="mt-3 rounded-md shadow sm:mt-0 sm:ml-3">
+                    <Button asChild size="lg" variant="outline">
+                       <Link href="/auth/signin">Sign In</Link>
+                    </Button>
+                </div>
+            </div>
+          </div>
         )}
+        
+        <FeaturesSection />
+
       </main>
+      <Footer />
     </div>
   );
 }
+
+    
