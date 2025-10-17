@@ -191,7 +191,7 @@ export function Header({
                     <CreateExamDialog 
                     open={isCreateExamOpen || false}
                     onOpenChange={(isOpen) => {
-                        setCreateExamOpen(isOpen);
+                        if (setCreateExamOpen) setCreateExamOpen(isOpen);
                         if (!isOpen && setExamToEdit) setExamToEdit(null);
                     }}
                     onExamCreated={handleExamCreated}
@@ -284,7 +284,7 @@ export function Header({
                                     <Badge>{userProfile?.attemptBalance ?? 0}</Badge>
                                 </div>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleRechargePayment}><RefreshCcw className="mr-2 h-4 w-4" /><span>Recharge Attempts</span></DropdownMenuItem>
+                            {handleRechargePayment && <DropdownMenuItem onClick={handleRechargePayment}><RefreshCcw className="mr-2 h-4 w-4" /><span>Recharge Attempts</span></DropdownMenuItem>}
                         </>
                      )}
                     <DropdownMenuSeparator />
